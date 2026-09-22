@@ -1,0 +1,81 @@
+"use client";
+
+import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
+import { ArrowRight, Clock3, FileQuestion, Search, SlidersHorizontal, X } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
+
+type RelatedName = { name: string } | { name: string }[] | null;
+type Test = { id: string; title: string; slug: string; description: string | null; total_questions: number; total_marks: number; duration_minutes: number; test_types: RelatedName & { code?: string }; subjects: RelatedName; chapters: RelatedName };
+type ListingResponse = { success: boolean; data?: { data: Test[]; pagination: { page: number; totalPages: number; total: number; hasMore: boolean } }; error?: string };
+
+function mergeUniqueTests(current: Test[], incoming: Test[]) {
+  const merged = new Map<string, Test>();
+  [...current, ...incoming].forEach((test) => merged.set(test.id, test));
+  return Array.from(merged.values());
+}
+
+function relatedName(value: RelatedName) {
+  return (Array.isArray(value) ? value[0] : value)?.name || null;
+}
+
+export function TestListing() {
+  const initialSearch = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("search") || "" : "";
+  const [tests, setTests] = useState<Test[]>([]);
+  const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
+  const [searchInput, setSearchInput] = useState(initialSearch);
+  const [search, setSearch] = useState(initialSearch);
+  const [testType, setTestType] = useState("");
+  const [sort, setSort] = useState("newest");
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(false);
+  const [total, setTotal] = useState(0);
+
+  useEffect(() => {
+    const timeout = window.setTimeout(() => {
+      setSearch(searchInput.trim());
+      setPage(1);
+    }, 300);
+    return () => window.clearTimeout(timeout);
+  }, [searchInput]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    async function loadTests() {
+      setStatus("loading");
+      try {
+        const params = new URLSearchParams({ page: String(page), limit: "9", sort });
+        if (search) params.set("search", search);
+        if (testType) params.set("testType", testType);
+        const response = await fetch(`/api/mock-tests?${params}`, { signal: controller.signal });
+        const payload = (await response.json()) as ListingResponse;
+        if (!response.ok || !payload.success || !payload.data) throw new Error(payload.error || "Unable to load tests");
+        setTests((current) => page === 1 ? mergeUniqueTests([], payload.data!.data) : mergeUniqueTests(current, payload.data!.data));
+        setHasMore(payload.data.pagination.hasMore);
+        setTotal(payload.data.pagination.total);
+        setStatus("ready");
+      } catch (error) {
+        if ((error as Error).name !== "AbortError") setStatus("error");
+      }
+    }
+    loadTests();
+    return () => controller.abort();
+  }, [page, search, sort, testType]);
+
+  const categories = useMemo(() => Array.from(new Map(tests.map((test) => {
+    const type = Array.isArray(test.test_types) ? test.test_types[0] : test.test_types;
+    return type && "code" in type ? [type.code, type.name] : null;
+  }).filter((value): value is [string, string] => value !== null)).entries()), [tests]);
+  const hasFilters = Boolean(searchInput || testType || sort !== "newest");
+  const clearFilters = () => { setSearchInput(""); setSearch(""); setTestType(""); setSort("newest"); setPage(1); };
+
+  return <main className="min-h-screen bg-background pt-20"><section className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8"><div className="max-w-3xl"><p className="text-sm font-semibold uppercase tracking-[0.2em] text-primary">Mock tests</p><h1 className="mt-3 text-4xl font-black tracking-tight sm:text-5xl">Find your next practice test.</h1><p className="mt-4 text-lg text-muted-foreground">Search available board-focused tests, then start the practice that fits your preparation.</p></div>
+    <div className="mt-10 rounded-2xl border bg-card p-4 shadow-sm"><div className="grid gap-3 lg:grid-cols-[1fr_auto_auto]"><div className="relative"><label htmlFor="test-search" className="sr-only">Search mock tests</label><Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /><Input id="test-search" value={searchInput} onChange={(event) => setSearchInput(event.target.value)} placeholder="Search by test title or description" className="pl-10 pr-10" />{searchInput && <button type="button" onClick={() => setSearchInput("")} aria-label="Clear search" className="absolute right-2 top-1/2 inline-flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-md hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"><X className="h-4 w-4" /></button>}</div><div><label htmlFor="test-type" className="sr-only">Filter by test type</label><select id="test-type" value={testType} onChange={(event) => { setTestType(event.target.value); setPage(1); }} className="h-10 w-full rounded-md border bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring lg:w-48"><option value="">All test types</option>{categories.map(([code, name]) => <option key={code} value={code}>{name}</option>)}</select></div><div><label htmlFor="test-sort" className="sr-only">Sort tests</label><select id="test-sort" value={sort} onChange={(event) => { setSort(event.target.value); setPage(1); }} className="h-10 w-full rounded-md border bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring lg:w-40"><option value="newest">Newest</option><option value="oldest">Oldest</option><option value="alphabetical">A–Z</option></select></div></div>{hasFilters && <button type="button" onClick={clearFilters} className="mt-3 inline-flex min-h-9 items-center gap-2 text-sm font-semibold text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"><SlidersHorizontal className="h-4 w-4" />Clear filters</button>}</div>
+    <div className="mt-8 flex items-center justify-between gap-4"><p aria-live="polite" className="text-sm text-muted-foreground">{status === "ready" ? `${total} ${total === 1 ? "test" : "tests"} available` : "Loading tests…"}</p></div>
+    <div className="mt-5 grid gap-6 md:grid-cols-2 xl:grid-cols-3">{status === "loading" && tests.length === 0 && Array.from({ length: 6 }).map((_, index) => <div key={index} className="rounded-3xl border bg-card p-6"><Skeleton className="h-5 w-24" /><Skeleton className="mt-6 h-7 w-4/5" /><Skeleton className="mt-3 h-5 w-full" /><Skeleton className="mt-8 h-11 w-full" /></div>)}
+      {status === "error" && <div className="rounded-3xl border border-destructive/30 bg-card p-8 text-center md:col-span-2 xl:col-span-3"><h2 className="text-lg font-bold">We couldn’t load mock tests</h2><p className="mt-2 text-muted-foreground">Please check your connection and try again.</p><button type="button" onClick={() => setPage((value) => value)} className="mt-5 rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">Try again</button></div>}
+      {status === "ready" && tests.length === 0 && <div className="rounded-3xl border bg-card p-8 text-center md:col-span-2 xl:col-span-3"><FileQuestion className="mx-auto h-9 w-9 text-muted-foreground" /><h2 className="mt-4 text-lg font-bold">No tests found</h2><p className="mt-2 text-muted-foreground">Try a different search or clear your filters.</p>{hasFilters && <button type="button" onClick={clearFilters} className="mt-5 font-semibold text-primary hover:underline">Clear filters</button>}</div>}
+      {tests.map((test) => <article key={test.id} className="flex h-full flex-col rounded-3xl border bg-card p-6 shadow-sm"><div className="flex flex-wrap items-center justify-between gap-2"><span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">{relatedName(test.test_types) || "Mock test"}</span>{relatedName(test.subjects) && <span className="text-xs font-medium text-muted-foreground">{relatedName(test.subjects)}</span>}</div><h2 className="mt-5 text-xl font-bold">{test.title}</h2>{test.description && <p className="mt-2 line-clamp-2 text-sm leading-6 text-muted-foreground">{test.description}</p>}{relatedName(test.chapters) && <p className="mt-3 text-sm text-muted-foreground">Topic: {relatedName(test.chapters)}</p>}<dl className="mt-6 grid grid-cols-3 gap-3 border-y py-4 text-sm"><div><dt className="text-muted-foreground">Duration</dt><dd className="mt-1 inline-flex items-center gap-1 font-semibold"><Clock3 className="h-4 w-4 text-primary" />{test.duration_minutes}m</dd></div><div><dt className="text-muted-foreground">Questions</dt><dd className="mt-1 font-semibold">{test.total_questions}</dd></div><div><dt className="text-muted-foreground">Marks</dt><dd className="mt-1 font-semibold">{test.total_marks}</dd></div></dl><Link href={`/test/${test.slug}`} className="mt-6 inline-flex min-h-11 items-center justify-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">View test <ArrowRight className="h-4 w-4" /></Link></article>)}</div>
+    {status === "ready" && hasMore && <div className="mt-10 text-center"><button type="button" onClick={() => setPage((value) => value + 1)} className="min-h-11 rounded-md border bg-card px-5 text-sm font-semibold hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">Load more tests</button></div>}</section></main>;
+}

@@ -1,0 +1,1014 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────────────────────
+// ENUMS (extensible via DB; seed provides defaults)
+// ─────────────────────────────────────────────
+
+enum ContentStatus {
+  DRAFT
+  UNDER_REVIEW
+  APPROVED
+  PUBLISHED
+  ARCHIVED
+  REJECTED
+}
+
+enum UserRole {
+  SUPER_ADMIN
+  ADMIN
+  CONTENT_MANAGER
+  REVIEWER
+  EDITOR
+  TEACHER
+  VIEWER
+}
+
+enum QuestionType {
+  MCQ
+  MULTIPLE_CORRECT
+  TRUE_FALSE
+  FILL_BLANK
+  ASSERTION_REASON
+  MATCH_FOLLOWING
+  NUMERICAL
+  CASE_STUDY
+  IMAGE_BASED
+  DIAGRAM
+  SHORT_ANSWER
+  LONG_ANSWER
+}
+
+enum DifficultyLevel {
+  VERY_EASY
+  EASY
+  MEDIUM
+  HARD
+  VERY_HARD
+}
+
+enum MediaType {
+  IMAGE
+  PDF
+  DOCUMENT
+  VIDEO
+  AUDIO
+  OTHER
+}
+
+enum ImportFormat {
+  CSV
+  XLSX
+  JSON
+}
+
+enum ImportStatus {
+  PENDING
+  VALIDATING
+  VALIDATED
+  VALIDATION_FAILED
+  IMPORTING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+enum ExportStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+enum AuditAction {
+  CREATE
+  UPDATE
+  DELETE
+  PUBLISH
+  UNPUBLISH
+  ARCHIVE
+  RESTORE
+  APPROVE
+  REJECT
+  SUBMIT_REVIEW
+  IMPORT
+  EXPORT
+  LOGIN
+  LOGOUT
+  UPLOAD
+  DOWNLOAD
+  MERGE
+  ROLLBACK
+  PERMISSION_CHANGE
+}
+
+enum MockTestType {
+  CHAPTER
+  SUBJECT
+  FULL_MOCK
+  CUSTOM
+  PREVIOUS_YEAR
+  SAMPLE_PAPER
+  PRACTICE_SET
+}
+
+enum WorkflowStep {
+  CREATED
+  SUBMITTED
+  REVIEWED
+  EDITED
+  APPROVED
+  PUBLISHED
+  REJECTED
+  REVISION_REQUESTED
+}
+
+// ─────────────────────────────────────────────
+// AUTH & USERS
+// ─────────────────────────────────────────────
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  passwordHash  String
+  firstName     String
+  lastName      String
+  role          UserRole  @default(VIEWER)
+  isActive      Boolean   @default(true)
+  avatarUrl     String?
+  lastLoginAt   DateTime?
+  lastLoginIp   String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  sessions          Session[]
+  auditLogs         AuditLog[]
+  contentVersions   ContentVersion[]  @relation("VersionEditor")
+  reviewedVersions  ContentVersion[]  @relation("VersionReviewer")
+  publishedVersions ContentVersion[]  @relation("VersionPublisher")
+  workflowActions   WorkflowAction[]
+  importJobs        ImportJob[]
+  exportJobs        ExportJob[]
+  mediaUploads      MediaAsset[]
+  createdQuestions  Question[]        @relation("QuestionAuthor")
+  createdNotes      Note[]            @relation("NoteAuthor")
+  createdMockTests  MockTest[]        @relation("MockTestAuthor")
+  createdLessons    Lesson[]          @relation("LessonAuthor")
+  createdBlogs      BlogPost[]        @relation("BlogAuthor")
+  createdFaqs       Faq[]             @relation("FaqAuthor")
+  createdAnnouncements Announcement[] @relation("AnnouncementAuthor")
+  createdFlashcards Flashcard[]       @relation("FlashcardAuthor")
+  createdFormulaSheets FormulaSheet[] @relation("FormulaSheetAuthor")
+  createdMindMaps   MindMap[]         @relation("MindMapAuthor")
+
+  @@index([email])
+  @@index([role])
+  @@index([isActive])
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([token])
+  @@index([expiresAt])
+}
+
+model Permission {
+  id          String   @id @default(cuid())
+  code        String   @unique
+  name        String
+  description String?
+  resource    String
+  action      String
+  createdAt   DateTime @default(now())
+
+  rolePermissions RolePermission[]
+
+  @@index([resource, action])
+}
+
+model RolePermission {
+  id           String   @id @default(cuid())
+  role         UserRole
+  permissionId String
+  createdAt    DateTime @default(now())
+
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@unique([role, permissionId])
+  @@index([role])
+}
+
+// ─────────────────────────────────────────────
+// TAXONOMY (fully dynamic – never hardcoded)
+// ─────────────────────────────────────────────
+
+model Board {
+  id          String   @id @default(cuid())
+  code        String   @unique
+  name        String
+  description String?
+  country     String   @default("IN")
+  isActive    Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  metadata    Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  classes Class[]
+  exams   Exam[]
+
+  @@index([code])
+  @@index([isActive])
+}
+
+model Class {
+  id          String   @id @default(cuid())
+  boardId     String
+  code        String
+  name        String
+  description String?
+  sortOrder   Int      @default(0)
+  isActive    Boolean  @default(true)
+  metadata    Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  board     Board     @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  subjects  Subject[]
+
+  @@unique([boardId, code])
+  @@index([boardId])
+  @@index([isActive])
+}
+
+model Subject {
+  id          String   @id @default(cuid())
+  classId     String
+  code        String
+  name        String
+  description String?
+  iconUrl     String?
+  color       String?
+  sortOrder   Int      @default(0)
+  isActive    Boolean  @default(true)
+  metadata    Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  class    Class     @relation(fields: [classId], references: [id], onDelete: Cascade)
+  chapters Chapter[]
+  mockTests MockTest[]
+
+  @@unique([classId, code])
+  @@index([classId])
+  @@index([isActive])
+}
+
+model Chapter {
+  id          String   @id @default(cuid())
+  subjectId   String
+  code        String
+  name        String
+  description String?
+  sortOrder   Int      @default(0)
+  isActive    Boolean  @default(true)
+  metadata    Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  subject Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  topics  Topic[]
+  notes   Note[]
+  mockTests MockTest[]
+
+  @@unique([subjectId, code])
+  @@index([subjectId])
+  @@index([isActive])
+}
+
+model Topic {
+  id          String   @id @default(cuid())
+  chapterId   String
+  code        String
+  name        String
+  description String?
+  sortOrder   Int      @default(0)
+  isActive    Boolean  @default(true)
+  metadata    Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  chapter  Chapter  @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+  lessons  Lesson[]
+  questions Question[]
+  notes    Note[]
+  flashcards Flashcard[]
+
+  @@unique([chapterId, code])
+  @@index([chapterId])
+  @@index([isActive])
+}
+
+model Lesson {
+  id          String        @id @default(cuid())
+  topicId     String
+  code        String
+  title       String
+  content     String        @db.Text
+  contentHtml String?       @db.Text
+  status      ContentStatus @default(DRAFT)
+  sortOrder   Int           @default(0)
+  duration    Int?
+  authorId    String
+  publishedAt DateTime?
+  metadata    Json?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  topic   Topic @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  author  User  @relation("LessonAuthor", fields: [authorId], references: [id])
+  versions ContentVersion[]
+  media    MediaAsset[]     @relation("LessonMedia")
+
+  @@unique([topicId, code])
+  @@index([topicId])
+  @@index([status])
+  @@index([authorId])
+}
+
+model Exam {
+  id          String   @id @default(cuid())
+  boardId     String?
+  code        String   @unique
+  name        String
+  description String?
+  examType    String
+  isActive    Boolean  @default(true)
+  metadata    Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  board Board? @relation(fields: [boardId], references: [id])
+
+  @@index([examType])
+  @@index([isActive])
+}
+
+model Language {
+  id        String   @id @default(cuid())
+  code      String   @unique
+  name      String
+  nativeName String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  questions Question[]
+  notes     Note[]
+}
+
+model Tag {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  slug      String   @unique
+  color     String?
+  createdAt DateTime @default(now())
+
+  questionTags QuestionTag[]
+  noteTags     NoteTag[]
+  mockTestTags MockTestTag[]
+}
+
+// ─────────────────────────────────────────────
+// QUESTIONS
+// ─────────────────────────────────────────────
+
+model Question {
+  id              String         @id @default(cuid())
+  topicId         String?
+  type            QuestionType
+  difficulty      DifficultyLevel @default(MEDIUM)
+  languageId      String?
+  stem            String         @db.Text
+  stemHtml        String?        @db.Text
+  explanation     String?        @db.Text
+  explanationHtml String?        @db.Text
+  marks           Float          @default(1)
+  negativeMarks   Float          @default(0)
+  timeLimitSec    Int?
+  status          ContentStatus  @default(DRAFT)
+  year            Int?
+  source          String?
+  isPreviousYear  Boolean        @default(false)
+  contentHash     String?
+  similarityHash  String?
+  authorId        String
+  publishedAt     DateTime?
+  metadata        Json?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  topic     Topic?    @relation(fields: [topicId], references: [id])
+  language  Language? @relation(fields: [languageId], references: [id])
+  author    User      @relation("QuestionAuthor", fields: [authorId], references: [id])
+  options   QuestionOption[]
+  blanks    QuestionBlank[]
+  matches   QuestionMatch[]
+  assertion QuestionAssertion?
+  numerical QuestionNumerical?
+  caseStudy QuestionCaseStudy?
+  tags      QuestionTag[]
+  media     MediaAsset[]      @relation("QuestionMedia")
+  versions  ContentVersion[]
+  mockTestQuestions MockTestQuestion[]
+  duplicatesAsSource DuplicateRecord[] @relation("DupSource")
+  duplicatesAsTarget DuplicateRecord[] @relation("DupTarget")
+
+  @@index([topicId])
+  @@index([type])
+  @@index([difficulty])
+  @@index([status])
+  @@index([authorId])
+  @@index([contentHash])
+  @@index([similarityHash])
+  @@index([isPreviousYear])
+  @@index([createdAt])
+}
+
+model QuestionOption {
+  id         String  @id @default(cuid())
+  questionId String
+  label      String
+  text       String  @db.Text
+  textHtml   String? @db.Text
+  isCorrect  Boolean @default(false)
+  sortOrder  Int     @default(0)
+  mediaUrl   String?
+
+  question Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@index([questionId])
+}
+
+model QuestionBlank {
+  id           String @id @default(cuid())
+  questionId   String
+  blankIndex   Int
+  correctAnswer String
+  alternatives Json?
+  caseSensitive Boolean @default(false)
+
+  question Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@index([questionId])
+}
+
+model QuestionMatch {
+  id         String @id @default(cuid())
+  questionId String
+  leftText   String
+  rightText  String
+  sortOrder  Int    @default(0)
+
+  question Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@index([questionId])
+}
+
+model QuestionAssertion {
+  id             String @id @default(cuid())
+  questionId     String @unique
+  assertion      String @db.Text
+  reason         String @db.Text
+  correctOption  String
+  explanation    String? @db.Text
+
+  question Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+}
+
+model QuestionNumerical {
+  id           String  @id @default(cuid())
+  questionId   String  @unique
+  correctValue Float
+  tolerance    Float   @default(0)
+  unit         String?
+  minValue     Float?
+  maxValue     Float?
+
+  question Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+}
+
+model QuestionCaseStudy {
+  id           String @id @default(cuid())
+  questionId   String @unique
+  passage      String @db.Text
+  passageHtml  String? @db.Text
+  subQuestions Json
+
+  question Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+}
+
+model QuestionTag {
+  questionId String
+  tagId      String
+
+  question Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  tag      Tag      @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([questionId, tagId])
+}
+
+// ─────────────────────────────────────────────
+// NOTES & LEARNING MATERIALS
+// ─────────────────────────────────────────────
+
+model Note {
+  id          String        @id @default(cuid())
+  topicId     String?
+  chapterId   String?
+  title       String
+  slug        String
+  content     String        @db.Text
+  contentHtml String?       @db.Text
+  summary     String?
+  status      ContentStatus @default(DRAFT)
+  languageId  String?
+  authorId    String
+  publishedAt DateTime?
+  metadata    Json?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  topic    Topic?    @relation(fields: [topicId], references: [id])
+  chapter  Chapter?  @relation(fields: [chapterId], references: [id])
+  language Language? @relation(fields: [languageId], references: [id])
+  author   User      @relation("NoteAuthor", fields: [authorId], references: [id])
+  tags     NoteTag[]
+  media    MediaAsset[] @relation("NoteMedia")
+  versions ContentVersion[]
+
+  @@unique([slug])
+  @@index([topicId])
+  @@index([chapterId])
+  @@index([status])
+  @@index([authorId])
+}
+
+model NoteTag {
+  noteId String
+  tagId  String
+
+  note Note @relation(fields: [noteId], references: [id], onDelete: Cascade)
+  tag  Tag  @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([noteId, tagId])
+}
+
+model Flashcard {
+  id        String        @id @default(cuid())
+  topicId   String?
+  front     String        @db.Text
+  back      String        @db.Text
+  frontHtml String?       @db.Text
+  backHtml  String?       @db.Text
+  status    ContentStatus @default(DRAFT)
+  authorId  String
+  metadata  Json?
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  topic  Topic? @relation(fields: [topicId], references: [id])
+  author User   @relation("FlashcardAuthor", fields: [authorId], references: [id])
+
+  @@index([topicId])
+  @@index([status])
+}
+
+model FormulaSheet {
+  id        String        @id @default(cuid())
+  title     String
+  content   String        @db.Text
+  contentHtml String?     @db.Text
+  subjectId String?
+  status    ContentStatus @default(DRAFT)
+  authorId  String
+  metadata  Json?
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  author User @relation("FormulaSheetAuthor", fields: [authorId], references: [id])
+
+  @@index([status])
+  @@index([authorId])
+}
+
+model MindMap {
+  id        String        @id @default(cuid())
+  title     String
+  data      Json
+  status    ContentStatus @default(DRAFT)
+  authorId  String
+  mediaUrl  String?
+  metadata  Json?
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  author User @relation("MindMapAuthor", fields: [authorId], references: [id])
+
+  @@index([status])
+}
+
+// ─────────────────────────────────────────────
+// MOCK TESTS
+// ─────────────────────────────────────────────
+
+model MockTest {
+  id              String        @id @default(cuid())
+  code            String        @unique
+  title           String
+  description     String?       @db.Text
+  type            MockTestType  @default(CUSTOM)
+  subjectId       String?
+  chapterId       String?
+  status          ContentStatus @default(DRAFT)
+  totalMarks      Float         @default(0)
+  durationMin     Int           @default(60)
+  negativeMarking Boolean       @default(false)
+  negativeRatio   Float         @default(0.25)
+  randomQuestions Boolean       @default(false)
+  randomOptions   Boolean       @default(false)
+  sectionWise     Boolean       @default(false)
+  difficultyMix   Json?
+  questionCount   Int           @default(0)
+  scheduledAt     DateTime?
+  publishedAt     DateTime?
+  authorId        String
+  instructions    String?       @db.Text
+  metadata        Json?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  subject   Subject? @relation(fields: [subjectId], references: [id])
+  chapter   Chapter? @relation(fields: [chapterId], references: [id])
+  author    User     @relation("MockTestAuthor", fields: [authorId], references: [id])
+  sections  MockTestSection[]
+  questions MockTestQuestion[]
+  tags      MockTestTag[]
+  versions  ContentVersion[]
+
+  @@index([type])
+  @@index([status])
+  @@index([subjectId])
+  @@index([chapterId])
+  @@index([authorId])
+  @@index([scheduledAt])
+}
+
+model MockTestSection {
+  id         String @id @default(cuid())
+  mockTestId String
+  name       String
+  sortOrder  Int    @default(0)
+  marks      Float  @default(0)
+  durationMin Int?
+  instructions String?
+
+  mockTest  MockTest @relation(fields: [mockTestId], references: [id], onDelete: Cascade)
+  questions MockTestQuestion[]
+
+  @@index([mockTestId])
+}
+
+model MockTestQuestion {
+  id         String @id @default(cuid())
+  mockTestId String
+  questionId String
+  sectionId  String?
+  sortOrder  Int    @default(0)
+  marks      Float?
+
+  mockTest MockTest         @relation(fields: [mockTestId], references: [id], onDelete: Cascade)
+  question Question         @relation(fields: [questionId], references: [id])
+  section  MockTestSection? @relation(fields: [sectionId], references: [id])
+
+  @@unique([mockTestId, questionId])
+  @@index([mockTestId])
+  @@index([questionId])
+}
+
+model MockTestTag {
+  mockTestId String
+  tagId      String
+
+  mockTest MockTest @relation(fields: [mockTestId], references: [id], onDelete: Cascade)
+  tag      Tag      @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([mockTestId, tagId])
+}
+
+// ─────────────────────────────────────────────
+// CMS CONTENT (Blogs, FAQs, Announcements)
+// ─────────────────────────────────────────────
+
+model BlogPost {
+  id          String        @id @default(cuid())
+  title       String
+  slug        String        @unique
+  excerpt     String?
+  content     String        @db.Text
+  contentHtml String?       @db.Text
+  coverUrl    String?
+  status      ContentStatus @default(DRAFT)
+  authorId    String
+  publishedAt DateTime?
+  metadata    Json?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  author User @relation("BlogAuthor", fields: [authorId], references: [id])
+
+  @@index([status])
+  @@index([slug])
+}
+
+model Faq {
+  id        String        @id @default(cuid())
+  question  String
+  answer    String        @db.Text
+  category  String?
+  sortOrder Int           @default(0)
+  status    ContentStatus @default(DRAFT)
+  authorId  String
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  author User @relation("FaqAuthor", fields: [authorId], references: [id])
+
+  @@index([category])
+  @@index([status])
+}
+
+model Announcement {
+  id        String        @id @default(cuid())
+  title     String
+  body      String        @db.Text
+  priority  Int           @default(0)
+  status    ContentStatus @default(DRAFT)
+  startsAt  DateTime?
+  endsAt    DateTime?
+  authorId  String
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  author User @relation("AnnouncementAuthor", fields: [authorId], references: [id])
+
+  @@index([status])
+  @@index([startsAt, endsAt])
+}
+
+// ─────────────────────────────────────────────
+// MEDIA LIBRARY
+// ─────────────────────────────────────────────
+
+model MediaFolder {
+  id        String   @id @default(cuid())
+  name      String
+  parentId  String?
+  path      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  parent   MediaFolder?  @relation("FolderTree", fields: [parentId], references: [id])
+  children MediaFolder[] @relation("FolderTree")
+  assets   MediaAsset[]
+
+  @@index([parentId])
+  @@index([path])
+}
+
+model MediaAsset {
+  id           String    @id @default(cuid())
+  folderId     String?
+  filename     String
+  originalName String
+  mimeType     String
+  mediaType    MediaType
+  sizeBytes    BigInt
+  width        Int?
+  height       Int?
+  duration     Int?
+  url          String
+  thumbnailUrl String?
+  checksum     String?
+  altText      String?
+  metadata     Json?
+  uploadedById String
+  questionId   String?
+  noteId       String?
+  lessonId     String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  folder     MediaFolder? @relation(fields: [folderId], references: [id])
+  uploadedBy User         @relation(fields: [uploadedById], references: [id])
+  question   Question?    @relation("QuestionMedia", fields: [questionId], references: [id])
+  note       Note?        @relation("NoteMedia", fields: [noteId], references: [id])
+  lesson     Lesson?      @relation("LessonMedia", fields: [lessonId], references: [id])
+
+  @@index([folderId])
+  @@index([mediaType])
+  @@index([checksum])
+  @@index([uploadedById])
+  @@index([filename])
+}
+
+// ─────────────────────────────────────────────
+// VERSION CONTROL
+// ─────────────────────────────────────────────
+
+model ContentVersion {
+  id            String        @id @default(cuid())
+  entityType    String
+  entityId      String
+  versionNumber Int
+  status        ContentStatus
+  snapshot      Json
+  changeSummary String?
+  editorId      String?
+  reviewerId    String?
+  publisherId   String?
+  questionId    String?
+  noteId        String?
+  lessonId      String?
+  mockTestId    String?
+  createdAt     DateTime      @default(now())
+
+  editor    User?     @relation("VersionEditor", fields: [editorId], references: [id])
+  reviewer  User?     @relation("VersionReviewer", fields: [reviewerId], references: [id])
+  publisher User?     @relation("VersionPublisher", fields: [publisherId], references: [id])
+  question  Question? @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  note      Note?     @relation(fields: [noteId], references: [id], onDelete: Cascade)
+  lesson    Lesson?   @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  mockTest  MockTest? @relation(fields: [mockTestId], references: [id], onDelete: Cascade)
+
+  @@unique([entityType, entityId, versionNumber])
+  @@index([entityType, entityId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+// ─────────────────────────────────────────────
+// REVIEW WORKFLOW
+// ─────────────────────────────────────────────
+
+model WorkflowAction {
+  id          String       @id @default(cuid())
+  entityType  String
+  entityId    String
+  step        WorkflowStep
+  fromStatus  ContentStatus?
+  toStatus    ContentStatus?
+  comment     String?      @db.Text
+  actorId     String
+  createdAt   DateTime     @default(now())
+
+  actor User @relation(fields: [actorId], references: [id])
+
+  @@index([entityType, entityId])
+  @@index([step])
+  @@index([actorId])
+  @@index([createdAt])
+}
+
+// ─────────────────────────────────────────────
+// IMPORT / EXPORT
+// ─────────────────────────────────────────────
+
+model ImportJob {
+  id              String       @id @default(cuid())
+  entityType      String
+  format          ImportFormat
+  status          ImportStatus @default(PENDING)
+  filename        String
+  filePath        String
+  totalRows       Int          @default(0)
+  validRows       Int          @default(0)
+  invalidRows     Int          @default(0)
+  importedRows    Int          @default(0)
+  skippedRows     Int          @default(0)
+  validationReport Json?
+  errorLog        Json?
+  previewData     Json?
+  options         Json?
+  userId          String
+  startedAt       DateTime?
+  completedAt     DateTime?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([status])
+  @@index([entityType])
+  @@index([userId])
+  @@index([createdAt])
+}
+
+model ExportJob {
+  id           String       @id @default(cuid())
+  entityType   String
+  format       ImportFormat
+  status       ExportStatus @default(PENDING)
+  filters      Json?
+  filename     String?
+  filePath     String?
+  totalRows    Int          @default(0)
+  errorLog     Json?
+  userId       String
+  startedAt    DateTime?
+  completedAt  DateTime?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([status])
+  @@index([entityType])
+  @@index([userId])
+  @@index([createdAt])
+}
+
+// ─────────────────────────────────────────────
+// DUPLICATE DETECTION
+// ─────────────────────────────────────────────
+
+model DuplicateRecord {
+  id              String    @id @default(cuid())
+  entityType      String
+  sourceId        String
+  targetId        String
+  similarityScore Float
+  status          String    @default("PENDING")
+  resolvedBy      String?
+  resolvedAt      DateTime?
+  createdAt       DateTime  @default(now())
+
+  sourceQuestion Question? @relation("DupSource", fields: [sourceId], references: [id], onDelete: Cascade)
+  targetQuestion Question? @relation("DupTarget", fields: [targetId], references: [id], onDelete: Cascade)
+
+  @@unique([entityType, sourceId, targetId])
+  @@index([status])
+  @@index([similarityScore])
+  @@index([sourceId])
+  @@index([targetId])
+}
+
+// ─────────────────────────────────────────────
+// AUDIT LOGS
+// ─────────────────────────────────────────────
+
+model AuditLog {
+  id         String      @id @default(cuid())
+  userId     String?
+  action     AuditAction
+  entityType String?
+  entityId   String?
+  details    Json?
+  ipAddress  String?
+  userAgent  String?
+  createdAt  DateTime    @default(now())
+
+  user User? @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([action])
+  @@index([entityType, entityId])
+  @@index([createdAt])
+}
+
+// ─────────────────────────────────────────────
+// SYSTEM SETTINGS
+// ─────────────────────────────────────────────
+
+model SystemSetting {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     Json
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+}

@@ -1,0 +1,142 @@
+/* Design tokens for futuristic glassmorphic system
+   - Place all CSS variables here and reference from tailwind and components
+   - Light and dark theme variables are defined for easy theming
+*/
+:root {
+  /* COLOR TOKENS (HSL / accessible mapping) */
+  --color-background: 210 12% 8%; /* dark base */
+  --color-surface: 210 14% 10%;
+  --color-elevated: 210 16% 12%;
+  --color-glass: 210 18% 14%;
+
+  --color-primary: 188 95% 60%; /* cyan/teal */
+  --color-primary-foreground: 210 16% 96%;
+  --color-secondary: 278 72% 62%; /* purple */
+  --color-success: 150 60% 40%;
+  --color-warning: 40 95% 55%;
+  --color-error: 10 80% 55%;
+  --color-info: 210 80% 70%;
+
+  --text-primary: 210 16% 96%;
+  --text-secondary: 210 14% 86%;
+  --text-muted: 210 12% 68%;
+
+  /* LEGACY TOKEN MAPPINGS (for existing code compatibility) */
+  --background: var(--color-background);
+  --foreground: var(--text-primary);
+  --card: var(--color-surface);
+  --card-foreground: var(--text-primary);
+  --popover: var(--color-surface);
+  --popover-foreground: var(--text-primary);
+  --primary: var(--color-primary);
+  --primary-foreground: var(--color-primary-foreground);
+  --secondary: var(--color-secondary);
+  --muted: 210 10% 12%;
+  --muted-foreground: var(--text-muted);
+  --accent: var(--color-info);
+  --accent-foreground: var(--text-primary);
+  --destructive: var(--color-error);
+  --destructive-foreground: var(--text-primary);
+
+  --border: 210 20% 30%;
+
+  /* GLASS TOKENS */
+  --glass-opacity: 0.14;
+  --glass-blur: 12px;
+  --glass-saturate: 120%;
+  --glass-border-opacity: 0.18;
+  --glass-highlight-opacity: 0.12;
+  --glass-shadow-intensity: 0.28; /* used for card/shadow alpha */
+  --glass-glow-intensity: 0.14;
+
+  /* RADIUS */
+  --radius-sm: 6px;
+  --radius-md: 12px;
+  --radius-lg: 18px;
+  --radius-xl: 24px;
+  --radius-capsule: 9999px;
+
+  /* SPACING */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+
+  /* SHADOWS */
+  --shadow-1: 0 6px 18px rgba(2,6,23, calc(var(--glass-shadow-intensity)));
+  --shadow-2: 0 18px 40px rgba(2,6,23, calc(var(--glass-shadow-intensity) * 1.25));
+
+  /* TRANSITIONS */
+  --transition-fast: 120ms;
+  --transition-medium: 200ms;
+  --transition-slow: 320ms;
+
+  /* BLUR */
+  --backdrop-blur-sm: 6px;
+  --backdrop-blur-md: 12px;
+  --backdrop-blur-lg: 20px;
+}
+
+/* Dark theme mapping (inherits where possible) */
+.dark {
+  --color-background: 220 18% 6%;
+  --color-surface: 220 16% 8%;
+  --color-elevated: 220 18% 10%;
+  --color-glass: 220 20% 12%;
+
+  --text-primary: 220 18% 96%;
+  --text-secondary: 220 16% 86%;
+  --text-muted: 220 14% 68%;
+
+  --border: 220 18% 22%;
+}
+
+/* Utility glass surface classes for consistent usage */
+.glass-surface {
+  background: linear-gradient(180deg, rgba(255,255,255, calc(var(--glass-opacity) * 0.06)), rgba(255,255,255, calc(var(--glass-opacity) * 0.02)));
+  border: 1px solid hsla(var(--border), calc(var(--glass-border-opacity)));
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  box-shadow: var(--shadow-1);
+}
+
+.glass-panel {
+  background: linear-gradient(180deg, rgba(255,255,255, calc(var(--glass-opacity) * 0.05)), rgba(255,255,255, calc(var(--glass-opacity) * 0.01)));
+  border-radius: var(--radius-lg);
+  border: 1px solid hsla(var(--border), calc(var(--glass-border-opacity)));
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+}
+
+/* Input-specific glass style */
+.glass-input {
+  background: linear-gradient(180deg, rgba(255,255,255, calc(var(--glass-opacity) * 0.03)), rgba(255,255,255, calc(var(--glass-opacity) * 0.01)));
+  border: 1px solid hsla(var(--border), calc(var(--glass-border-opacity)));
+  color: hsl(var(--text-primary));
+  backdrop-filter: blur(var(--backdrop-blur-md)) saturate(var(--glass-saturate));
+  box-shadow: inset 0 2px 8px rgba(0,0,0,0.35);
+}
+
+/* Spinner */
+@keyframes dt-spin { to { transform: rotate(360deg); } }
+.dt-spinner {
+  width: 1rem;
+  height: 1rem;
+  border-radius: 9999px;
+  border: 2px solid rgba(255,255,255,0.14);
+  border-top-color: rgba(255,255,255,0.9);
+  animation: dt-spin 0.8s linear infinite;
+}
+
+/* Backwards-compat: style common legacy select class combinations
+   so existing pages using utility classes receive the glass input look
+   until all selects are migrated to .glass-input */
+select.rounded-md.border,
+select.w-full.rounded-md.border,
+select.rounded-md.border.bg-background,
+select.rounded-md.border.bg-card {
+  background: linear-gradient(180deg, rgba(255,255,255, calc(var(--glass-opacity) * 0.03)), rgba(255,255,255, calc(var(--glass-opacity) * 0.01)));
+  border: 1px solid hsla(var(--border), calc(var(--glass-border-opacity)));
+  color: hsl(var(--text-primary));
+  backdrop-filter: blur(var(--backdrop-blur-md)) saturate(var(--glass-saturate));
+  box-shadow: inset 0 2px 8px rgba(0,0,0,0.35);
+}

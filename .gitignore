@@ -1,0 +1,17 @@
+node_modules
+.next
+out
+.env
+.env.*
+.DS_Store
+npm-debug.log*
+.vite
+coverage
+playwright-report
+.test-results
+.vercel
+
+# Editor / junk artifacts (never commit)
+*Attached Element Context*
+Untitled-1.md
+MAIN_ADMIN_EMAILS=*
