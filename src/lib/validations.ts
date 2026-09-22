@@ -28,7 +28,7 @@ export const otpVerifySchema = otpEmailSchema.extend({
 export const registerSchema = z.object({
   fullName: z.string().min(2, "Name must be at least 2 characters"),
   email: z.string().email("Invalid email address"),
-  password: z.string().min(6, "Password must be at least 6 characters"),
+  password: z.string().min(8, "Password must be at least 8 characters"),
   confirmPassword: z.string(),
   boardId: z.string().uuid().optional(),
   classId: z.string().uuid().optional(),
@@ -42,7 +42,7 @@ export const adminRegisterSchema = z.object({
   email: z.string().email("Invalid email address"),
   phone: z.string().min(9, "Phone number must be at least 9 characters").optional().or(z.literal("")),
   role: z.enum(["admin", "content_manager", "reviewer", "super_admin"]).default("admin"),
-  password: z.string().min(6, "Password must be at least 6 characters"),
+  password: z.string().min(8, "Password must be at least 8 characters"),
   confirmPassword: z.string(),
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Passwords don't match",

@@ -20,7 +20,7 @@ describe("authentication validation", () => {
     const result = registerSchema.safeParse({
       fullName: "Test Student",
       email: "student@example.com",
-      password: "secret1",
+      password: "Secret123",
       confirmPassword: "different",
     });
 
@@ -30,5 +30,16 @@ describe("authentication validation", () => {
         expect.objectContaining({ path: ["confirmPassword"], message: "Passwords don't match" })
       );
     }
+  });
+
+  it("enforces a strong minimum password for registration", () => {
+    expect(
+      registerSchema.safeParse({
+        fullName: "Test Student",
+        email: "student@example.com",
+        password: "short7",
+        confirmPassword: "short7",
+      }).success
+    ).toBe(false);
   });
 });

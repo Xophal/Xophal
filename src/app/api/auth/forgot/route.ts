@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { publicEnv } from "@/lib/env";
 import { z } from "zod";
 import { createRouteHandlerClient } from "@/lib/supabase/route-handler";
-import { apiSuccess, ApiError, handleApiError } from "@/lib/api-utils";
+import { apiSuccess, ApiError, handleApiError, assertTrustedOrigin } from "@/lib/api-utils";
 import { authRateLimit } from "@/lib/redis";
 
 const forgotPasswordSchema = z.object({
@@ -11,6 +11,7 @@ const forgotPasswordSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
+    assertTrustedOrigin(request);
     const parsed = forgotPasswordSchema.safeParse(await request.json());
     if (!parsed.success) {
       throw new ApiError(400, parsed.error.errors[0]?.message || "Enter a valid email address", "VALIDATION_ERROR");

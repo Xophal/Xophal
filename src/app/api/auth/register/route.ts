@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { ApiError, apiSuccess, handleApiError, validateBody } from "@/lib/api-utils";
+import { ApiError, apiSuccess, handleApiError, validateBody, assertTrustedOrigin } from "@/lib/api-utils";
 import { buildProfileUpsertPayload } from "@/lib/auth";
 import { adminRegisterSchema, registerSchema } from "@/lib/validations";
 // Import admin client lazily inside the request handler to avoid
@@ -80,6 +80,7 @@ function formatSupabaseError(error: unknown) {
 export async function POST(request: NextRequest) {
   try {
     // Quick fail when server-side Supabase admin config is missing.
+    assertTrustedOrigin(request);
     ensureSupabaseRegistrationConfig();
 
     const body = await request.json();
@@ -244,25 +245,25 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Attempt to send a verification email using the public/server client
-    // so users receive instructions to confirm their address. This will
-    // not fail the registration flow if the email send doesn't succeed
-    // (for example when SMTP is not configured in the Supabase project).
+    // Send a 6-digit verification OTP code so the user can confirm their
+    // email address in the verify-email flow. This matches the OTP-based
+    // verification used by login and sign-up OTP flows. `signInWithOtp`
+    // with `shouldCreateUser: false` sends a code to an existing user
+    // without attempting to create a new session.
     try {
       const { createRouteHandlerClient } = await import("@/lib/supabase/route-handler");
-      const { publicEnv } = await import("@/lib/env");
       const routeClient = await createRouteHandlerClient();
-      // Supabase client has a `resend` helper to resend signup confirmation
-      // emails. Use the app URL to redirect users back after they confirm.
-      await routeClient.auth.resend({
-        type: "signup",
+      const { error: otpError } = await routeClient.auth.signInWithOtp({
         email: data.email,
-        options: { emailRedirectTo: `${publicEnv.NEXT_PUBLIC_APP_URL}/auth/callback` },
+        options: { shouldCreateUser: false },
       });
+      if (otpError) {
+        console.warn("Failed to send verification OTP after signup:", otpError);
+      }
     } catch (err) {
       // Non-fatal: log and continue. The UI guides users to "Check your
       // inbox" on the verify-email page regardless.
-      console.warn("Failed to trigger verification email:", err);
+      console.warn("Failed to trigger verification OTP:", err);
     }
 
     return apiSuccess({

@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import type { ZodSchema } from "zod";
 
 export class ApiError extends Error {
@@ -35,7 +35,7 @@ export function handleApiError(error: unknown) {
   }
   try {
     console.error("API Error:", error, error instanceof Error ? error.stack : undefined);
-  } catch (e) {
+  } catch {
     // ignore logging failures
   }
   return apiError("Internal server error", 500, "INTERNAL_ERROR");
@@ -72,4 +72,51 @@ export function paginatedResponse<T>(
       hasMore: page * limit < total,
     },
   };
+}
+
+/** Canonical app origin used to validate browser-initiated requests. */
+export function getAppOrigin(): string {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+  try {
+    return new URL(appUrl).origin;
+  } catch {
+    return "http://localhost:3000";
+  }
+}
+
+function normalizeOrigin(value: string | null | undefined): string {
+  if (!value) return "";
+  try {
+    return new URL(value).origin;
+  } catch {
+    return "";
+  }
+}
+
+function hostName(hostHeader: string | null | undefined): string {
+  return (hostHeader || "").trim().toLowerCase();
+}
+
+/**
+ * CSRF hardening for cookie-authenticated endpoints. When a browser sends an
+ * `Origin` (or `Referer`) header it must belong to the app itself; otherwise the
+ * request is rejected. Requests that carry no origin header (server-to-server
+ * calls, `curl`, tests) pass through unchanged. The check is only enforced in
+ * production so local proxies and development hosts are never blocked.
+ */
+export function assertTrustedOrigin(request: NextRequest): void {
+  const originHeader = request.headers.get("origin");
+  const sourceOrigin =
+    normalizeOrigin(originHeader) ||
+    (request.headers.get("referer") ? normalizeOrigin(request.headers.get("referer")) : "");
+  if (!sourceOrigin) return;
+
+  const allowed = hostName(getAppOrigin());
+  if (allowed && hostName(sourceOrigin) === allowed) return;
+  if (hostName(request.headers.get("host")) === hostName(sourceOrigin)) return;
+
+  // Do not block development/localhost traffic.
+  if (process.env.NODE_ENV !== "production") return;
+
+  throw new ApiError(403, "Cross-site requests are not allowed.", "CSRF_PROTECTION");
 }

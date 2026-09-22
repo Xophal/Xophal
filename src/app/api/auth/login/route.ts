@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { apiSuccess, ApiError, handleApiError, validateBody } from "@/lib/api-utils";
+import { apiSuccess, ApiError, handleApiError, assertTrustedOrigin } from "@/lib/api-utils";
 import { createRouteHandlerClient } from "@/lib/supabase/route-handler";
 import { authRateLimit } from "@/lib/redis";
 import { promoteMainAdminProfile } from "@/lib/auth";
@@ -12,6 +12,7 @@ const loginSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
+    assertTrustedOrigin(request);
     const body = await request.json();
     const parsed = loginSchema.safeParse(body);
     if (!parsed.success) throw new ApiError(400, parsed.error.errors[0]?.message || "Invalid credentials", "VALIDATION_ERROR");
@@ -39,11 +40,10 @@ export async function POST(request: NextRequest) {
     });
 
     if (error || !data?.session) {
-      // Try to surface a helpful message when Supabase indicates the
-      // account is unconfirmed. Fall back to a generic message otherwise
-      // to avoid leaking information about which accounts exist.
-      const errMsg = (error && (error as any).message) || "";
-      const isUnconfirmed = /confirm|confirmed|not verified|not confirmed|email.*confirm/i.test(errMsg);
+      const isUnconfirmed =
+        (error?.code ?? "") === "user_requires_confirm" ||
+        (error?.message ?? "").toLowerCase() ===
+          "your account needs to be confirmed before signing in. Please check your email.";
       const message = isUnconfirmed
         ? "Invalid email or password. If your email is not verified, check your inbox."
         : "Invalid email or password.";

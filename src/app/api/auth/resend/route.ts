@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { apiSuccess, ApiError, handleApiError, validateBody } from "@/lib/api-utils";
+import { apiSuccess, ApiError, handleApiError, validateBody, assertTrustedOrigin } from "@/lib/api-utils";
 import { z } from "zod";
 import { authRateLimit } from "@/lib/redis";
 
@@ -7,6 +7,7 @@ const bodySchema = z.object({ email: z.string().email() });
 
 export async function POST(request: NextRequest) {
   try {
+    assertTrustedOrigin(request);
     const body = await request.json();
     const parsed = bodySchema.safeParse(body);
     if (!parsed.success) throw new ApiError(400, parsed.error.errors[0]?.message || "Invalid payload", "VALIDATION_ERROR");

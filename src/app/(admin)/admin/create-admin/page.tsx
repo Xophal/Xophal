@@ -65,7 +65,7 @@ export default function CreateAdminPage() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
-              <Input id="password" name="password" type="password" required minLength={6} />
+              <Input id="password" name="password" type="password" required minLength={8} />
             </div>
             <div className="space-y-2">
               <Label htmlFor="role">Role</Label>

@@ -1,6 +1,6 @@
 import { otpRequestSchema } from "@/lib/validations";
 import { NextRequest } from "next/server";
-import { ApiError, apiSuccess, handleApiError, validateBody } from "@/lib/api-utils";
+import { ApiError, apiSuccess, handleApiError, validateBody, assertTrustedOrigin } from "@/lib/api-utils";
 import { createRouteHandlerClient } from "@/lib/supabase/route-handler";
 import { authRateLimit } from "@/lib/redis";
 
@@ -17,6 +17,7 @@ function getRequestIp(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    assertTrustedOrigin(request);
     const data = await validateBody(otpRequestSchema, await request.json());
     if (data.intent === "admin-login" && data.fullName) {
       throw new ApiError(400, "Invalid OTP request", "VALIDATION_ERROR");

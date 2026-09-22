@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { ApiError, apiSuccess, handleApiError, validateBody } from "@/lib/api-utils";
+import { ApiError, apiSuccess, handleApiError, validateBody, assertTrustedOrigin } from "@/lib/api-utils";
 import { createRouteHandlerClient } from "@/lib/supabase/route-handler";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { authRateLimit } from "@/lib/redis";
@@ -14,6 +14,7 @@ function getRequestIp(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    assertTrustedOrigin(request);
     const data = await validateBody(otpVerifySchema, await request.json());
 
     if (!authRateLimit && process.env.NODE_ENV === "production") {
