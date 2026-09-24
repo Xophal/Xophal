@@ -17,6 +17,7 @@ import { isAdminRole } from "@/lib/roles";
 import { createClient as createBrowserSupabaseClient } from "@/lib/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { OtpForm } from "@/components/auth/otp-form";
+import XophalLogo from "@/components/shared/xophal-logo";
 
 type LoginFormProps = {
   mode?: "student" | "admin";
@@ -38,7 +39,7 @@ export function LoginForm({ mode = "student", onSuccess, allowSelfRegistration =
       : ROUTES.dashboard;
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [authMethod, setAuthMethod] = useState<"otp" | "password">("otp");
+  const [authMethod, setAuthMethod] = useState<"otp" | "password">("password");
 
   // Surface OAuth/callback failures (e.g. "access_denied" on Google, an invalid
   // auth code, or a code-exchange error) instead of silently bouncing the user
@@ -135,6 +136,9 @@ export function LoginForm({ mode = "student", onSuccess, allowSelfRegistration =
   return (
     <Card className={isAdminMode ? "glass w-full max-w-md admin-auth-card border-primary/30 bg-slate-950/50 text-slate-50 shadow-2xl shadow-primary/10" : "glass w-full max-w-md student-auth-card auth-panel-login text-white shadow-2xl"}>
       <CardHeader className="relative z-10 text-center py-8">
+        <div className="mb-5 flex justify-center">
+          <XophalLogo variant="stacked" size="lg" alt="Xophal" className="w-[220px]" />
+        </div>
         <div className={isAdminMode ? "admin-auth-kicker mb-3" : "student-auth-kicker mb-3"}>
           {isAdminMode ? "XOPHAL CONTROL ROOM" : "XOPHAL LEARNING HUB"}
         </div>

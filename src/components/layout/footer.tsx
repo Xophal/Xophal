@@ -1,6 +1,7 @@
 import Link from "next/link";
-import { BookOpen, Facebook, Instagram, Mail, MessageCircle, Phone, ShieldCheck, FileText, HelpCircle } from "lucide-react";
-import { APP_NAME, ROUTES } from "@/constants";
+import { Facebook, Instagram, Mail, MessageCircle, Phone, ShieldCheck, FileText, HelpCircle } from "lucide-react";
+import { APP_NAME } from "@/constants";
+import XophalLogo from "@/components/shared/xophal-logo";
 import { SUPPORT_EMAIL, SUPPORT_PHONE } from "@/lib/legal";
 
 const SOCIALS = [
@@ -15,12 +16,7 @@ export function Footer() {
       <div className="container mx-auto px-4 py-12">
         <div className="grid gap-8 md:grid-cols-4">
           <div className="space-y-3">
-            <div className="flex items-center gap-2 font-semibold">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-                <BookOpen className="h-4 w-4" />
-              </div>
-              {APP_NAME}
-            </div>
+            <XophalLogo variant="horizontal" size="sm" alt={APP_NAME} className="w-[180px]" />
             <p className="text-sm text-muted-foreground">Empowering students through smart learning and mock practice.</p>
             <p className="text-sm text-muted-foreground">Learn • Practice • Improve</p>
 

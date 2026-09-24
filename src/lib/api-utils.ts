@@ -97,6 +97,33 @@ function hostName(hostHeader: string | null | undefined): string {
   return (hostHeader || "").trim().toLowerCase();
 }
 
+function normalizedHost(hostHeader: string | null | undefined): string {
+  const value = hostName(hostHeader).replace(/:\d+$/, "");
+  if (!value) return "";
+
+  try {
+    const parsed = new URL(value.includes("://") ? value : `https://${value}`);
+    const hostname = parsed.hostname.toLowerCase();
+    if (hostname === "localhost" || /^\d+(?:\.\d+){3}$/.test(hostname) || hostname === "[::1]") return hostname;
+    const labels = hostname.split(".").filter(Boolean);
+    if (labels.length <= 2) return labels.join(".").replace(/^www\./, "");
+    return labels.slice(-2).join(".");
+  } catch {
+    const hostname = value.toLowerCase();
+    if (hostname === "localhost" || /^\d+(?:\.\d+){3}$/.test(hostname) || hostname === "[::1]") return hostname;
+    const labels = hostname.split(".").filter(Boolean);
+    if (labels.length <= 2) return labels.join(".").replace(/^www\./, "");
+    return labels.slice(-2).join(".");
+  }
+}
+
+function isSameSiteHost(left: string | null | undefined, right: string | null | undefined): boolean {
+  const leftHost = normalizedHost(left);
+  const rightHost = normalizedHost(right);
+  if (!leftHost || !rightHost) return false;
+  return leftHost === rightHost;
+}
+
 /**
  * CSRF hardening for cookie-authenticated endpoints. When a browser sends an
  * `Origin` (or `Referer`) header it must belong to the app itself; otherwise the
@@ -111,9 +138,10 @@ export function assertTrustedOrigin(request: NextRequest): void {
     (request.headers.get("referer") ? normalizeOrigin(request.headers.get("referer")) : "");
   if (!sourceOrigin) return;
 
-  const allowed = hostName(getAppOrigin());
-  if (allowed && hostName(sourceOrigin) === allowed) return;
-  if (hostName(request.headers.get("host")) === hostName(sourceOrigin)) return;
+  const sourceHost = new URL(sourceOrigin).host;
+  const appHost = new URL(getAppOrigin()).host;
+  const requestHost = request.headers.get("host");
+  if (isSameSiteHost(sourceHost, appHost) || isSameSiteHost(sourceHost, requestHost)) return;
 
   // Do not block development/localhost traffic.
   if (process.env.NODE_ENV !== "production") return;

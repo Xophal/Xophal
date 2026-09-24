@@ -61,9 +61,9 @@ const config = {
         sm: "calc(var(--radius) - 4px)",
       },
       fontFamily: {
-        sans: ["var(--font-geist-sans)", "system-ui", "sans-serif"],
-        mono: ["var(--font-geist-mono)", "monospace"],
-        display: ["var(--font-cabinet)", "var(--font-geist-sans)", "sans-serif"],
+        sans: ["var(--font-geist-sans, system-ui)", "system-ui", "sans-serif"],
+        mono: ["var(--font-geist-mono, ui-monospace)", "monospace"],
+        display: ["var(--font-cabinet, var(--font-geist-sans, system-ui))", "system-ui", "sans-serif"],
       },
       keyframes: {
         "fade-in": {

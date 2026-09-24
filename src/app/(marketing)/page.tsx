@@ -2,9 +2,9 @@ import Link from "next/link";
 import { ArrowRight, BarChart3, CheckCircle2, Clock3, GraduationCap, Play, Sparkles, Target } from "lucide-react";
 import Icon from "@/components/icons/Icon";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { APP_NAME, ROUTES } from "@/constants";
+import HeroSection from "@/components/marketing/HeroSection";
+import { ROUTES } from "@/constants";
 import { createClient } from "@/lib/supabase/server";
 
 const features = [
@@ -51,33 +51,7 @@ export default async function HomePage() {
 
   return (
     <main className="home-page">
-      <section className="home-hero">
-        <div className="container mx-auto grid max-w-7xl items-center gap-10 px-4 pb-14 pt-28 sm:gap-12 md:grid-cols-[minmax(0,0.92fr)_minmax(420px,0.88fr)] md:pb-24 md:pt-36">
-          <div className="home-hero-copy">
-            <Badge variant="secondary" className="home-eyebrow mb-5">SEBA & CBSE preparation, made clear</Badge>
-            <h1 aria-label={`Master Your Exams with ${APP_NAME}`} className="max-w-3xl text-4xl font-bold leading-[1.02] tracking-tight sm:text-6xl md:text-7xl">
-              Study with a plan. <span className="home-highlight">Test with purpose.</span>
-            </h1>
-            <p className="mt-6 max-w-xl text-base leading-7 text-muted-foreground md:text-lg">
-              {APP_NAME} brings your syllabus, practice tests, revision notes, and progress into one focused study space.
-            </p>
-            <div className="mt-8 grid max-w-md gap-3 sm:flex">
-              <Button size="lg" asChild className="home-primary-action w-full px-7 sm:w-auto"><Link href={ROUTES.register}>Start free <ArrowRight className="ml-2 h-4 w-4" /></Link></Button>
-              <Button size="lg" variant="outline" asChild className="home-secondary-action w-full px-7 sm:w-auto"><Link href={ROUTES.tests}><Play className="mr-2 h-4 w-4" /> Try a mock test</Link></Button>
-            </div>
-            <div className="mt-8 flex flex-wrap gap-x-6 gap-y-3 text-sm text-muted-foreground">
-              {["11 question types", "Instant results", "Daily streaks"].map((item) => <span key={item} className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-primary" />{item}</span>)}
-            </div>
-          </div>
-          <div className="home-product-preview" aria-label="Xophal study dashboard preview">
-            <div className="home-preview-topline"><span className="home-status-dot" />Today&apos;s study plan <span className="ml-auto text-xs text-white/60">Tuesday, 24 min</span></div>
-            <div className="home-preview-heading"><div><p className="text-xs font-semibold uppercase tracking-[0.16em] text-cyan-200/70">Your momentum</p><p className="mt-2 text-3xl font-bold text-white">72% ready</p></div><div className="home-ring"><span>7</span><small>day streak</small></div></div>
-            <div className="home-progress"><span style={{ width: "72%" }} /></div>
-            <div className="mt-6 grid gap-3 sm:grid-cols-2"><div className="home-preview-card"><Target className="h-5 w-5 text-amber-300" /><div><p className="text-sm font-semibold text-white">Science revision</p><p className="mt-1 text-xs text-white/55">12 questions left</p></div></div><div className="home-preview-card"><BarChart3 className="h-5 w-5 text-cyan-300" /><div><p className="text-sm font-semibold text-white">Accuracy</p><p className="mt-1 text-xs text-white/55">+18% this week</p></div></div></div>
-            <div className="mt-6 rounded-2xl border border-white/10 bg-white/[0.06] p-4"><div className="flex items-center justify-between text-sm text-white/80"><span>Next up</span><Clock3 className="h-4 w-4 text-cyan-200" /></div><div className="mt-3 flex items-center justify-between"><p className="font-semibold text-white">Chemical Reactions</p><span className="text-xs text-cyan-200">15 min</span></div></div>
-          </div>
-        </div>
-      </section>
+      <HeroSection />
 
       <section id="boards" className="home-section home-board-section border-y py-20">
         <div className="container mx-auto px-4">

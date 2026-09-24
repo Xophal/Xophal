@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import { usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
 import * as Icons from "lucide-react";
+import XophalLogo from "@/components/shared/xophal-logo";
 
 type NavItem = { href: string; icon: string; label: string };
 type SideNavProfile = {
@@ -50,15 +51,17 @@ export function Sidenav({ items, profile, variant = "student" }: { items: NavIte
         className="flex h-full min-h-[calc(100vh-1.5rem)] flex-col overflow-hidden rounded-[28px] border border-slate-200/80 bg-[linear-gradient(180deg,rgba(12,18,29,0.96),rgba(9,13,20,0.92))] text-slate-100 shadow-[0_30px_80px_rgba(15,23,42,0.28)] backdrop-blur-xl dark:border-white/10"
       >
         <div className="flex items-center justify-between border-b border-white/10 px-4 py-4 md:px-5">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[linear-gradient(135deg,#22c55e,#14b8a6,#0ea5e9)] text-sm font-black text-white shadow-lg shadow-emerald-500/30">
-              X
-            </div>
-            {!collapsed && (
-              <div>
-                <div className="text-sm font-black tracking-[0.22em] text-white/90">XOPHAL</div>
-                <div className="text-[10px] uppercase tracking-[0.2em] text-slate-400">{variant === "admin" ? "control room" : "student"}</div>
-              </div>
+          <div className="flex items-center gap-3 overflow-hidden">
+            {collapsed ? (
+              <XophalLogo variant="mark" size="sm" alt="Xophal" className="h-8 w-8 shrink-0" />
+            ) : (
+              <>
+                <XophalLogo variant="mark" size="sm" alt="Xophal" className="h-9 w-9 shrink-0" />
+                <div className="min-w-0">
+                  <div className="text-sm font-black tracking-[0.2em] text-white/90">XOPHAL</div>
+                  <div className="text-[10px] uppercase tracking-[0.2em] text-slate-400">{variant === "admin" ? "control room" : "student"}</div>
+                </div>
+              </>
             )}
           </div>
 

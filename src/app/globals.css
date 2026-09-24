@@ -6,6 +6,11 @@
 
 @layer base {
   :root {
+    --xophal-blue: #00B4FF;
+    --xophal-purple: #8B5CF6;
+    --xophal-navy: #0B183B;
+    --xophal-white: #F8FAFF;
+    --xophal-gold: #D4AF37;
     --background: 32 42% 97%;
     --foreground: 155 24% 16%;
     --card: 0 0% 100%;
@@ -76,6 +81,695 @@
   .home-page { overflow: hidden; }
   .site-header { isolation: isolate; }
   .site-navbar { min-height: 58px; border: 1px solid hsl(var(--border) / 0.9); background: hsl(var(--card) / 0.94); color: hsl(var(--foreground)); backdrop-filter: blur(18px) saturate(140%); -webkit-backdrop-filter: blur(18px) saturate(140%); }
+  @keyframes xophal-logo-pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.97; transform: scale(1.02); }
+  }
+
+  .xophal-hero {
+    position: relative;
+    overflow: hidden;
+    background: linear-gradient(135deg, #020617 0%, #0b183b 42%, #111b4d 100%);
+    border-bottom: 1px solid rgba(148, 163, 184, 0.18);
+  }
+
+  .xophal-hero__backdrop {
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(circle at 15% 15%, rgba(59, 130, 246, 0.15), transparent 28%),
+      radial-gradient(circle at 82% 12%, rgba(168, 85, 247, 0.12), transparent 26%),
+      radial-gradient(circle at 70% 30%, rgba(34, 211, 238, 0.14), transparent 26%);
+    pointer-events: none;
+  }
+
+  .xophal-hero__backdrop::before,
+  .xophal-hero__backdrop::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background:
+      linear-gradient(120deg, transparent 0 42%, rgba(255,255,255,0.08) 47%, transparent 58%),
+      linear-gradient(130deg, transparent 0 58%, rgba(45, 212, 191, 0.08) 64%, transparent 72%);
+    transform: skewX(-18deg) translateX(-12%);
+    opacity: 0.9;
+  }
+
+  .xophal-hero__backdrop::after {
+    background: linear-gradient(135deg, rgba(59,130,246,0.14), transparent 45%, rgba(168,85,247,0.12) 75%, transparent 100%);
+    transform: none;
+  }
+
+  .xophal-hero__grid {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    align-items: center;
+    gap: 2.5rem;
+    grid-template-columns: 1fr;
+  }
+
+  .xophal-hero__content {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+
+  .xophal-hero__brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.9rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .xophal-hero__brand-mark {
+    width: 3.2rem;
+    height: 3.2rem;
+    flex-shrink: 0;
+  }
+
+  .xophal-hero__brand-wordmark {
+    display: flex;
+    flex-direction: column;
+    line-height: 0.9;
+    color: #f8faff;
+  }
+
+  .xophal-hero__brand-wordmark span {
+    font-size: clamp(2.8rem, 5vw, 5.2rem);
+    font-weight: 900;
+    letter-spacing: -0.09em;
+  }
+
+  .xophal-hero__brand-wordmark small {
+    margin-top: 0.45rem;
+    font-size: 0.8rem;
+    letter-spacing: 0.58em;
+    color: #7dd3fc;
+    font-weight: 700;
+  }
+
+  .xophal-hero__eyebrow {
+    margin-bottom: 1.4rem;
+    font-size: 0.76rem;
+    font-weight: 800;
+    letter-spacing: 0.38em;
+    text-transform: uppercase;
+    color: rgba(191, 219, 254, 0.9);
+  }
+
+  .xophal-hero__heading {
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    font-size: clamp(2.9rem, 5.3vw, 5.25rem);
+    line-height: 0.9;
+    letter-spacing: -0.06em;
+    font-weight: 900;
+    color: #f8faff;
+  }
+
+  .xophal-hero__heading span {
+    display: block;
+    margin-top: 0.2em;
+    font-weight: 800;
+    color: rgba(248,250,255,0.96);
+  }
+
+  .xophal-hero__heading em {
+    display: inline-block;
+    font-style: normal;
+    background: linear-gradient(135deg, #00b4ff 0%, #2563eb 42%, #8b5cf6 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  .xophal-hero__description {
+    max-width: 35rem;
+    margin-top: 1.5rem;
+    color: rgba(203, 213, 225, 0.9);
+    font-size: 1.2rem;
+    line-height: 1.6;
+  }
+
+  .xophal-hero__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    align-items: center;
+    margin-top: 2rem;
+  }
+
+  .xophal-hero__primary-btn {
+    background: linear-gradient(135deg, #00b4ff 0%, #2563eb 48%, #8b5cf6 100%);
+    border: 1px solid rgba(255,255,255,0.20);
+    box-shadow: 0 18px 35px rgba(59,130,246,0.35);
+    color: white;
+    font-weight: 700;
+    padding: 0.95rem 1.5rem;
+    border-radius: 999px;
+  }
+
+  .xophal-hero__primary-btn:hover {
+    filter: brightness(1.03);
+    transform: translateY(-1px);
+  }
+
+  .xophal-hero__primary-btn a {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+    color: white;
+  }
+
+  .xophal-hero__secondary-btn {
+    border-radius: 999px;
+    background: rgba(15, 23, 42, 0.35);
+    border: 1px solid rgba(148, 163, 184, 0.28);
+    color: white;
+    font-weight: 700;
+    padding: 0.95rem 1.5rem;
+  }
+
+  .xophal-hero__play-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.14);
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.12);
+  }
+
+  .xophal-hero__features {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.9rem 1rem;
+    max-width: 30rem;
+    margin-top: 2.25rem;
+  }
+
+  .xophal-hero__feature-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    min-height: 3.5rem;
+    padding: 0.5rem 0.65rem;
+    color: rgba(248,250,255,0.92);
+    font-weight: 600;
+    white-space: pre-line;
+    line-height: 1.1;
+  }
+
+  .xophal-hero__feature-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.4rem;
+    height: 2.4rem;
+    border-radius: 0.8rem;
+    background: rgba(14, 165, 233, 0.12);
+    border: 1px solid rgba(96, 165, 250, 0.22);
+    color: #7dd3fc;
+    box-shadow: inset 0 0 0 1px rgba(125, 211, 252, 0.08);
+  }
+
+  .xophal-hero__visual {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 36rem;
+  }
+
+  .xophal-hero__visual-shell {
+    position: relative;
+    width: min(100%, 42rem);
+    height: 34rem;
+    border-radius: 2rem;
+    background: radial-gradient(circle at 30% 20%, rgba(96,165,250,0.16), transparent 25%), rgba(3, 7, 18, 0.12);
+    overflow: hidden;
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.05);
+  }
+
+  .xophal-hero__x {
+    position: absolute;
+    width: 18rem;
+    height: 18rem;
+    background: linear-gradient(135deg, rgba(0,180,255,0.84), rgba(139,92,246,0.8));
+    clip-path: polygon(0 38%, 36% 0, 54% 0, 22% 56%, 100% 100%, 68% 100%, 44% 64%, 0 100%);
+    opacity: 0.22;
+    filter: blur(2px);
+    transform: rotate(18deg);
+  }
+
+  .xophal-hero__x--large {
+    top: 2rem;
+    right: 1rem;
+  }
+
+  .xophal-hero__x--small {
+    left: -2rem;
+    bottom: 3rem;
+    transform: rotate(22deg) scale(0.7);
+  }
+
+  .xophal-hero__card {
+    position: absolute;
+    z-index: 4;
+    border-radius: 1.2rem;
+    border: 1px solid rgba(255,255,255,0.16);
+    background: rgba(11, 24, 59, 0.78);
+    backdrop-filter: blur(12px);
+    box-shadow: 0 20px 60px rgba(2,6,23,0.26);
+  }
+
+  .xophal-hero__card--mock {
+    top: 9.25rem;
+    left: 28%;
+    width: 15rem;
+    padding: 0.9rem 0.95rem 1rem;
+  }
+
+  .xophal-hero__card-header {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    font-size: 0.92rem;
+    font-weight: 700;
+    color: #f8faff;
+  }
+
+  .xophal-hero__mini-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.7rem;
+    height: 1.7rem;
+    border-radius: 0.55rem;
+    background: rgba(96,165,250,0.18);
+    color: #c4f1ff;
+  }
+
+  .xophal-hero__card-body {
+    margin-top: 0.9rem;
+  }
+
+  .xophal-hero__list-lines {
+    display: grid;
+    gap: 0.45rem;
+    margin-bottom: 0.8rem;
+  }
+
+  .xophal-hero__list-lines span {
+    display: block;
+    height: 0.48rem;
+    border-radius: 999px;
+    background: rgba(148, 163, 184, 0.25);
+  }
+
+  .xophal-hero__card-cta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    color: rgba(226,232,240,0.88);
+    font-size: 0.72rem;
+  }
+
+  .xophal-hero__card-cta button {
+    border: 1px solid rgba(104, 234, 255, 0.3);
+    background: rgba(59,130,246,0.18);
+    color: #f8fcff;
+    border-radius: 999px;
+    padding: 0.38rem 0.7rem;
+    font-size: 0.73rem;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.2rem;
+  }
+
+  .xophal-hero__card--accuracy {
+    left: 2%;
+    top: 20rem;
+    width: 13.5rem;
+    padding: 1rem 0.9rem;
+    display: flex;
+    gap: 0.8rem;
+    align-items: center;
+  }
+
+  .xophal-hero__accuracy-circle {
+    display: grid;
+    place-items: center;
+    width: 5.2rem;
+    height: 5.2rem;
+    border-radius: 50%;
+    background: conic-gradient(#00b4ff 0 85%, rgba(255,255,255,0.08) 85% 100%);
+    position: relative;
+  }
+
+  .xophal-hero__accuracy-circle::before {
+    content: "";
+    position: absolute;
+    inset: 0.55rem;
+    border-radius: 50%;
+    background: rgba(11,24,59,0.8);
+    border: 1px solid rgba(255,255,255,0.14);
+  }
+
+  .xophal-hero__accuracy-circle span {
+    position: relative;
+    z-index: 1;
+    font-size: 1.1rem;
+    color: white;
+    font-weight: 800;
+  }
+
+  .xophal-hero__accuracy-legend {
+    display: grid;
+    gap: 0.38rem;
+    color: rgba(226,232,240,0.9);
+    font-size: 0.7rem;
+  }
+
+  .xophal-hero__accuracy-legend div {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+  }
+
+  .xophal-hero__accuracy-legend strong {
+    margin-left: auto;
+    color: white;
+  }
+
+  .dot {
+    width: 0.45rem;
+    height: 0.45rem;
+    border-radius: 50%;
+    display: inline-block;
+  }
+
+  .dot--correct { background: #45d0ff; }
+  .dot--wrong { background: #f97316; }
+  .dot--skipped { background: #a78bfa; }
+
+  .xophal-hero__card--progress {
+    right: 3%;
+    top: 0.75rem;
+    width: 12rem;
+    padding: 0.9rem 1rem 0.8rem;
+  }
+
+  .xophal-hero__progress-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: white;
+    font-size: 0.82rem;
+    font-weight: 700;
+  }
+
+  .xophal-hero__progress-bars {
+    display: flex;
+    align-items: end;
+    justify-content: space-between;
+    gap: 0.45rem;
+    height: 5.5rem;
+    margin-top: 1rem;
+    padding-top: 0.5rem;
+  }
+
+  .xophal-hero__progress-bars span {
+    flex: 1;
+    border-radius: 999px 999px 0 0;
+    background: linear-gradient(180deg, rgba(96,165,250,0.9), rgba(139,92,246,0.9));
+    box-shadow: 0 12px 20px rgba(56, 189, 248, 0.18);
+  }
+
+  .xophal-hero__card--leaderboard {
+    right: 1%;
+    bottom: 0.75rem;
+    width: 13rem;
+    padding: 0.9rem 0.8rem;
+  }
+
+  .xophal-hero__leaderboard-head {
+    color: white;
+    font-size: 0.85rem;
+    font-weight: 700;
+    margin-bottom: 0.8rem;
+  }
+
+  .xophal-hero__leaderboard-list {
+    display: grid;
+    gap: 0.45rem;
+  }
+
+  .xophal-hero__leaderboard-row {
+    display: grid;
+    grid-template-columns: 1.2rem 1fr auto;
+    gap: 0.5rem;
+    align-items: center;
+    color: rgba(226,232,240,0.9);
+    font-size: 0.72rem;
+  }
+
+  .xophal-hero__leaderboard-row strong {
+    color: white;
+  }
+
+  .xophal-hero__student {
+    position: absolute;
+    bottom: 0;
+    left: 68%;
+    transform: translateX(-50%);
+    width: 18rem;
+    height: 21rem;
+    z-index: 2;
+    transform: translateX(-50%) scale(0.95);
+  }
+
+  .xophal-hero__student-head {
+    position: absolute;
+    left: 50%;
+    top: 0.4rem;
+    transform: translateX(-50%);
+    width: 7.5rem;
+    height: 7.5rem;
+    border-radius: 50%;
+    background: linear-gradient(180deg, #f4c5a6 0%, #c97f62 100%);
+    box-shadow: inset 0 -0.3rem 0 rgba(82, 39, 17, 0.16);
+  }
+
+  .xophal-hero__student-body {
+    position: absolute;
+    left: 50%;
+    bottom: 3.2rem;
+    transform: translateX(-50%);
+    width: 16rem;
+    height: 12rem;
+    border-radius: 2.2rem 2.2rem 1.6rem 1.6rem;
+    background: linear-gradient(180deg, #0b172f 0%, #111f5a 30%, #0b183b 100%);
+    box-shadow: inset 0 0 0 1px rgba(96, 165, 250, 0.12);
+  }
+
+  .xophal-hero__student-laptop {
+    position: absolute;
+    left: 50%;
+    bottom: 0.8rem;
+    transform: translateX(-50%);
+    width: 20rem;
+    height: 12rem;
+  }
+
+  .xophal-hero__laptop-screen {
+    width: 92%;
+    height: 8.2rem;
+    margin: 0 auto;
+    border-radius: 1.1rem 1.1rem 0.8rem 0.8rem;
+    background: linear-gradient(135deg, rgba(19, 74, 138, 0.55), rgba(153, 101, 255, 0.32));
+    border: 1px solid rgba(164, 227, 255, 0.28);
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.12), 0 25px 40px rgba(0,0,0,0.2);
+    display: grid;
+    place-items: center;
+  }
+
+  .xophal-hero__laptop-mark {
+    display: grid;
+    place-items: center;
+    width: 4rem;
+    height: 4rem;
+    border-radius: 1rem;
+    background: rgba(15,23,42,0.16);
+  }
+
+  .xophal-hero__laptop-base {
+    width: 100%;
+    height: 1.4rem;
+    margin-top: 0.5rem;
+    border-radius: 0 0 1.2rem 1.2rem;
+    background: linear-gradient(135deg, rgba(148,163,184,0.72), rgba(15,23,42,0.75));
+    box-shadow: 0 12px 26px rgba(0,0,0,0.2);
+  }
+
+  .xophal-hero__book-stack {
+    position: absolute;
+    left: 28%;
+    bottom: 1.8rem;
+    width: 8.8rem;
+    display: grid;
+    gap: 0.35rem;
+    z-index: 3;
+  }
+
+  .xophal-hero__book-stack span {
+    display: block;
+    border-radius: 0.55rem;
+    padding: 0.4rem 0.55rem;
+    font-size: 0.52rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    background: linear-gradient(135deg, rgba(5, 150, 105, 0.18), rgba(59,130,246,0.26));
+    color: #e0f2fe;
+    border: 1px solid rgba(255,255,255,0.1);
+    text-align: center;
+  }
+
+  .xophal-hero__cup {
+    position: absolute;
+    right: 1.8rem;
+    bottom: 1.6rem;
+    width: 3.1rem;
+    height: 3.1rem;
+    border-radius: 50%;
+    background: linear-gradient(180deg, #7dd3fc 0%, #38bdf8 100%);
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.22), 0 18px 26px rgba(56,189,248,0.2);
+  }
+
+  .xophal-hero__plant {
+    position: absolute;
+    right: 6rem;
+    bottom: 1.6rem;
+    width: 2.3rem;
+    height: 3.1rem;
+    border-radius: 1.2rem 1.2rem 0.8rem 0.8rem;
+    background: linear-gradient(180deg, #2dd4bf, #34d399);
+    transform: rotate(-14deg);
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.12);
+  }
+
+  @media (min-width: 768px) {
+    .xophal-hero__grid {
+      grid-template-columns: minmax(0, 0.96fr) minmax(18rem, 1.04fr);
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .xophal-hero__visual {
+      min-height: 36rem;
+    }
+  }
+
+  @media (max-width: 767px) {
+    .xophal-hero__brand {
+      justify-content: center;
+    }
+
+    .xophal-hero__eyebrow {
+      text-align: center;
+      letter-spacing: 0.22em;
+    }
+
+    .xophal-hero__heading,
+    .xophal-hero__description,
+    .xophal-hero__actions,
+    .xophal-hero__features {
+      text-align: center;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .xophal-hero__description {
+      margin-left: auto;
+      margin-right: auto;
+      font-size: 1.05rem;
+    }
+
+    .xophal-hero__actions {
+      flex-direction: column;
+      width: 100%;
+    }
+
+    .xophal-hero__primary-btn,
+    .xophal-hero__secondary-btn {
+      width: min(100%, 20rem);
+      justify-content: center;
+    }
+
+    .xophal-hero__features {
+      max-width: 100%;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .xophal-hero__visual {
+      min-height: 28rem;
+    }
+
+    .xophal-hero__visual-shell {
+      height: 26rem;
+      width: min(100%, 30rem);
+    }
+
+    .xophal-hero__card--mock {
+      left: 38%;
+      width: 12rem;
+      top: 5.5rem;
+    }
+
+    .xophal-hero__card--accuracy {
+      left: 0.5rem;
+      top: 10.5rem;
+      width: 11rem;
+    }
+
+    .xophal-hero__card--progress {
+      right: 0.5rem;
+      top: 1rem;
+      width: 10.5rem;
+    }
+
+    .xophal-hero__card--leaderboard {
+      right: 0.5rem;
+      bottom: 0.8rem;
+      width: 10.8rem;
+    }
+
+    .xophal-hero__student {
+      transform: translateX(-50%) scale(0.85);
+      bottom: -0.8rem;
+    }
+
+    .xophal-hero__book-stack {
+      left: 9%;
+      bottom: 0.8rem;
+      width: 6.8rem;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .xophal-hero__visual-shell,
+    .xophal-hero__card,
+    .xophal-hero__primary-btn,
+    .xophal-hero__secondary-btn {
+      animation: none !important;
+      transition: none !important;
+    }
+  }
   .site-navbar a, .site-navbar button { color: hsl(var(--foreground)); }
   .site-navbar a.bg-primary\/10 { color: hsl(var(--primary)); }
   .site-navbar .bg-primary { color: hsl(var(--primary-foreground)); }
@@ -134,7 +828,7 @@
   .home-progress { height: 8px; margin-top: 22px; overflow: hidden; border-radius: 99px; background: rgba(255,255,255,0.1); }
   .home-progress span { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #fbbf24, #2dd4bf); }
   .home-preview-card { display: flex; align-items: center; gap: 12px; border: 1px solid rgba(255,255,255,0.09); border-radius: 16px; padding: 14px; background: rgba(255,255,255,0.06); }
-  .home-section { position: relative; }
+  .home-section { position: relative; scroll-margin-top: 6.5rem; }
   .home-board-section { background: hsl(var(--muted) / 0.46); }
   .home-section-kicker { color: hsl(var(--accent)); font-size: 0.7rem; font-weight: 800; letter-spacing: 0.16em; text-transform: uppercase; }
   .home-board-card, .home-feature-card { border-color: hsl(var(--border) / 0.75); background: hsl(var(--card) / 0.72); transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease; }

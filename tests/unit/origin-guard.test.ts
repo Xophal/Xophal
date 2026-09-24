@@ -33,6 +33,13 @@ describe("assertTrustedOrigin", () => {
     expect(() => assertTrustedOrigin(makeRequest({ origin: "https://evil.example" }))).toThrow();
   });
 
+  it("accepts same-site host aliases such as www and apex domains", () => {
+    expect(() => assertTrustedOrigin(makeRequest({
+      origin: "https://www.xophal.com",
+      host: "app.xophal.com",
+    }))).not.toThrow();
+  });
+
   it("allows requests with no origin header (server-to-server / tests)", () => {
     expect(() => assertTrustedOrigin(makeRequest({}))).not.toThrow();
   });
