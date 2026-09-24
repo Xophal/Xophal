@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import HeroSection from "@/components/marketing/HeroSection";
 import { ROUTES } from "@/constants";
+import { SUPPORT_EMAIL, SUPER_ADMIN_PHONE, ADMIN_PHONE, phoneHref } from "@/lib/legal";
 import { createClient } from "@/lib/supabase/server";
 
 const features = [
@@ -104,7 +105,7 @@ export default async function HomePage() {
         <div className="container mx-auto px-4 text-center">
           <Sparkles className="mx-auto h-7 w-7 text-amber-300" /><h2 className="mt-4 text-3xl font-bold text-white">Your next strong score starts today.</h2>
           <p className="mx-auto mt-3 max-w-xl text-muted-foreground">
-            Build a consistent rhythm with structured learning, useful feedback, and practice that meets you where you are.
+            Need help? Contact the Super Admin at <a href={phoneHref(SUPER_ADMIN_PHONE)} className="font-semibold text-white underline">{SUPER_ADMIN_PHONE}</a> or <a href={`mailto:${SUPPORT_EMAIL}`} className="font-semibold text-white underline">{SUPPORT_EMAIL}</a>. Admin support: <a href={phoneHref(ADMIN_PHONE)} className="font-semibold text-white underline">{ADMIN_PHONE}</a>.
           </p>
           <Button size="lg" className="mt-8 px-8 py-3" asChild>
             <Link href={ROUTES.register}>Create Free Account</Link>

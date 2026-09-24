@@ -1,7 +1,30 @@
-export const SUPPORT_EMAIL = "support@xophal.in";
-export const SUPPORT_PHONE = "+91 98765 43210";
-export const SUPPORT_ADDRESS = "Bhubaneswar, Odisha, India";
+export const SUPER_ADMIN_PHONE = "+91 88768 86919";
+export const SUPER_ADMIN_EMAIL = "borahjayanta840@gmail.com";
+export const ADMIN_PHONE = "+91 93659 90261";
+export const ADMIN_EMAIL = "biplopdasofficial1999@gmail.com";
+export const SUPPORT_EMAIL = "xophal123@gmail.com";
+export const SUPPORT_PHONE = SUPER_ADMIN_PHONE;
+export const SUPPORT_ADDRESS = "Jorhat, Assam, India";
 export const CONTACT_FORM_MAX_MESSAGE_LENGTH = 2000;
+
+export const CONTACT_DETAILS = [
+  {
+    label: "Super Admin",
+    phone: SUPER_ADMIN_PHONE,
+    email: SUPER_ADMIN_EMAIL,
+    whatsapp: `https://wa.me/918876886919`,
+  },
+  {
+    label: "Admin",
+    phone: ADMIN_PHONE,
+    email: ADMIN_EMAIL,
+    whatsapp: `https://wa.me/919365990261`,
+  },
+] as const;
+
+export function phoneHref(phone: string) {
+  return `tel:${phone.replace(/[^+\d]/g, "")}`;
+}
 
 export function sanitizeContactInput(value: string, maxLength = CONTACT_FORM_MAX_MESSAGE_LENGTH) {
   const stripped = value

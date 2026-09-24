@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Facebook, Instagram, Mail, MessageCircle, Phone, ShieldCheck, FileText, HelpCircle } from "lucide-react";
 import { APP_NAME } from "@/constants";
-import { SUPPORT_EMAIL, SUPPORT_PHONE } from "@/lib/legal";
+import { SUPPORT_EMAIL, SUPPORT_PHONE, SUPER_ADMIN_EMAIL, ADMIN_EMAIL, ADMIN_PHONE, phoneHref } from "@/lib/legal";
 
 const SOCIALS = [
   { name: "Telegram", href: "https://t.me/xopholstudent", icon: MessageCircle },
@@ -61,14 +61,27 @@ export function Footer() {
           <div>
             <h3 className="mb-3 text-sm font-semibold">Support</h3>
             <div className="space-y-3 text-sm text-muted-foreground">
-              <a href={`mailto:${SUPPORT_EMAIL}`} className="inline-flex items-center gap-2 hover:text-foreground">
-                <Mail className="h-4 w-4" />
-                {SUPPORT_EMAIL}
-              </a>
-              <div className="inline-flex items-center gap-2">
-                <Phone className="h-4 w-4" />
-                {SUPPORT_PHONE}
-              </div>
+            <a href={`mailto:${SUPPORT_EMAIL}`} className="inline-flex items-center gap-2 hover:text-foreground">
+              <Mail className="h-4 w-4" />
+              {SUPPORT_EMAIL}
+            </a>
+            <a href={phoneHref(SUPPORT_PHONE)} className="inline-flex items-center gap-2 hover:text-foreground">
+              <Phone className="h-4 w-4" />
+              {SUPPORT_PHONE}
+            </a>
+            <a href={phoneHref(ADMIN_PHONE)} className="inline-flex items-center gap-2 hover:text-foreground">
+              <Phone className="h-4 w-4" />
+              Admin: {ADMIN_PHONE}
+            </a>
+            <a href={`mailto:${SUPER_ADMIN_EMAIL}`} className="inline-flex items-center gap-2 hover:text-foreground">
+              <Mail className="h-4 w-4" />
+              Super Admin: {SUPER_ADMIN_EMAIL}
+            </a>
+            <a href={`mailto:${ADMIN_EMAIL}`} className="inline-flex items-center gap-2 hover:text-foreground">
+              <Mail className="h-4 w-4" />
+              Admin: {ADMIN_EMAIL}
+            </a>
+            <div className="text-xs">Jorhat, Assam, India</div>
               <Link href="/contact" className="inline-flex items-center gap-2 hover:text-foreground">
                 Contact page
               </Link>

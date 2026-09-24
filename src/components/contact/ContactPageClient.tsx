@@ -1,16 +1,9 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Facebook, Instagram, Mail, MapPin, MessageCircle, Phone, Send } from "lucide-react";
+import { Facebook, Instagram, MapPin, MessageCircle, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  CONTACT_FORM_MAX_MESSAGE_LENGTH,
-  SUPPORT_ADDRESS,
-  SUPPORT_EMAIL,
-  SUPPORT_PHONE,
-  buildSupportMailto,
-  sanitizeContactInput,
-} from "@/lib/legal";
+import { CONTACT_FORM_MAX_MESSAGE_LENGTH, CONTACT_DETAILS, SUPPORT_ADDRESS, SUPPORT_EMAIL, SUPPORT_PHONE, phoneHref, buildSupportMailto, sanitizeContactInput } from "@/lib/legal";
 
 const socialLinks = [
   { name: "Telegram", href: "https://t.me/xopholstudent", icon: MessageCircle },
@@ -83,23 +76,34 @@ export function ContactPageClient() {
       <div className="grid gap-8 lg:grid-cols-[1fr_1.2fr]">
         <aside className="rounded-3xl border bg-card p-6 shadow-sm">
           <div className="space-y-5">
-            <div className="flex items-start gap-3">
-              <Mail className="mt-0.5 h-5 w-5 text-primary" />
-              <div>
-                <p className="font-semibold">Email</p>
-                <a href={`mailto:${SUPPORT_EMAIL}`} className="text-sm text-muted-foreground hover:text-foreground">
-                  {SUPPORT_EMAIL}
-                </a>
-              </div>
+            <div>
+              <p className="font-semibold">Email</p>
+              <a href={`mailto:${SUPPORT_EMAIL}`} className="text-sm text-muted-foreground hover:text-foreground">
+                {SUPPORT_EMAIL}
+              </a>
             </div>
 
-            <div className="flex items-start gap-3">
-              <Phone className="mt-0.5 h-5 w-5 text-primary" />
-              <div>
-                <p className="font-semibold">Phone</p>
-                <p className="text-sm text-muted-foreground">{SUPPORT_PHONE}</p>
-              </div>
+            <div>
+              <p className="font-semibold">Phone / WhatsApp</p>
+              <a href={phoneHref(SUPPORT_PHONE)} className="text-sm text-muted-foreground hover:text-foreground">
+                {SUPPORT_PHONE}
+              </a>
             </div>
+
+            {CONTACT_DETAILS.map((contact) => (
+              <div key={contact.label} className="rounded-xl border bg-background/50 p-3">
+                <p className="text-sm font-semibold">{contact.label}</p>
+                <a href={phoneHref(contact.phone)} className="mt-1 block text-sm text-muted-foreground hover:text-foreground">
+                  {contact.phone}
+                </a>
+                <a href={contact.whatsapp} target="_blank" rel="noreferrer" className="mt-1 block text-sm text-primary hover:underline">
+                  WhatsApp {contact.label}
+                </a>
+                <a href={`mailto:${contact.email}`} className="mt-1 block text-sm text-muted-foreground hover:text-foreground">
+                  {contact.email}
+                </a>
+              </div>
+            ))}
 
             <div className="flex items-start gap-3">
               <MapPin className="mt-0.5 h-5 w-5 text-primary" />
