@@ -15,10 +15,6 @@ export const metadata: Metadata = {
   alternates: {
     canonical: "/",
   },
-  icons: {
-    icon: "/favicon.svg",
-    apple: "/favicon.svg",
-  },
   openGraph: {
     title: APP_NAME,
     description: APP_DESCRIPTION,
@@ -26,20 +22,11 @@ export const metadata: Metadata = {
     locale: "en_IN",
     type: "website",
     url: APP_URL,
-    images: [
-      {
-        url: "/favicon.svg",
-        width: 512,
-        height: 512,
-        alt: `${APP_NAME} logo`,
-      },
-    ],
   },
   twitter: {
-    card: "summary_large_image",
+    card: "summary",
     title: APP_NAME,
     description: APP_DESCRIPTION,
-    images: ["/favicon.svg"],
   },
 };
 

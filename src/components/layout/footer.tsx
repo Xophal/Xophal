@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { Facebook, Instagram, Mail, MessageCircle, Phone, ShieldCheck, FileText, HelpCircle } from "lucide-react";
 import { APP_NAME } from "@/constants";
-import XophalLogo from "@/components/shared/xophal-logo";
 import { SUPPORT_EMAIL, SUPPORT_PHONE } from "@/lib/legal";
 
 const SOCIALS = [
@@ -16,7 +15,6 @@ export function Footer() {
       <div className="container mx-auto px-4 py-12">
         <div className="grid gap-8 md:grid-cols-4">
           <div className="space-y-3">
-            <XophalLogo variant="horizontal" size="sm" alt={APP_NAME} className="w-[180px]" />
             <p className="text-sm text-muted-foreground">Empowering students through smart learning and mock practice.</p>
             <p className="text-sm text-muted-foreground">Learn • Practice • Improve</p>
 

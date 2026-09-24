@@ -1,5 +1,4 @@
 import Link from "next/link";
-import XophalLogo from "@/components/shared/xophal-logo";
 
 export function AuthFooter() {
   const currentYear = new Date().getFullYear();
@@ -10,7 +9,6 @@ export function AuthFooter() {
         <div className="grid gap-8 md:grid-cols-4 mb-8">
           {/* Brand Column */}
           <div className="flex flex-col gap-3">
-            <XophalLogo variant="horizontal" size="sm" alt="Xophal" className="w-[170px]" />
             <p className="text-sm text-slate-600">
               Premium online learning platform for competitive exams and mock tests
             </p>

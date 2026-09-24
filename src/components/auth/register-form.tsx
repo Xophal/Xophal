@@ -16,7 +16,6 @@ import { ROUTES } from "@/constants";
 import { getFallbackBoards, getFallbackClassesForBoard } from "@/lib/board-data";
 import type { Board, Class } from "@/types";
 import { toast } from "@/hooks/use-toast";
-import XophalLogo from "@/components/shared/xophal-logo";
 
 type RegisterFormProps = {
   mode?: "student" | "admin";
@@ -173,9 +172,6 @@ export function RegisterForm({ mode = "student", onSuccess, allowAdminSignup = f
   return (
     <Card className="glass w-full max-w-md student-auth-card auth-panel-register">
       <CardHeader className="relative z-10 text-center">
-        <div className="mb-4 flex justify-center">
-          <XophalLogo variant="stacked" size="lg" alt="Xophal" className="w-[220px]" />
-        </div>
         <div className="student-auth-kicker mb-3">
           XOPHAL LEARNING HUB
         </div>

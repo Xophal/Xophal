@@ -6,7 +6,6 @@ import { LogOut, Menu, ShieldCheck, User, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { APP_NAME } from "@/constants";
 import NotificationBell from "@/components/layout/NotificationBell";
-import XophalLogo from "@/components/shared/xophal-logo";
 import { createClient } from "@/lib/supabase/client";
 
 type SessionUser = { id: string; email?: string; full_name?: string | null };
@@ -81,9 +80,9 @@ export function Navbar() {
   return (
     <header className="site-header fixed inset-x-0 top-0 z-50 px-3 py-3 sm:px-4" data-testid="site-header">
       <nav aria-label="Primary navigation" className="site-navbar mx-auto flex max-w-7xl items-center justify-between gap-3 rounded-2xl px-3 py-2 shadow-lg shadow-primary/5 glass-panel sm:px-4">
-        <Link href="/" className="flex min-h-10 shrink-0 items-center rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2" aria-label={`${APP_NAME} home`}>
-          <XophalLogo variant="light" size="md" alt={`${APP_NAME}`} className="w-[180px] sm:w-[220px]" />
-        </Link>
+          <Link href="/" className="flex min-h-10 shrink-0 items-center rounded-md px-2 text-base font-bold tracking-tight text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2" aria-label={`${APP_NAME} home`}>
+            {APP_NAME}
+          </Link>
 
         <div className="hidden items-center gap-1 md:flex">{publicLinks.map((link) => <Link key={link.href} href={link.href} aria-current={isActive(pathname, link.href) ? "page" : undefined} className={navLinkClass(link.href)}>{link.label}</Link>)}{auth?.user && <Link href="/dashboard" aria-current={isActive(pathname, "/dashboard") ? "page" : undefined} className={navLinkClass("/dashboard")}>Dashboard</Link>}{auth?.user && auth.isAdmin && <Link href="/admin" aria-current={isActive(pathname, "/admin") ? "page" : undefined} className={navLinkClass("/admin")}>Admin Dashboard</Link>}</div>
 

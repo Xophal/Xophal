@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { ArrowRight, BarChart3, Check, Play, Rocket, ShieldCheck, Sparkles, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import XophalLogo from "@/components/shared/xophal-logo";
 import { ROUTES } from "@/constants";
 
 const featureHighlights = [
@@ -27,8 +26,7 @@ export function HeroSection() {
       <div className="container relative mx-auto max-w-7xl px-4 pb-14 pt-28 sm:px-6 lg:px-8 lg:pb-20 lg:pt-24">
         <div className="xophal-hero__grid">
           <div className="xophal-hero__content">
-            <div className="xophal-hero__brand" aria-label="Xophal brand">
-              <XophalLogo variant="mark" size="sm" alt="Xophal" className="xophal-hero__brand-mark" />
+            <div className="xophal-hero__brand" aria-label="Xophal">
               <div className="xophal-hero__brand-wordmark">
                 <span>Xophal</span>
                 <small>MOCK TESTS</small>
@@ -150,9 +148,7 @@ export function HeroSection() {
                 <div className="xophal-hero__student-body" />
                 <div className="xophal-hero__student-laptop">
                   <div className="xophal-hero__laptop-screen">
-                    <div className="xophal-hero__laptop-mark">
-                      <XophalLogo variant="mark" size="sm" alt="Xophal" className="h-8 w-8" />
-                    </div>
+                    <div className="xophal-hero__laptop-mark" aria-hidden="true" />
                   </div>
                   <div className="xophal-hero__laptop-base" />
                 </div>

@@ -81,10 +81,6 @@
   .home-page { overflow: hidden; }
   .site-header { isolation: isolate; }
   .site-navbar { min-height: 58px; border: 1px solid hsl(var(--border) / 0.9); background: hsl(var(--card) / 0.94); color: hsl(var(--foreground)); backdrop-filter: blur(18px) saturate(140%); -webkit-backdrop-filter: blur(18px) saturate(140%); }
-  @keyframes xophal-logo-pulse {
-    0%, 100% { opacity: 1; transform: scale(1); }
-    50% { opacity: 0.97; transform: scale(1.02); }
-  }
 
   .xophal-hero {
     position: relative;
