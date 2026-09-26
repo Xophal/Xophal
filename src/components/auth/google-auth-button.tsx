@@ -5,6 +5,18 @@ import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
+
+/** "or continue with" rule used to separate OAuth from password/email-code auth. */
+export function AuthDivider({ className }: { className?: string }) {
+  return (
+    <div className={cn("flex items-center gap-3", className)} aria-hidden="true">
+      <span className="h-px flex-1 bg-current opacity-20" />
+      <span className="text-xs uppercase tracking-wide opacity-70">or</span>
+      <span className="h-px flex-1 bg-current opacity-20" />
+    </div>
+  );
+}
 
 export function GoogleAuthButton({ next = "/dashboard" }: { next?: string }) {
   const [loading, setLoading] = useState(false);

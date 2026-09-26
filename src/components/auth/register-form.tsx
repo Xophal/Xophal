@@ -16,6 +16,8 @@ import { ROUTES } from "@/constants";
 import { getFallbackBoards, getFallbackClassesForBoard } from "@/lib/board-data";
 import type { Board, Class } from "@/types";
 import { toast } from "@/hooks/use-toast";
+import { GoogleAuthButton, AuthDivider } from "@/components/auth/google-auth-button";
+import { publicEnv } from "@/lib/env";
 
 type RegisterFormProps = {
   mode?: "student" | "admin";
@@ -168,6 +170,9 @@ export function RegisterForm({ mode = "student", onSuccess, allowAdminSignup = f
   }
 
   const isAdminMode = mode === "admin";
+  // Student signup only. Admin accounts are created through the approval flow,
+  // so OAuth is deliberately not offered on the admin registration form.
+  const googleAuthEnabled = publicEnv.NEXT_PUBLIC_ENABLE_GOOGLE_AUTH && !isAdminMode;
 
   return (
     <Card className="glass w-full max-w-md student-auth-card auth-panel-register">
@@ -282,6 +287,12 @@ export function RegisterForm({ mode = "student", onSuccess, allowAdminSignup = f
             {loading && <Loader2 className="animate-spin" />}
             Create account
           </Button>
+          {googleAuthEnabled && (
+            <>
+              <AuthDivider />
+              <GoogleAuthButton />
+            </>
+          )}
           <p className="text-center text-sm text-muted-foreground">
             Already have an account?{" "}
             <Link href={isAdminMode ? ROUTES.adminLogin : ROUTES.login} className="text-primary hover:underline">

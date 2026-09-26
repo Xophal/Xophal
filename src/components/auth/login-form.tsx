@@ -17,6 +17,8 @@ import { isAdminRole } from "@/lib/roles";
 import { createClient as createBrowserSupabaseClient } from "@/lib/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { OtpForm } from "@/components/auth/otp-form";
+import { GoogleAuthButton, AuthDivider } from "@/components/auth/google-auth-button";
+import { publicEnv } from "@/lib/env";
 
 type LoginFormProps = {
   mode?: "student" | "admin";
@@ -39,6 +41,9 @@ export function LoginForm({ mode = "student", onSuccess, allowSelfRegistration =
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [authMethod, setAuthMethod] = useState<"otp" | "password">("password");
+  // Hidden unless NEXT_PUBLIC_ENABLE_GOOGLE_AUTH=true, so an unconfigured
+  // Google provider cannot leave a visible-but-broken button on the form.
+  const googleAuthEnabled = publicEnv.NEXT_PUBLIC_ENABLE_GOOGLE_AUTH;
 
   // Surface OAuth/callback failures (e.g. "access_denied" on Google, an invalid
   // auth code, or a code-exchange error) instead of silently bouncing the user
@@ -197,6 +202,12 @@ export function LoginForm({ mode = "student", onSuccess, allowSelfRegistration =
             {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Sign in
           </Button>
+          {googleAuthEnabled && (
+            <>
+              <AuthDivider />
+              <GoogleAuthButton next={isAdminMode ? "/admin" : redirect} />
+            </>
+          )}
           <Button type="button" variant="link" onClick={() => setAuthMethod("otp")} className={isAdminMode ? "text-primary" : "text-white/80"}>
             Sign in with email code instead
           </Button>
