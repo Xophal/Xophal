@@ -31,6 +31,13 @@ export async function POST(request: NextRequest) {
       }
     } catch (err) {
       if (err instanceof ApiError) throw err;
+      // A limiter transport error must not silently disable brute-force
+      // protection. Fail closed in production; stay permissive in dev so a
+      // missing Redis does not block local sign-in.
+      console.error("Login rate limiter failure", err);
+      if (process.env.NODE_ENV === "production") {
+        throw new ApiError(503, "Authentication protection is temporarily unavailable.", "RATE_LIMIT_UNAVAILABLE");
+      }
     }
 
     const supabase = await createRouteHandlerClient();

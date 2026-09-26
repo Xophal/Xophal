@@ -54,8 +54,16 @@ export async function updateSession(request: NextRequest) {
     "/cookie-policy",
     "/refund-policy",
   ];
-  const isPublicPath = publicPaths.some((p) => pathname === p || pathname.startsWith("/blog/"));
-  const isAuthPath = pathname.startsWith("/login") || pathname.startsWith("/register") || pathname.startsWith("/admin/login") || pathname.startsWith("/admin/register");
+  // NOTE: the `/blog/` prefix test must be evaluated once for the pathname, not
+  // inside the per-entry `some()` callback where it was OR-ed against every
+  // public path (making any `/blog/*` URL public regardless of the list).
+  const isPublicPath =
+    pathname === "/blog" || pathname.startsWith("/blog/") || publicPaths.includes(pathname);
+  // Exact/segment matching: the previous `startsWith` also matched unrelated
+  // paths such as "/loginfoo" or "/registration-help".
+  const isAuthPath = ["/login", "/register", "/admin/login", "/admin/register"].some(
+    (p) => pathname === p || pathname.startsWith(`${p}/`)
+  );
   const isVerificationPath = pathname === "/verify-email";
   const isAdminPath = pathname.startsWith("/admin");
   const isApiPath = pathname.startsWith("/api");
@@ -64,6 +72,15 @@ export async function updateSession(request: NextRequest) {
     const url = request.nextUrl.clone();
     url.pathname = isAdminPath ? "/admin/login" : "/login";
     url.searchParams.set("redirect", pathname);
+    return NextResponse.redirect(url);
+  }
+
+  // Unverified users must be sent to /verify-email before the auth-path
+  // redirect below, otherwise they bounce /login -> /dashboard -> /verify-email.
+  if (user && !user.email_confirmed_at && !isVerificationPath && !isApiPath) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/verify-email";
+    url.search = "";
     return NextResponse.redirect(url);
   }
 
@@ -81,13 +98,6 @@ export async function updateSession(request: NextRequest) {
       url.pathname = "/dashboard";
     }
 
-    return NextResponse.redirect(url);
-  }
-
-  if (user && !user.email_confirmed_at && !isVerificationPath && !isAuthPath && !isApiPath) {
-    const url = request.nextUrl.clone();
-    url.pathname = "/verify-email";
-    url.search = "";
     return NextResponse.redirect(url);
   }
 

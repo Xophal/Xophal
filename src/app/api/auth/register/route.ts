@@ -107,7 +107,13 @@ export async function POST(request: NextRequest) {
       }
     } catch (err) {
       if (err instanceof ApiError) throw err;
-      // Non-fatal: allow registration to continue if rate limiter fails unexpectedly.
+      // Fail closed in production: a limiter transport error must not silently
+      // disable abuse protection on account creation.
+      console.error("Register rate limiter failure", err);
+      if (process.env.NODE_ENV === "production") {
+        throw new ApiError(503, "Authentication protection is temporarily unavailable.", "RATE_LIMIT_UNAVAILABLE");
+      }
+      // Non-fatal in dev: allow registration to continue if rate limiter fails.
     }
     if (isAdminRequest && process.env.ENABLE_ADMIN_SELF_REGISTER !== "true") {
       throw new ApiError(403, "Privileged accounts can only be created by an authorized administrator.", "FORBIDDEN");

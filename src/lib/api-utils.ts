@@ -93,43 +93,26 @@ function normalizeOrigin(value: string | null | undefined): string {
   }
 }
 
-function hostName(hostHeader: string | null | undefined): string {
-  return (hostHeader || "").trim().toLowerCase();
-}
-
-function normalizedHost(hostHeader: string | null | undefined): string {
-  const value = hostName(hostHeader).replace(/:\d+$/, "");
-  if (!value) return "";
-
-  try {
-    const parsed = new URL(value.includes("://") ? value : `https://${value}`);
-    const hostname = parsed.hostname.toLowerCase();
-    if (hostname === "localhost" || /^\d+(?:\.\d+){3}$/.test(hostname) || hostname === "[::1]") return hostname;
-    const labels = hostname.split(".").filter(Boolean);
-    if (labels.length <= 2) return labels.join(".").replace(/^www\./, "");
-    return labels.slice(-2).join(".");
-  } catch {
-    const hostname = value.toLowerCase();
-    if (hostname === "localhost" || /^\d+(?:\.\d+){3}$/.test(hostname) || hostname === "[::1]") return hostname;
-    const labels = hostname.split(".").filter(Boolean);
-    if (labels.length <= 2) return labels.join(".").replace(/^www\./, "");
-    return labels.slice(-2).join(".");
-  }
-}
-
-function isSameSiteHost(left: string | null | undefined, right: string | null | undefined): boolean {
-  const leftHost = normalizedHost(left);
-  const rightHost = normalizedHost(right);
-  if (!leftHost || !rightHost) return false;
-  return leftHost === rightHost;
+/**
+ * Extra origins (e.g. "https://www.xophal.com") that are trusted in addition to
+ * the canonical app origin. Configured explicitly via TRUSTED_ORIGINS so an
+ * operator can permit known aliases without trusting every subdomain of the
+ * app's registrable domain (which would be a CSRF bypass).
+ */
+function getTrustedOrigins(): string[] {
+  return (process.env.TRUSTED_ORIGINS || "")
+    .split(",")
+    .map((value) => normalizeOrigin(value.trim()))
+    .filter((value): value is string => Boolean(value));
 }
 
 /**
  * CSRF hardening for cookie-authenticated endpoints. When a browser sends an
- * `Origin` (or `Referer`) header it must belong to the app itself; otherwise the
- * request is rejected. Requests that carry no origin header (server-to-server
- * calls, `curl`, tests) pass through unchanged. The check is only enforced in
- * production so local proxies and development hosts are never blocked.
+ * `Origin` (or `Referer`) header it must belong to the app itself (or an
+ * explicitly trusted alias); otherwise the request is rejected. Requests that
+ * carry no origin header (server-to-server calls, `curl`, tests) pass through
+ * unchanged. The check is only enforced in production so local proxies and
+ * development hosts are never blocked.
  */
 export function assertTrustedOrigin(request: NextRequest): void {
   const originHeader = request.headers.get("origin");
@@ -138,13 +121,20 @@ export function assertTrustedOrigin(request: NextRequest): void {
     (request.headers.get("referer") ? normalizeOrigin(request.headers.get("referer")) : "");
   if (!sourceOrigin) return;
 
-  const sourceHost = new URL(sourceOrigin).host;
-  const appHost = new URL(getAppOrigin()).host;
-  const requestHost = request.headers.get("host");
-  if (isSameSiteHost(sourceHost, appHost) || isSameSiteHost(sourceHost, requestHost)) return;
+  const sourceHost = new URL(sourceOrigin).host.toLowerCase();
+  const appHost = new URL(getAppOrigin()).host.toLowerCase();
+  const requestHost = request.headers.get("host")?.toLowerCase();
+
+  // Exact host (case-insensitive) is always trusted.
+  if (sourceHost === appHost) return;
+  if (requestHost && sourceHost === requestHost) return;
+  if (getTrustedOrigins().some((origin) => new URL(origin).host.toLowerCase() === sourceHost)) return;
 
   // Do not block development/localhost traffic.
   if (process.env.NODE_ENV !== "production") return;
 
+  // In production require an exact host match. Comparing only the registrable
+  // domain (e.g. "app.example.com" vs "evil.example.com") let any subdomain of
+  // the app's domain satisfy the check, which is a CSRF bypass.
   throw new ApiError(403, "Cross-site requests are not allowed.", "CSRF_PROTECTION");
 }

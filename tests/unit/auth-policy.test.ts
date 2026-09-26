@@ -88,4 +88,46 @@ describe("auth policy", () => {
     expect(result.allowed).toBe(false);
     expect(result.reason).toBe("Premium access required");
   });
+
+  it("denies role-restricted access when the profile has no resolvable role", () => {
+    // Regression: the old `options.allowRoles && roleCode && ...` guard let a
+    // profile with a missing role skip the check and be granted access.
+    expect(() =>
+      assertAccess(
+        { is_active: true, email_verified: true, roles: null },
+        { email_confirmed_at: "2024-01-01T00:00:00Z" },
+        { requireAuth: true, allowRoles: ["admin", "super_admin"] }
+      )
+    ).toThrow("Access denied");
+  });
+
+  it("denies role-restricted access when the profile itself is absent", () => {
+    expect(() =>
+      assertAccess(
+        null,
+        { email_confirmed_at: "2024-01-01T00:00:00Z" },
+        { requireAuth: true, allowRoles: ["admin", "super_admin"] }
+      )
+    ).toThrow("Authentication required");
+  });
+
+  it("returns a denied result instead of throwing for unauthenticated premium checks", () => {
+    // Regression: canAccessPremiumContent called assertAccess, which threw and
+    // made its { allowed: false } return path unreachable.
+    const result = canAccessPremiumContent(null, null, { status: "active" });
+
+    expect(result.allowed).toBe(false);
+    expect(result.reason).toBe("Authentication required");
+  });
+
+  it("returns a denied result for unverified users requesting premium content", () => {
+    const result = canAccessPremiumContent(
+      { is_active: true, email_verified: false, roles: [{ code: "student" }] },
+      { email_confirmed_at: null },
+      { status: "active" }
+    );
+
+    expect(result.allowed).toBe(false);
+    expect(result.reason).toBe("Email verification required");
+  });
 });

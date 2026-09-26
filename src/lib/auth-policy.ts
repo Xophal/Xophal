@@ -47,7 +47,10 @@ export function getAccessState(profile: any, session: any, options: AuthAccessOp
     reason = "Email verification required";
   } else if (options.requireActive && !isActive) {
     reason = "Account inactive";
-  } else if (options.allowRoles && roleCode && !options.allowRoles.includes(roleCode)) {
+  } else if (options.allowRoles && (!roleCode || !options.allowRoles.includes(roleCode))) {
+    // A missing/unresolvable role must fail closed. Previously the `roleCode &&`
+    // guard let a profile with no role skip this check entirely and be granted
+    // access to role-restricted routes.
     reason = "Access denied";
   } else if (options.allowAdmin && !isAdmin) {
     reason = "Access denied";
@@ -87,7 +90,11 @@ export function canAccessPremiumContent(
   session: any,
   subscriptionState?: { status?: string; expires_at?: string | null; is_active?: boolean } | null
 ): { allowed: boolean; reason?: string } {
-  const access = assertAccess(profile, session, {
+  // Use getAccessState (non-throwing) rather than assertAccess: this function is
+  // a predicate that reports denial via `allowed: false`. assertAccess threw on
+  // failure, which made the `!access.isAuthenticated` branch below unreachable
+  // and crashed callers that legitimately expected a boolean result.
+  const access = getAccessState(profile, session, {
     requireAuth: true,
     requireActive: true,
     requireEmailVerified: true,

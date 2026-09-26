@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { apiSuccess, ApiError, handleApiError, validateBody, assertTrustedOrigin } from "@/lib/api-utils";
+import { apiSuccess, ApiError, handleApiError, assertTrustedOrigin } from "@/lib/api-utils";
 import { z } from "zod";
 import { authRateLimit } from "@/lib/redis";
 
@@ -26,6 +26,12 @@ export async function POST(request: NextRequest) {
       }
     } catch (err) {
       if (err instanceof ApiError) throw err;
+      // Fail closed in production so a limiter outage cannot be used to spam
+      // verification emails at arbitrary addresses.
+      console.error("Resend rate limiter failure", err);
+      if (process.env.NODE_ENV === "production") {
+        throw new ApiError(503, "Authentication protection is temporarily unavailable.", "RATE_LIMIT_UNAVAILABLE");
+      }
     }
 
     const { createRouteHandlerClient } = await import("@/lib/supabase/route-handler");

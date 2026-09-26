@@ -34,7 +34,13 @@ export async function POST(request: NextRequest) {
       }
     } catch (err) {
       if (err instanceof ApiError) throw err;
-      // Non-fatal: continue if limiter has issues
+      // Fail closed in production so a limiter outage cannot be used to
+      // enumerate accounts via unlimited password-reset requests.
+      console.error("Forgot-password rate limiter failure", err);
+      if (process.env.NODE_ENV === "production") {
+        throw new ApiError(503, "Authentication protection is temporarily unavailable.", "RATE_LIMIT_UNAVAILABLE");
+      }
+      // Non-fatal in dev: continue if limiter has issues
     }
     const { error } = await supabase.auth.resetPasswordForEmail(parsed.data.email.toLowerCase(), {
       redirectTo: `${publicEnv.NEXT_PUBLIC_APP_URL}/auth/callback?next=/reset-password`,
