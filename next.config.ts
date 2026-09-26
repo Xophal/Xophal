@@ -5,7 +5,7 @@ import { validateEnv } from "./src/lib/env.server";
 validateEnv();
 
 const nextConfig: NextConfig = {
-  allowedDevOrigins: ["127.0.0.1"],
+  allowedDevOrigins: ["127.0.0.1", "localhost", "10.203.91.253"],
   experimental: {
     serverActions: {
       bodySizeLimit: "50mb",

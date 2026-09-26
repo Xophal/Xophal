@@ -5,6 +5,7 @@ out
 .env.*
 .DS_Store
 npm-debug.log*
+dev-server.log
 .vite
 coverage
 playwright-report
