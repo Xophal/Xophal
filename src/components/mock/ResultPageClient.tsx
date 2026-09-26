@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
@@ -97,7 +97,7 @@ export default function ResultPageClient({ attemptId }: { attemptId: string }) {
           </p>
           <p className="mt-3 text-xs text-muted-foreground">{error}</p>
           <div className="mt-6 flex justify-center gap-3">
-            <Button onClick={() => window.location.reload()}>Try again</Button>
+            <Button className="exam-cta" onClick={() => window.location.reload()}>Try again</Button>
             <Button variant="outline" asChild>
               <Link href="/mock-tests">Back to tests</Link>
             </Button>
@@ -145,7 +145,7 @@ export default function ResultPageClient({ attemptId }: { attemptId: string }) {
               Retake test
             </Link>
           </Button>
-          <Button asChild>
+          <Button asChild className="exam-cta">
             <Link href="/dashboard">
               Go to dashboard
               <ArrowRight className="h-4 w-4" />

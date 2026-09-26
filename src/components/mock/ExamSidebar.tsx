@@ -61,7 +61,7 @@ export default function ExamSidebar({
       />
 
       <div className="mt-auto flex flex-col gap-2 border-t border-border pt-4">
-        <Button type="button" onClick={onSubmit} isLoading={submitting} loadingText="Submitting…">
+        <Button type="button" className="exam-cta" onClick={onSubmit} isLoading={submitting} loadingText="Submitting...">
           <Send className="h-4 w-4" />
           Submit test
         </Button>

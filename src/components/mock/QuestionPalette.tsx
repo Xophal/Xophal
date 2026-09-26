@@ -50,7 +50,13 @@ export default function QuestionPalette({
           const response = responses[question.id];
           const status = getQuestionStatus(response, index === currentIndex);
           const isCurrent = index === currentIndex;
-          const visualState = getQuestionVisualState(status);
+          // Base state drives the colour/fill; the current question adds a ring
+          // on top so it never loses its answered or review colour.
+          const visualState = getQuestionVisualState({
+            isAnswered: status.isAnswered,
+            isMarkedForReview: status.isMarkedForReview,
+            isCurrent: false,
+          });
           const label = getQuestionStatusLabel(status);
 
           return (
@@ -62,7 +68,7 @@ export default function QuestionPalette({
               aria-label={`Question ${index + 1}, ${label}`}
               title={`Question ${index + 1}: ${label}`}
               data-question-status={label}
-              data-state={isCurrent ? "current" : visualState}
+              data-state={visualState}
               data-current={isCurrent}
               className="exam-palette-cell"
             >
@@ -88,16 +94,11 @@ export default function QuestionPalette({
           <ul className="mt-2 space-y-1.5">
             {QUESTION_STATE_LEGEND.map((entry) => (
               <li key={entry.state} className="flex items-center gap-2.5 text-xs text-muted-foreground">
-                <span
-                  aria-hidden="true"
-                  data-state={entry.state}
-                  data-current={entry.state === "current"}
-                  className="exam-palette-cell relative h-7 w-7 shrink-0 text-[0.6875rem]"
-                >
-                  {entry.state === "marked" || entry.state === "answered-marked" ? (
-                    <Flag className="h-3 w-3" />
-                  ) : entry.state === "answered" ? (
+                <span aria-hidden="true" data-state={entry.state} className="exam-legend-swatch">
+                  {entry.state === "answered" ? (
                     <Check className="h-3 w-3" />
+                  ) : entry.state === "marked" || entry.state === "answered-marked" ? (
+                    <Flag className="h-3 w-3" />
                   ) : null}
                 </span>
                 <span className="min-w-0">

@@ -1,4 +1,4 @@
-﻿/* ==========================================================================
+/* ==========================================================================
    XOPHAL - EXAM OS DESIGN LAYER
    Shared tokens + components for the CBT (computer based test) experience.
    Extends the existing token system in globals.css / design-tokens.css.
@@ -9,10 +9,10 @@
 :root {
   /* Palette state colours (shared by palette cells, legend and review rows) */
   --exam-state-answered: 152 55% 34%;
-  --exam-state-answered-soft: 152 45% 94%;
+  --exam-state-answered-soft: 152 44% 89%;
   --exam-state-review: 33 80% 34%;
-  --exam-state-review-soft: 40 92% 93%;
-  --exam-state-unvisited-soft: 220 20% 96%;
+  --exam-state-review-soft: 38 92% 89%;
+  --exam-state-unvisited-soft: 220 16% 95%;
   --exam-state-correct: 152 55% 34%;
   --exam-state-incorrect: 4 74% 47%;
   --exam-state-skipped: 220 12% 42%;
@@ -273,6 +273,55 @@
     background: hsl(var(--exam-state-review));
   }
 
+
+  /* --- Legend swatch ------------------------------------------------------ */
+
+  .exam-legend-swatch {
+    display: inline-flex;
+    height: 1.25rem;
+    width: 1.25rem;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0.375rem;
+    border: 1px solid hsl(var(--exam-hairline));
+    background: hsl(var(--card));
+    color: hsl(var(--exam-state-skipped));
+  }
+
+  .exam-legend-swatch[data-state="answered"] {
+    border-color: hsl(var(--exam-state-answered) / 0.7);
+    background: hsl(var(--exam-state-answered-soft));
+    color: hsl(var(--exam-state-answered));
+  }
+
+  .exam-legend-swatch[data-state="not-visited"] {
+    border-style: dashed;
+    background: hsl(var(--exam-state-unvisited-soft));
+  }
+
+  .exam-legend-swatch[data-state="marked"] {
+    border-color: hsl(var(--exam-state-review) / 0.75);
+    background: hsl(var(--exam-state-review-soft));
+    color: hsl(var(--exam-state-review));
+  }
+
+  .exam-legend-swatch[data-state="answered-marked"] {
+    border-color: hsl(var(--exam-state-review));
+    background: linear-gradient(
+      135deg,
+      hsl(var(--exam-state-answered-soft)) 0%,
+      hsl(var(--exam-state-answered-soft)) 52%,
+      hsl(var(--exam-state-review-soft)) 52%,
+      hsl(var(--exam-state-review-soft)) 100%
+    );
+    color: hsl(var(--exam-state-answered));
+  }
+
+  .exam-legend-swatch[data-state="current"] {
+    border-color: hsl(var(--primary));
+    box-shadow: 0 0 0 2px hsl(var(--primary) / 0.28);
+  }
   /* --- Timer -------------------------------------------------------------- */
 
   .exam-timer {
@@ -444,6 +493,18 @@
     background: hsl(var(--primary) / 0.08);
   }
 
+
+  /* Primary call-to-action inside the exam surfaces. Neutralises the shared
+     Button gradient so the CTA stays a solid, high-contrast brand block. */
+  .exam-cta {
+    background-image: none !important;
+    background-color: hsl(var(--primary));
+    color: hsl(var(--primary-foreground));
+  }
+
+  .exam-cta:hover {
+    filter: brightness(1.06);
+  }
   /* --- Shared text utilities ---------------------------------------------- */
 
   .exam-eyebrow {

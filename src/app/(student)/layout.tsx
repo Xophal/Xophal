@@ -1,4 +1,4 @@
-﻿import { redirect } from "next/navigation";
+import { redirect } from "next/navigation";
 import { Sparkles } from "lucide-react";
 import Sidenav from "@/components/layout/sidenav";
 import StudentBottomNav from "@/components/layout/StudentBottomNav";

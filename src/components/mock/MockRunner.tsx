@@ -1,6 +1,6 @@
-﻿"use client";
+"use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, ArrowRight, Bookmark, Eraser, Flag, RotateCcw, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -94,11 +94,6 @@ export default function MockRunner({ slug }: { slug: string }) {
   const response = question ? responses[question.id] : undefined;
   const answeredCount = Object.values(responses).filter((item) => getQuestionStatus(item).isAnswered).length;
 
-  const handleSelectQuestion = (index: number) => {
-    const nextIndex = Math.max(0, Math.min(index, questions.length - 1));
-    setCurrentIndex(nextIndex);
-    if (questions[nextIndex]) markVisited(questions[nextIndex].id);
-  };
 
   const selectOption = (optionId: string) => {
     if (!question || isSubmitted || !question.options?.some((option) => option.id === optionId)) return;
@@ -161,20 +156,19 @@ export default function MockRunner({ slug }: { slug: string }) {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [paletteOpen]);
 
-  const goTo = useCallback(
-    (index: number) => {
-      handleSelectQuestion(index);
-      setPaletteOpen(false);
-    },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [questions.length, setCurrentIndex, markVisited]
-  );
+  // Jump to a question, mark it visited, and close the mobile palette sheet.
+  const goTo = (index: number) => {
+    const nextIndex = Math.max(0, Math.min(index, questions.length - 1));
+    setCurrentIndex(nextIndex);
+    if (questions[nextIndex]) markVisited(questions[nextIndex].id);
+    setPaletteOpen(false);
+  };
 
   if (loading) {
     return (
       <div className="exam-shell">
         <div className="mx-auto w-full max-w-3xl space-y-4 p-6" aria-busy="true" aria-live="polite">
-          <span className="sr-only">Loading mock testâ€¦</span>
+          <span className="sr-only">Loading mock test...</span>
           <div className="h-8 w-64 animate-pulse rounded-md bg-muted" />
           <div className="h-40 animate-pulse rounded-xl bg-muted" />
           <div className="h-12 animate-pulse rounded-lg bg-muted" />
@@ -191,11 +185,11 @@ export default function MockRunner({ slug }: { slug: string }) {
           <div className="exam-panel p-8 text-center" role="alert">
             <h1 className="text-lg font-bold">Something went wrong</h1>
             <p className="mt-2 text-sm text-muted-foreground">
-              We could not load this mock test. Your progress is safe â€” nothing was submitted.
+              We could not load this mock test. Your progress is safe - nothing was submitted.
             </p>
             <p className="mt-3 text-xs text-muted-foreground">{error}</p>
             <div className="mt-6 flex flex-wrap justify-center gap-3">
-              <Button onClick={() => window.location.reload()}>Try again</Button>
+              <Button className="exam-cta" onClick={() => window.location.reload()}>Try again</Button>
               <Button variant="outline" asChild>
                 <a href="/mock-tests">Back to mock tests</a>
               </Button>
@@ -378,9 +372,9 @@ export default function MockRunner({ slug }: { slug: string }) {
                     {answeredCount} of {questions.length} answered
                   </span>
                   {currentIndex === questions.length - 1 ? (
-                    <Button onClick={() => setShowConfirm(true)}>Review &amp; submit</Button>
+                    <Button className="exam-cta" onClick={() => setShowConfirm(true)}>Review &amp; submit</Button>
                   ) : (
-                    <Button onClick={() => goTo(currentIndex + 1)}>
+                    <Button className="exam-cta" onClick={() => goTo(currentIndex + 1)}>
                       Save &amp; next
                       <ArrowRight className="h-4 w-4" />
                     </Button>
@@ -457,7 +451,7 @@ export default function MockRunner({ slug }: { slug: string }) {
                   <span
                     aria-hidden="true"
                     data-state={entry.state}
-                    className="exam-palette-cell h-6 w-6 shrink-0 text-[0.625rem]"
+                    className="exam-legend-swatch"
                   />
                   {entry.label}
                 </li>
@@ -467,7 +461,7 @@ export default function MockRunner({ slug }: { slug: string }) {
               <Button variant="outline" onClick={() => setShowConfirm(false)}>
                 Keep reviewing
               </Button>
-              <Button onClick={completeSubmit} isLoading={submitting} loadingText="Submitting…">
+              <Button className="exam-cta" onClick={completeSubmit} isLoading={submitting} loadingText="Submitting…">
                 Submit test
               </Button>
             </div>

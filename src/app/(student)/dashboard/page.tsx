@@ -1,4 +1,4 @@
-﻿import { redirect } from "next/navigation";
+import { redirect } from "next/navigation";
 import Link from "next/link";
 import { ArrowUpRight, BarChart3, Brain, CheckCircle2, Facebook, Flame, Instagram, MessageCircle, Play, Sparkles, Target, Trophy, Zap } from "lucide-react";
 import Icon from "@/components/icons/Icon";
@@ -72,7 +72,7 @@ export default async function DashboardPage() {
       percentage: Math.max(0, Math.min(100, attempt.percentage ?? 0)),
       label: attempt.submitted_at
         ? new Date(attempt.submitted_at).toLocaleDateString("en-IN", { day: "numeric", month: "short" })
-        : "â€”",
+        : "-",
     }))
     .reverse();
 
