@@ -1,7 +1,9 @@
 import type { NextConfig } from "next";
 import { validateEnv } from "./src/lib/env.server";
 
-// Validate once as Next starts, before it accepts any requests.
+// Surface environment misconfigurations early and loudly. This intentionally
+// only warns: it runs inside `next build`, so throwing here would block
+// deployments over a fixable environment-variable gap.
 validateEnv();
 
 const nextConfig: NextConfig = {

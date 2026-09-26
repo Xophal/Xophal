@@ -49,6 +49,11 @@ Quick checklist to prepare `Xophal` for staging/production deployment.
    - If OTP returns `OTP_PROVIDER_UNAVAILABLE`, verify DNS/network access to `NEXT_PUBLIC_SUPABASE_URL`, then check Supabase Auth email provider and SMTP/Resend configuration.
    - Verify database reads/writes with seeded test data.
    - Confirm admin operations (content import, user resets) work using service role key.
+   - If every auth route returns `503 RATE_LIMIT_NOT_CONFIGURED`, Upstash Redis is not fully
+     configured. Both `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` must be set
+     together; with only one present, rate limiting stays disabled and auth deliberately fails
+     closed. A missing variable is reported as a `[config]` warning at build time and does not
+     fail the build.
 
 8. Optional optimizations
    - Set `NEXT_PUBLIC_APP_URL` canonical and OpenGraph/SEO meta tags for pages.

@@ -62,24 +62,44 @@ const serverEnvShape = {
   UPSTASH_REDIS_REST_TOKEN: z.string().min(1).optional(),
 };
 
-function validateRedisPair(
-  value: { UPSTASH_REDIS_REST_URL?: string; UPSTASH_REDIS_REST_TOKEN?: string },
-  context: z.RefinementCtx
-) {
+const serverEnvSchema = z.object(serverEnvShape);
+const startupEnvSchema = publicEnvSchema.extend(serverEnvShape);
+
+/**
+ * Redis is an optional integration, but a half-configured pair is always a
+ * mistake: Upstash cannot authenticate with only a URL, and silently treating it
+ * as "unconfigured" would quietly disable auth rate limiting. This is reported as
+ * a warning rather than a thrown ZodError, because `validateEnv()` runs while
+ * Next loads its config (i.e. during `next build`) and a runtime configuration
+ * gap must never be able to block a deployment.
+ */
+function collectRedisPairWarning(value: {
+  UPSTASH_REDIS_REST_URL?: string;
+  UPSTASH_REDIS_REST_TOKEN?: string;
+}): string[] {
   const hasRedisUrl = Boolean(value.UPSTASH_REDIS_REST_URL);
   const hasRedisToken = Boolean(value.UPSTASH_REDIS_REST_TOKEN);
 
-  if (hasRedisUrl !== hasRedisToken) {
-    context.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: [hasRedisUrl ? "UPSTASH_REDIS_REST_TOKEN" : "UPSTASH_REDIS_REST_URL"],
-      message: "Both UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN must be provided together",
-    });
+  if (hasRedisUrl === hasRedisToken) {
+    return [];
   }
+
+  const missing = hasRedisUrl ? "UPSTASH_REDIS_REST_TOKEN" : "UPSTASH_REDIS_REST_URL";
+
+  return [
+    `Incomplete Upstash Redis configuration: ${missing} is missing. ` +
+      "Both UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN must be set. " +
+      "Until then rate limiting stays disabled and production auth routes will " +
+      "return 503 RATE_LIMIT_NOT_CONFIGURED.",
+  ];
 }
 
-const serverEnvSchema = z.object(serverEnvShape).superRefine(validateRedisPair);
-const startupEnvSchema = publicEnvSchema.extend(serverEnvShape).superRefine(validateRedisPair);
+function formatIssues(error: z.ZodError): string[] {
+  return error.issues.map((issue) => {
+    const path = issue.path.join(".") || "(root)";
+    return `Invalid environment value for ${path}: ${issue.message}`;
+  });
+}
 
 /** Server-only configuration. This module must never be imported by client code. */
 export const serverEnv = serverEnvSchema.parse({
@@ -91,9 +111,19 @@ export const serverEnv = serverEnvSchema.parse({
   UPSTASH_REDIS_REST_TOKEN: normalizeOptionalString(process.env.UPSTASH_REDIS_REST_TOKEN),
 });
 
-/** Called while Next loads its configuration so invalid deployments never boot. */
+/**
+ * Called while Next loads its configuration so misconfigurations are surfaced
+ * loudly and early.
+ *
+ * This deliberately never throws: `next.config.ts` invokes it, so a throw here
+ * aborts `next build` and turns a fixable environment-variable gap into a failed
+ * deployment. Invalid values are reported as warnings instead, and the runtime
+ * keeps enforcing the important invariants (see `src/lib/redis.ts`, where an
+ * incomplete pair disables rate limiting, and the auth routes, which fail closed
+ * with 503 RATE_LIMIT_NOT_CONFIGURED in production).
+ */
 export function validateEnv() {
-  return startupEnvSchema.parse({
+  const raw = {
     NEXT_PUBLIC_SUPABASE_URL: resolveSupabaseUrl(
       process.env.NEXT_PUBLIC_SUPABASE_URL,
       process.env.SUPABASE_URL
@@ -109,5 +139,14 @@ export function validateEnv() {
     RAZORPAY_KEY_SECRET: normalizeOptionalString(process.env.RAZORPAY_KEY_SECRET),
     UPSTASH_REDIS_REST_URL: normalizeOptionalString(process.env.UPSTASH_REDIS_REST_URL),
     UPSTASH_REDIS_REST_TOKEN: normalizeOptionalString(process.env.UPSTASH_REDIS_REST_TOKEN),
-  });
+  };
+
+  const result = startupEnvSchema.safeParse(raw);
+  const warnings = result.success ? collectRedisPairWarning(raw) : formatIssues(result.error);
+
+  for (const warning of warnings) {
+    console.warn(`[config] ${warning}`);
+  }
+
+  return result.success ? result.data : undefined;
 }
