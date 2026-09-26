@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Analytics } from "@vercel/analytics/next";
 import { ThemeProvider } from "@/components/shared/theme-provider";
 import { Toaster } from "@/components/shared/toaster";
 import NavTheme from "@/components/layout/NavTheme";
@@ -40,6 +41,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             <Toaster />
           </ThemeProvider>
         </NavTheme>
+        <Analytics />
       </body>
     </html>
   );
