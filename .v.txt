@@ -1,0 +1,42 @@
+﻿
+[1m[30m[46m RUN [49m[39m[22m [36mv4.1.11 [39m[90mC:/Users/Saurabh/Desktop/XophalFinal2[39m
+
+ [31mΓ¥»[39m tests/unit/phase3-generator.test.ts [2m([22m[2m0 test[22m[2m)[22m
+vitest.cmd : 
+At line:1 char:1
++ & '.\node_modules\.bin\vitest.cmd' run tests/unit/phase3-generator.te ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+[31mΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»[39m[1m[41m Failed Suites 1 [49m[22m[31mΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»[39m
+
+[41m[1m FAIL [22m[49m tests/unit/phase3-generator.test.ts[2m [ tests/unit/phase3-generator.test.ts 
+][22m
+[31m[1mError[22m: Transform failed with 1 error:
+C:/Users/Saurabh/Desktop/XophalFinal2/tests/unit/phase3-generator.test.ts:395:2: ERROR: Unexpected "}"[39m
+  Plugin: [35mvite:esbuild[39m
+  File: [36mC:/Users/Saurabh/Desktop/XophalFinal2/tests/unit/phase3-generator.test.ts[39m:395:2
+[33m  
+  [33mUnexpected "}"[33m
+  393 |  
+  394 |      expect(matchesTags(["other"], f, new Set(["tags"]))).toBe(true);
+  395 |    });
+      |    ^
+  396 |  
+  397 |  /* ----------------------------------------------------- weak area / daily */
+  [39m
+[90m [2mΓ¥»[22m failureErrorWithLog node_modules/esbuild/lib/main.js:[2m1752:15[22m[39m
+[90m [2mΓ¥»[22m node_modules/esbuild/lib/main.js:[2m1019:50[22m[39m
+[90m [2mΓ¥»[22m responseCallbacks.<computed> node_modules/esbuild/lib/main.js:[2m886:9[22m[39m
+[90m [2mΓ¥»[22m handleIncomingPacket node_modules/esbuild/lib/main.js:[2m941:12[22m[39m
+[90m [2mΓ¥»[22m Socket.readFromStdout node_modules/esbuild/lib/main.js:[2m864:7[22m[39m
+
+[31m[2mΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»[1/1]ΓÄ»[22m[39m
+
+
+[2m Test Files [22m [1m[31m1 failed[39m[22m[90m (1)[39m
+[2m      Tests [22m [2mno tests[22m
+[2m   Start at [22m 05:05:09
+[2m   Duration [22m 1.13s[2m (transform 0ms, setup 0ms, import 0ms, tests 0ms, environment 0ms)[22m
+

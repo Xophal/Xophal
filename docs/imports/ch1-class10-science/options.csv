@@ -1,0 +1,577 @@
+﻿question_id,label,text,is_correct,position
+CR-T1-001,A,Change in colour,False,1
+CR-T1-001,B,Formation of a precipitate,False,2
+CR-T1-001,C,Evolution of a gas,False,3
+CR-T1-001,D,Change in the size of a solid piece,True,4
+CR-T1-002,A,Conservation of mass,True,1
+CR-T1-002,B,Avogadro's law,False,2
+CR-T1-002,C,Multiple proportions,False,3
+CR-T1-002,D,Definite proportions,False,4
+CR-T1-003,A,"3, 4, 1, 4",True,1
+CR-T1-003,B,"1, 4, 3, 4",False,2
+CR-T1-003,C,"3, 2, 1, 2",False,3
+CR-T1-003,D,"2, 4, 1, 3",False,4
+CR-T1-004,A,"4, 3, 2",True,1
+CR-T1-004,B,"2, 3, 1",False,2
+CR-T1-004,C,"3, 4, 2",False,3
+CR-T1-004,D,"2, 2, 1",False,4
+CR-T1-005,A,6,True,1
+CR-T1-005,B,4,False,2
+CR-T1-005,C,5,False,3
+CR-T1-005,D,7,False,4
+CR-T1-006,A,2H₂ + O₂ → H₂O,False,1
+CR-T1-006,B,H₂ + 2O₂ → 2H₂O,False,2
+CR-T1-006,C,2H₂ + O₂ → 2H₂O,True,3
+CR-T1-006,D,H₂ + O₂ → H₂O,False,4
+CR-T1-007,A,It violates Avogadro's law,False,1
+CR-T1-007,B,It makes the equation longer,False,2
+CR-T1-007,C,It changes the state of the substance,False,3
+CR-T1-007,D,It changes the identity of the substance,True,4
+CR-T1-008,A,Carbon dioxide,False,1
+CR-T1-008,B,Oxygen,False,2
+CR-T1-008,C,Hydrogen,True,3
+CR-T1-008,D,Chlorine,False,4
+CR-T1-009,A,Nitrogen,False,1
+CR-T1-009,B,Oxygen,False,2
+CR-T1-009,C,Nitrogen dioxide,True,3
+CR-T1-009,D,Lead monoxide,False,4
+CR-T1-010,A,4,True,1
+CR-T1-010,B,8,False,2
+CR-T1-010,C,2,False,3
+CR-T1-010,D,3,False,4
+CR-T1-011,A,3,False,1
+CR-T1-011,B,7,True,2
+CR-T1-011,C,5,False,3
+CR-T1-011,D,6,False,4
+CR-T1-012,A,4,False,1
+CR-T1-012,B,1,False,2
+CR-T1-012,C,3,True,3
+CR-T1-012,D,2,False,4
+CR-T1-013,A,Boiling of water,False,1
+CR-T1-013,B,Souring of milk,True,2
+CR-T1-013,C,Melting of ice,False,3
+CR-T1-013,D,Dissolving sugar in water,False,4
+CR-T1-014,A,Formed with release of heat,False,1
+CR-T1-014,B,A gas,False,2
+CR-T1-014,C,An insoluble solid (precipitate),True,3
+CR-T1-014,D,A liquid,False,4
+CR-T1-015,A,Both A and R are true and R is the correct explanation of A.,True,1
+CR-T1-015,B,Both A and R are true but R is not the correct explanation of A.,False,2
+CR-T1-015,C,A is true but R is false.,False,3
+CR-T1-015,D,A is false but R is true.,False,4
+CR-T1-016,A,Both A and R are true and R is the correct explanation of A.,False,1
+CR-T1-016,B,Both A and R are true but R is not the correct explanation of A.,False,2
+CR-T1-016,C,A is true but R is false.,False,3
+CR-T1-016,D,A is false but R is true.,True,4
+CR-T1-017,A,Both A and R are true and R is the correct explanation of A.,False,1
+CR-T1-017,B,Both A and R are true but R is not the correct explanation of A.,False,2
+CR-T1-017,C,A is true but R is false.,False,3
+CR-T1-017,D,A is false but R is true.,True,4
+CR-T1-018,A,Only I is correct,True,1
+CR-T1-018,B,Only II is correct,False,2
+CR-T1-018,C,Both I and II are correct,False,3
+CR-T1-018,D,Neither I nor II is correct,False,4
+CR-T1-019,A,Only I is correct,False,1
+CR-T1-019,B,Only II is correct,False,2
+CR-T1-019,C,Both I and II are correct,True,3
+CR-T1-019,D,Neither I nor II is correct,False,4
+CR-T1-020,A,"1-Q, 2-P, 3-S, 4-R",True,1
+CR-T1-020,B,"1-S, 2-P, 3-Q, 4-R",False,2
+CR-T1-020,C,"1-P, 2-Q, 3-S, 4-R",False,3
+CR-T1-020,D,"1-Q, 2-P, 3-R, 4-S",False,4
+CR-T1-021,A,Lead vapour,False,1
+CR-T1-021,B,Oxygen,False,2
+CR-T1-021,C,Nitrogen,False,3
+CR-T1-021,D,Nitrogen dioxide,True,4
+CR-T1-022,A,Lead sulphate,False,1
+CR-T1-022,B,Lead dioxide,False,2
+CR-T1-022,C,Lead nitrate,False,3
+CR-T1-022,D,Lead monoxide (PbO),True,4
+CR-T1-023,A,Thermal decomposition,True,1
+CR-T1-023,B,Photolytic decomposition,False,2
+CR-T1-023,C,Displacement,False,3
+CR-T1-023,D,Combination,False,4
+CR-T2-001,A,A combination reaction,True,1
+CR-T2-001,B,A decomposition reaction,False,2
+CR-T2-001,C,A displacement reaction,False,3
+CR-T2-001,D,A double displacement reaction,False,4
+CR-T2-002,A,Magnesium hydroxide,False,1
+CR-T2-002,B,Magnesium chloride,False,2
+CR-T2-002,C,Magnesium carbonate,False,3
+CR-T2-002,D,Magnesium oxide,True,4
+CR-T2-003,A,Calcium chloride and oxygen,False,1
+CR-T2-003,B,Calcium oxide and hydrogen,False,2
+CR-T2-003,C,Calcium oxide and carbon dioxide,True,3
+CR-T2-003,D,Calcium hydroxide and carbon dioxide,False,4
+CR-T2-004,A,2AgCl → 2Ag + Cl₂ (in sunlight),False,1
+CR-T2-004,B,2H₂O → 2H₂ + O₂ (electric current passed),True,2
+CR-T2-004,C,CaCO₃ → CaO + CO₂ (on heating),False,3
+CR-T2-004,D,2Pb(NO₃)₂ → 2PbO + 4NO₂ + O₂ (on heating),False,4
+CR-T2-005,A,1 : 2,False,1
+CR-T2-005,B,1 : 1,False,2
+CR-T2-005,C,2 : 1,True,3
+CR-T2-005,D,3 : 1,False,4
+CR-T2-006,A,Grey,True,1
+CR-T2-006,B,Yellow,False,2
+CR-T2-006,C,Green,False,3
+CR-T2-006,D,Blue,False,4
+CR-T2-007,A,Calcium hydroxide,True,1
+CR-T2-007,B,Calcium oxide,False,2
+CR-T2-007,C,Calcium chloride,False,3
+CR-T2-007,D,Calcium carbonate,False,4
+CR-T2-008,A,CaCO₃ → CaO + CO₂,True,1
+CR-T2-008,B,C + O₂ → CO₂,False,2
+CR-T2-008,C,N₂ + 3H₂ → 2NH₃,False,3
+CR-T2-008,D,2H₂ + O₂ → 2H₂O,False,4
+CR-T2-009,A,Calcium hydroxide,False,1
+CR-T2-009,B,Calcium carbonate,True,2
+CR-T2-009,C,Calcium oxide,False,3
+CR-T2-009,D,Calcium chloride,False,4
+CR-T2-010,A,6,False,1
+CR-T2-010,B,5,True,2
+CR-T2-010,C,4,False,3
+CR-T2-010,D,3,False,4
+CR-T2-011,A,2H₂O → 2H₂ + O₂,False,1
+CR-T2-011,B,CaCO₃ → CaO + CO₂,False,2
+CR-T2-011,C,2FeSO₄ → Fe₂O₃ + SO₂ + SO₃,False,3
+CR-T2-011,D,2AgBr → 2Ag + Br₂,True,4
+CR-T2-012,A,Both A and R are true and R is the correct explanation of A.,True,1
+CR-T2-012,B,Both A and R are true but R is not the correct explanation of A.,False,2
+CR-T2-012,C,A is true but R is false.,False,3
+CR-T2-012,D,A is false but R is true.,False,4
+CR-T2-013,A,Both A and R are true and R is the correct explanation of A.,False,1
+CR-T2-013,B,Both A and R are true but R is not the correct explanation of A.,True,2
+CR-T2-013,C,A is true but R is false.,False,3
+CR-T2-013,D,A is false but R is true.,False,4
+CR-T2-014,A,Both A and R are true and R is the correct explanation of A.,True,1
+CR-T2-014,B,Both A and R are true but R is not the correct explanation of A.,False,2
+CR-T2-014,C,A is true but R is false.,False,3
+CR-T2-014,D,A is false but R is true.,False,4
+CR-T2-015,A,Only I is correct,False,1
+CR-T2-015,B,Only II is correct,False,2
+CR-T2-015,C,Both I and II are correct,True,3
+CR-T2-015,D,Neither I nor II is correct,False,4
+CR-T2-016,A,Only I is correct,True,1
+CR-T2-016,B,Only II is correct,False,2
+CR-T2-016,C,Both I and II are correct,False,3
+CR-T2-016,D,Neither I nor II is correct,False,4
+CR-T2-017,A,"1-Q, 2-P, 3-S, 4-R",False,1
+CR-T2-017,B,"1-Q, 2-P, 3-R, 4-S",True,2
+CR-T2-017,C,"1-P, 2-Q, 3-R, 4-S",False,3
+CR-T2-017,D,"1-S, 2-P, 3-R, 4-Q",False,4
+CR-T2-018,A,Thermal decomposition,True,1
+CR-T2-018,B,Photolytic decomposition,False,2
+CR-T2-018,C,Double displacement,False,3
+CR-T2-018,D,Combination,False,4
+CR-T2-019,A,SO₂ and SO₃,True,1
+CR-T2-019,B,H₂S and SO₂,False,2
+CR-T2-019,C,CO₂ and CO,False,3
+CR-T2-019,D,NO₂ and O₂,False,4
+CR-T2-020,A,"Ferrous oxide, green",False,1
+CR-T2-020,B,"Ferric oxide (Fe₂O₃), reddish-brown",True,2
+CR-T2-020,C,"Iron sulphide, black",False,3
+CR-T2-020,D,"Iron metal, grey",False,4
+CR-T3-001,A,Light green,True,1
+CR-T3-001,B,Yellow,False,2
+CR-T3-001,C,Colourless,False,3
+CR-T3-001,D,Red,False,4
+CR-T3-002,A,Copper oxide,False,1
+CR-T3-002,B,Iron sulphate,False,2
+CR-T3-002,C,Iron oxide,False,3
+CR-T3-002,D,Copper,True,4
+CR-T3-003,A,Decomposition reaction,False,1
+CR-T3-003,B,Combination reaction,False,2
+CR-T3-003,C,Displacement reaction,True,3
+CR-T3-003,D,Double displacement reaction,False,4
+CR-T3-004,A,Silver oxide,False,1
+CR-T3-004,B,Sodium nitrate,False,2
+CR-T3-004,C,Silver chloride,True,3
+CR-T3-004,D,Sodium chloride,False,4
+CR-T3-005,A,Iron,False,1
+CR-T3-005,B,Silver,True,2
+CR-T3-005,C,Zinc,False,3
+CR-T3-005,D,Magnesium,False,4
+CR-T3-006,A,AgNO₃ + NaCl → AgCl + NaNO₃,True,1
+CR-T3-006,B,C + O₂ → CO₂,False,2
+CR-T3-006,C,2H₂O → 2H₂ + O₂,False,3
+CR-T3-006,D,Zn + H₂SO₄ → ZnSO₄ + H₂,False,4
+CR-T3-007,A,Lead oxide,False,1
+CR-T3-007,B,Lead iodide,True,2
+CR-T3-007,C,Lead sulphate,False,3
+CR-T3-007,D,Potassium nitrate,False,4
+CR-T3-008,A,Displacement reaction,False,1
+CR-T3-008,B,Decomposition reaction,False,2
+CR-T3-008,C,Combination reaction,False,3
+CR-T3-008,D,Neutralisation (a double displacement reaction),True,4
+CR-T3-009,A,Cu + ZnSO₄,False,1
+CR-T3-009,B,Cu + MgSO₄,False,2
+CR-T3-009,C,Ag + CuSO₄,False,3
+CR-T3-009,D,Zn + CuSO₄,True,4
+CR-T3-010,A,6,False,1
+CR-T3-010,B,3,False,2
+CR-T3-010,C,2,True,3
+CR-T3-010,D,1,False,4
+CR-T3-011,A,Cu²⁺ ions are converted into copper metal,True,1
+CR-T3-011,B,Zinc sulphate is blue and dilutes the solution,False,2
+CR-T3-011,C,Sulphate ions are removed,False,3
+CR-T3-011,D,Copper dissolves in zinc,False,4
+CR-T3-012,A,Both A and R are true and R is the correct explanation of A.,True,1
+CR-T3-012,B,Both A and R are true but R is not the correct explanation of A.,False,2
+CR-T3-012,C,A is true but R is false.,False,3
+CR-T3-012,D,A is false but R is true.,False,4
+CR-T3-013,A,Both A and R are true and R is the correct explanation of A.,True,1
+CR-T3-013,B,Both A and R are true but R is not the correct explanation of A.,False,2
+CR-T3-013,C,A is true but R is false.,False,3
+CR-T3-013,D,A is false but R is true.,False,4
+CR-T3-014,A,Both A and R are true and R is the correct explanation of A.,False,1
+CR-T3-014,B,Both A and R are true but R is not the correct explanation of A.,False,2
+CR-T3-014,C,A is true but R is false.,False,3
+CR-T3-014,D,A is false but R is true.,True,4
+CR-T3-015,A,Only I is correct,False,1
+CR-T3-015,B,Only II is correct,False,2
+CR-T3-015,C,Both I and II are correct,True,3
+CR-T3-015,D,Neither I nor II is correct,False,4
+CR-T3-016,A,Only I is correct,False,1
+CR-T3-016,B,Only II is correct,True,2
+CR-T3-016,C,Both I and II are correct,False,3
+CR-T3-016,D,Neither I nor II is correct,False,4
+CR-T3-017,A,"1-S, 2-R, 3-Q, 4-P",False,1
+CR-T3-017,B,"1-P, 2-R, 3-S, 4-Q",False,2
+CR-T3-017,C,"1-S, 2-R, 3-P, 4-Q",True,3
+CR-T3-017,D,"1-R, 2-S, 3-P, 4-Q",False,4
+CR-T3-018,A,Combination reaction,False,1
+CR-T3-018,B,Double displacement (precipitation) reaction,True,2
+CR-T3-018,C,Thermal decomposition,False,3
+CR-T3-018,D,Displacement reaction,False,4
+CR-T3-019,A,Barium chloride,False,1
+CR-T3-019,B,Barium sulphate,True,2
+CR-T3-019,C,Sodium sulphate,False,3
+CR-T3-019,D,Sodium chloride,False,4
+CR-T3-020,A,Chlorine gas,False,1
+CR-T3-020,B,Sodium sulphate,False,2
+CR-T3-020,C,Sodium chloride,True,3
+CR-T3-020,D,Barium hydroxide,False,4
+CR-T4-001,A,Gain of both oxygen and hydrogen,False,1
+CR-T4-001,B,Loss of both oxygen and hydrogen,False,2
+CR-T4-001,C,Gain of oxygen or loss of hydrogen,True,3
+CR-T4-001,D,Loss of oxygen or gain of hydrogen,False,4
+CR-T4-002,A,Cu,False,1
+CR-T4-002,B,H₂,True,2
+CR-T4-002,C,CuO,False,3
+CR-T4-002,D,H₂O,False,4
+CR-T4-003,A,CuO,False,1
+CR-T4-003,B,Cu,True,2
+CR-T4-003,C,Both Cu and O₂,False,3
+CR-T4-003,D,O₂,False,4
+CR-T4-004,A,White,False,1
+CR-T4-004,B,Blue,False,2
+CR-T4-004,C,Green,False,3
+CR-T4-004,D,Black,True,4
+CR-T4-005,A,CaCO₃ → CaO + CO₂,False,1
+CR-T4-005,B,BaCl₂ + Na₂SO₄ → BaSO₄ + 2NaCl,False,2
+CR-T4-005,C,NaOH + HCl → NaCl + H₂O,False,3
+CR-T4-005,D,ZnO + C → Zn + CO,True,4
+CR-T4-006,A,Zn,False,1
+CR-T4-006,B,ZnO,False,2
+CR-T4-006,C,CO,False,3
+CR-T4-006,D,C,True,4
+CR-T4-007,A,MnO₂,True,1
+CR-T4-007,B,HCl,False,2
+CR-T4-007,C,Cl₂,False,3
+CR-T4-007,D,MnCl₂,False,4
+CR-T4-008,A,Only in the presence of light,False,1
+CR-T4-008,B,Simultaneously,True,2
+CR-T4-008,C,One after the other,False,3
+CR-T4-008,D,Only in aqueous solutions,False,4
+CR-T4-009,A,Neutralised by hydrogen,False,1
+CR-T4-009,B,Reduced to copper,True,2
+CR-T4-009,C,Oxidised to copper,False,3
+CR-T4-009,D,Dissolved in hydrogen,False,4
+CR-T4-010,A,Fe,False,1
+CR-T4-010,B,Fe₂O₃,True,2
+CR-T4-010,C,Al₂O₃,False,3
+CR-T4-010,D,Al,False,4
+CR-T4-011,A,An oxidising agent,True,1
+CR-T4-011,B,A reducing agent,False,2
+CR-T4-011,C,A catalyst,False,3
+CR-T4-011,D,A neutral solvent,False,4
+CR-T4-012,A,Both A and R are true and R is the correct explanation of A.,True,1
+CR-T4-012,B,Both A and R are true but R is not the correct explanation of A.,False,2
+CR-T4-012,C,A is true but R is false.,False,3
+CR-T4-012,D,A is false but R is true.,False,4
+CR-T4-013,A,Both A and R are true and R is the correct explanation of A.,False,1
+CR-T4-013,B,Both A and R are true but R is not the correct explanation of A.,True,2
+CR-T4-013,C,A is true but R is false.,False,3
+CR-T4-013,D,A is false but R is true.,False,4
+CR-T4-014,A,Both A and R are true and R is the correct explanation of A.,False,1
+CR-T4-014,B,Both A and R are true but R is not the correct explanation of A.,False,2
+CR-T4-014,C,A is true but R is false.,False,3
+CR-T4-014,D,A is false but R is true.,True,4
+CR-T4-015,A,Only I is correct,False,1
+CR-T4-015,B,Only II is correct,False,2
+CR-T4-015,C,Both I and II are correct,True,3
+CR-T4-015,D,Neither I nor II is correct,False,4
+CR-T4-016,A,Only I is correct,False,1
+CR-T4-016,B,Only II is correct,True,2
+CR-T4-016,C,Both I and II are correct,False,3
+CR-T4-016,D,Neither I nor II is correct,False,4
+CR-T4-017,A,"1-P, 2-Q, 3-R, 4-S",False,1
+CR-T4-017,B,"1-Q, 2-P, 3-R, 4-S",True,2
+CR-T4-017,C,"1-Q, 2-P, 3-S, 4-R",False,3
+CR-T4-017,D,"1-R, 2-S, 3-Q, 4-P",False,4
+CR-T4-018,A,Copper hydroxide,False,1
+CR-T4-018,B,Copper sulphate,False,2
+CR-T4-018,C,Copper carbonate,False,3
+CR-T4-018,D,Copper(II) oxide,True,4
+CR-T4-019,A,Reduction,False,1
+CR-T4-019,B,Neutralisation,False,2
+CR-T4-019,C,Decomposition,False,3
+CR-T4-019,D,Oxidation,True,4
+CR-T4-020,A,An oxidising agent,False,1
+CR-T4-020,B,A precipitating agent,False,2
+CR-T4-020,C,A catalyst,False,3
+CR-T4-020,D,A reducing agent,True,4
+CR-T5-001,A,Iron(II) sulphate,False,1
+CR-T5-001,B,Hydrated iron(III) oxide,True,2
+CR-T5-001,C,Iron carbonate,False,3
+CR-T5-001,D,Anhydrous iron oxide,False,4
+CR-T5-002,A,Only air,False,1
+CR-T5-002,B,Both air and moisture,True,2
+CR-T5-002,C,Only moisture,False,3
+CR-T5-002,D,Only light,False,4
+CR-T5-003,A,Silver carbonate,False,1
+CR-T5-003,B,Silver sulphide,True,2
+CR-T5-003,C,Silver chloride,False,3
+CR-T5-003,D,Silver oxide,False,4
+CR-T5-004,A,Copper chloride,False,1
+CR-T5-004,B,Copper sulphide,False,2
+CR-T5-004,C,Basic copper carbonate,True,3
+CR-T5-004,D,Copper oxide,False,4
+CR-T5-005,A,Zinc,True,1
+CR-T5-005,B,Copper,False,2
+CR-T5-005,C,Tin,False,3
+CR-T5-005,D,Nickel,False,4
+CR-T5-006,A,Applying grease or oil,False,1
+CR-T5-006,B,Painting,False,2
+CR-T5-006,C,Dipping iron articles in salt solution,True,3
+CR-T5-006,D,Galvanisation,False,4
+CR-T5-007,A,A vacuum,False,1
+CR-T5-007,B,Boiled distilled water covered with oil,False,2
+CR-T5-007,C,Tap water exposed to air,True,3
+CR-T5-007,D,Dry air with anhydrous calcium chloride,False,4
+CR-T5-008,A,Chromium and nickel,True,1
+CR-T5-008,B,Zinc and copper,False,2
+CR-T5-008,C,Tin and lead,False,3
+CR-T5-008,D,Carbon and sulphur,False,4
+CR-T5-009,A,Sulphur compounds in air,True,1
+CR-T5-009,B,Nitrogen,False,2
+CR-T5-009,C,Oxygen only,False,3
+CR-T5-009,D,Carbon dioxide,False,4
+CR-T5-010,A,Removes oxygen from air,False,1
+CR-T5-010,B,Reacts with iron to form an alloy,False,2
+CR-T5-010,C,Stops contact of iron with air and moisture,True,3
+CR-T5-010,D,Makes iron more reactive,False,4
+CR-T5-011,A,Forms a layer of paint,False,1
+CR-T5-011,B,Is more reactive than iron and corrodes first,True,2
+CR-T5-011,C,Is less reactive than iron,False,3
+CR-T5-011,D,Absorbs moisture,False,4
+CR-T5-012,A,Decreases,False,1
+CR-T5-012,B,Becomes zero,False,2
+CR-T5-012,C,Increases,True,3
+CR-T5-012,D,Remains the same,False,4
+CR-T5-013,A,Both A and R are true and R is the correct explanation of A.,True,1
+CR-T5-013,B,Both A and R are true but R is not the correct explanation of A.,False,2
+CR-T5-013,C,A is true but R is false.,False,3
+CR-T5-013,D,A is false but R is true.,False,4
+CR-T5-014,A,Both A and R are true and R is the correct explanation of A.,False,1
+CR-T5-014,B,Both A and R are true but R is not the correct explanation of A.,False,2
+CR-T5-014,C,A is true but R is false.,True,3
+CR-T5-014,D,A is false but R is true.,False,4
+CR-T5-015,A,Both A and R are true and R is the correct explanation of A.,False,1
+CR-T5-015,B,Both A and R are true but R is not the correct explanation of A.,False,2
+CR-T5-015,C,A is true but R is false.,False,3
+CR-T5-015,D,A is false but R is true.,True,4
+CR-T5-016,A,Only I is correct,True,1
+CR-T5-016,B,Only II is correct,False,2
+CR-T5-016,C,Both I and II are correct,False,3
+CR-T5-016,D,Neither I nor II is correct,False,4
+CR-T5-017,A,Only I is correct,False,1
+CR-T5-017,B,Only II is correct,False,2
+CR-T5-017,C,Both I and II are correct,True,3
+CR-T5-017,D,Neither I nor II is correct,False,4
+CR-T5-018,A,"1-S, 2-P, 3-R, 4-Q",False,1
+CR-T5-018,B,"1-Q, 2-R, 3-P, 4-S",False,2
+CR-T5-018,C,"1-Q, 2-P, 3-R, 4-S",True,3
+CR-T5-018,D,"1-P, 2-Q, 3-R, 4-S",False,4
+CR-T5-019,A,Tube A,True,1
+CR-T5-019,B,Tube B,False,2
+CR-T5-019,C,Tube C,False,3
+CR-T5-019,D,All three,False,4
+CR-T5-020,A,Provide moisture to the nail,False,1
+CR-T5-020,B,Prevent air (oxygen) from dissolving in the water,True,2
+CR-T5-020,C,Speed up rusting,False,3
+CR-T5-020,D,Remove dissolved salts,False,4
+CR-T5-021,A,Reacts with iron to form rust,False,1
+CR-T5-021,B,Acts as a catalyst for rusting,False,2
+CR-T5-021,C,Supplies oxygen,False,3
+CR-T5-021,D,Absorbs moisture from the air,True,4
+CR-T6-001,A,Reduction of fats and oils,False,1
+CR-T6-001,B,Oxidation of fats and oils,True,2
+CR-T6-001,C,Evaporation of water from food,False,3
+CR-T6-001,D,Neutralisation of acids in food,False,4
+CR-T6-002,A,Cool the chips,False,1
+CR-T6-002,B,Increase the weight,False,2
+CR-T6-002,C,Add flavour,False,3
+CR-T6-002,D,Prevent oxidation of fats and oils,True,4
+CR-T6-003,A,Antioxidants,True,1
+CR-T6-003,B,Catalysts,False,2
+CR-T6-003,C,Antibiotics,False,3
+CR-T6-003,D,Antacids,False,4
+CR-T6-004,A,Table salt,False,1
+CR-T6-004,B,Butter kept open in a warm room,True,2
+CR-T6-004,C,Distilled water,False,3
+CR-T6-004,D,Sugar crystals,False,4
+CR-T6-005,A,Increased sweetness,False,1
+CR-T6-005,B,Only bubbles of colourless gas,False,2
+CR-T6-005,C,Improved flavour,False,3
+CR-T6-005,D,Unpleasant smell and taste,True,4
+CR-T6-006,A,Storing food in an airtight container,False,1
+CR-T6-006,B,Keeping food in a refrigerator,False,2
+CR-T6-006,C,Storing food in an open container in a warm place,True,3
+CR-T6-006,D,Adding antioxidants,False,4
+CR-T6-007,A,Adds nitrogen to food,False,1
+CR-T6-007,B,Converts fats into sugars,False,2
+CR-T6-007,C,Removes fats from food,False,3
+CR-T6-007,D,Slows down the rate of oxidation,True,4
+CR-T6-008,A,Nitrogen reacts with oil to make it tasty,False,1
+CR-T6-008,B,Nitrogen is more soluble in oil,False,2
+CR-T6-008,C,Oxygen is coloured,False,3
+CR-T6-008,D,Nitrogen is unreactive and does not oxidise the chips,True,4
+CR-T6-009,A,Neutralisation,False,1
+CR-T6-009,B,Rancidity,True,2
+CR-T6-009,C,Displacement,False,3
+CR-T6-009,D,Precipitation,False,4
+CR-T6-010,A,Nitrogen is more abundant in summer,False,1
+CR-T6-010,B,Higher temperature increases the rate of oxidation,True,2
+CR-T6-010,C,Fats absorb more water in summer,False,3
+CR-T6-010,D,Oxygen is absent in winter,False,4
+CR-T6-011,A,Keeping it in a cool place,False,1
+CR-T6-011,B,A small hole letting air enter,True,2
+CR-T6-011,C,Storing it in the shade,False,3
+CR-T6-011,D,Keeping it sealed,False,4
+CR-T6-012,A,Both A and R are true and R is the correct explanation of A.,True,1
+CR-T6-012,B,Both A and R are true but R is not the correct explanation of A.,False,2
+CR-T6-012,C,A is true but R is false.,False,3
+CR-T6-012,D,A is false but R is true.,False,4
+CR-T6-013,A,Both A and R are true and R is the correct explanation of A.,False,1
+CR-T6-013,B,Both A and R are true but R is not the correct explanation of A.,True,2
+CR-T6-013,C,A is true but R is false.,False,3
+CR-T6-013,D,A is false but R is true.,False,4
+CR-T6-014,A,Both A and R are true and R is the correct explanation of A.,False,1
+CR-T6-014,B,Both A and R are true but R is not the correct explanation of A.,False,2
+CR-T6-014,C,A is true but R is false.,False,3
+CR-T6-014,D,A is false but R is true.,True,4
+CR-T6-015,A,Only I is correct,False,1
+CR-T6-015,B,Only II is correct,False,2
+CR-T6-015,C,Both I and II are correct,True,3
+CR-T6-015,D,Neither I nor II is correct,False,4
+CR-T6-016,A,Only I is correct,False,1
+CR-T6-016,B,Only II is correct,True,2
+CR-T6-016,C,Both I and II are correct,False,3
+CR-T6-016,D,Neither I nor II is correct,False,4
+CR-T6-017,A,"1-R, 2-Q, 3-P, 4-S",False,1
+CR-T6-017,B,"1-P, 2-Q, 3-S, 4-R",False,2
+CR-T6-017,C,"1-Q, 2-P, 3-R, 4-S",False,3
+CR-T6-017,D,"1-P, 2-Q, 3-R, 4-S",True,4
+CR-T6-018,A,Corrosion,False,1
+CR-T6-018,B,Precipitation,False,2
+CR-T6-018,C,Rancidity,True,3
+CR-T6-018,D,Neutralisation,False,4
+CR-T6-019,A,Reduction,False,1
+CR-T6-019,B,Decomposition by electricity,False,2
+CR-T6-019,C,Displacement,False,3
+CR-T6-019,D,Oxidation,True,4
+CR-T6-020,A,It contained more fat,False,1
+CR-T6-020,B,It was kept warm,False,2
+CR-T6-020,C,It contained nitrogen that prevented contact with oxygen,True,3
+CR-T6-020,D,It was exposed to light,False,4
+CR-T7-001,A,Respiration,True,1
+CR-T7-001,B,Electrolysis of water,False,2
+CR-T7-001,C,Photosynthesis,False,3
+CR-T7-001,D,Thermal decomposition of limestone,False,4
+CR-T7-002,A,Respiration,False,1
+CR-T7-002,B,Burning of magnesium ribbon,False,2
+CR-T7-002,C,Burning of natural gas,False,3
+CR-T7-002,D,Thermal decomposition of calcium carbonate,True,4
+CR-T7-003,A,Hot,True,1
+CR-T7-003,B,Frozen,False,2
+CR-T7-003,C,Coloured,False,3
+CR-T7-003,D,Cold,False,4
+CR-T7-004,A,An endothermic reaction,False,1
+CR-T7-004,B,An exothermic reaction,True,2
+CR-T7-004,C,A displacement reaction,False,3
+CR-T7-004,D,A photolytic decomposition,False,4
+CR-T7-005,A,Energy is released when glucose is oxidised,True,1
+CR-T7-005,B,Energy is absorbed from the surroundings,False,2
+CR-T7-005,C,Carbon dioxide is absorbed,False,3
+CR-T7-005,D,Oxygen is released,False,4
+CR-T7-006,A,Very cold,True,1
+CR-T7-006,B,Warm,False,2
+CR-T7-006,C,Very hot,False,3
+CR-T7-006,D,Unchanged,False,4
+CR-T7-007,A,Electrolytic,False,1
+CR-T7-007,B,Endothermic,False,2
+CR-T7-007,C,Photolytic,False,3
+CR-T7-007,D,Exothermic,True,4
+CR-T7-008,A,Chemical energy from glucose,False,1
+CR-T7-008,B,Electrical energy,False,2
+CR-T7-008,C,Heat released by the plant,False,3
+CR-T7-008,D,Light energy from the Sun,True,4
+CR-T7-009,A,Endothermic,False,1
+CR-T7-009,B,Exothermic,True,2
+CR-T7-009,C,Electrolytic,False,3
+CR-T7-009,D,Photolytic,False,4
+CR-T7-010,A,Slaking of lime — exothermic,True,1
+CR-T7-010,B,Photosynthesis — exothermic,False,2
+CR-T7-010,C,Thermal decomposition of CaCO₃ — exothermic,False,3
+CR-T7-010,D,Respiration — endothermic,False,4
+CR-T7-011,A,Occur only in the dark,False,1
+CR-T7-011,B,Release heat,False,2
+CR-T7-011,C,Need no energy,False,3
+CR-T7-011,D,Require energy in some form,True,4
+CR-T7-012,A,Both A and R are true and R is the correct explanation of A.,True,1
+CR-T7-012,B,Both A and R are true but R is not the correct explanation of A.,False,2
+CR-T7-012,C,A is true but R is false.,False,3
+CR-T7-012,D,A is false but R is true.,False,4
+CR-T7-013,A,Both A and R are true and R is the correct explanation of A.,False,1
+CR-T7-013,B,Both A and R are true but R is not the correct explanation of A.,False,2
+CR-T7-013,C,A is true but R is false.,False,3
+CR-T7-013,D,A is false but R is true.,True,4
+CR-T7-014,A,Both A and R are true and R is the correct explanation of A.,False,1
+CR-T7-014,B,Both A and R are true but R is not the correct explanation of A.,True,2
+CR-T7-014,C,A is true but R is false.,False,3
+CR-T7-014,D,A is false but R is true.,False,4
+CR-T7-015,A,Only I is correct,True,1
+CR-T7-015,B,Only II is correct,False,2
+CR-T7-015,C,Both I and II are correct,False,3
+CR-T7-015,D,Neither I nor II is correct,False,4
+CR-T7-016,A,Only I is correct,False,1
+CR-T7-016,B,Only II is correct,False,2
+CR-T7-016,C,Both I and II are correct,True,3
+CR-T7-016,D,Neither I nor II is correct,False,4
+CR-T7-017,A,"1-R, 2-Q, 3-P, 4-S",False,1
+CR-T7-017,B,"1-P, 2-Q, 3-R, 4-S",True,2
+CR-T7-017,C,"1-P, 2-Q, 3-S, 4-R",False,3
+CR-T7-017,D,"1-Q, 2-P, 3-R, 4-S",False,4
+CR-T7-018,A,Exothermic,False,1
+CR-T7-018,B,Photolytic,False,2
+CR-T7-018,C,Combustion,False,3
+CR-T7-018,D,Endothermic,True,4
+CR-T7-019,A,The reaction produces a sticky gum,False,1
+CR-T7-019,B,The beaker becomes magnetic,False,2
+CR-T7-019,C,Ammonia acts as an adhesive,False,3
+CR-T7-019,D,The water on the plank freezes as heat is absorbed,True,4
+CR-T7-020,A,A double displacement reaction,True,1
+CR-T7-020,B,A combination reaction,False,2
+CR-T7-020,C,A simple displacement reaction,False,3
+CR-T7-020,D,A thermal decomposition,False,4

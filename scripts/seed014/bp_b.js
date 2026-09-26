@@ -1,0 +1,37 @@
+// Starter blueprints B (3 of 6).
+module.exports = [
+{ slug:'ch1-case-based-test', name:'Case-Based Test - Chemical Reactions', kind:'custom',
+  desc:'Case studies on decomposition and rusting with linked questions.',
+  duration:1200, marks:10, marking:{ default_marks:1, default_neg_marks:0 },
+  shuffleQ:false, shuffleO:true,
+  sections:[
+   { title:'Case studies', pos:0, count:7, mpq:1, neg:0, instr:'Read each passage, then answer linked questions.',
+     filter:{ topic_slugs:['types-of-reactions','corrosion'], types:['mcq','assertion_reason','short'], dmin:1, dmax:3, skills:['recall','application','reasoning'], tags:['case-child'], pyq_only:false } },
+  ] },
+{ slug:'ch1-balancing-marathon', name:'Balancing Marathon - 20 in 15 Minutes', kind:'speed',
+  desc:'Speed drill: twenty balancing items in fifteen minutes.',
+  duration:900, marks:26, marking:{ default_marks:1, default_neg_marks:0 },
+  shuffleQ:true, shuffleO:true,
+  sections:[
+   { title:'Balance the equations', pos:0, count:6, mpq:2, neg:0, instr:'Write fully balanced equations.',
+     filter:{ topic_slugs:['balancing-equations','types-of-reactions','exothermic-endothermic'], types:['equation'], dmin:1, dmax:3, skills:['application'], tags:[], pyq_only:false } },
+   { title:'Rapid-fire balancing', pos:1, count:14, mpq:1, neg:0, instr:'Quick MCQ and fill-blank items.',
+     filter:{ topic_slugs:['balancing-equations'], types:['mcq','fill_blank'], dmin:1, dmax:2, skills:['recall','application'], tags:['balancing'], pyq_only:false } },
+  ] },
+{ slug:'ch1-cbse-pattern-40', name:'CBSE Pattern Paper - Chemical Reactions (40 Marks)', kind:'board_pattern',
+  desc:'CBSE-style paper with sections A to E, 40 marks.',
+  duration:10800, marks:40, marking:{ default_marks:1, default_neg_marks:0, pattern:'CBSE' },
+  shuffleQ:false, shuffleO:true,
+  sections:[
+   { title:'Section A - Objective', pos:0, count:6, mpq:1, neg:0, instr:'MCQs carrying 1 mark each.',
+     filter:{ topic_slugs:['balancing-equations','types-of-reactions','redox-reactions','exothermic-endothermic','corrosion','rancidity'], types:['mcq'], dmin:1, dmax:2, skills:['recall','application'], tags:[], pyq_only:false } },
+   { title:'Section B - Reasoning', pos:1, count:5, mpq:1, neg:0, instr:'Assertion-reason, statements and match.',
+     filter:{ topic_slugs:['balancing-equations','types-of-reactions','redox-reactions','exothermic-endothermic','corrosion','rancidity'], types:['assertion_reason','statement','match'], dmin:1, dmax:3, skills:['application','reasoning'], tags:[], pyq_only:false } },
+   { title:'Section C - Short I', pos:2, count:5, mpq:2, neg:0, instr:'Fill blanks and equations, 2 marks each.',
+     filter:{ topic_slugs:['balancing-equations','types-of-reactions','redox-reactions','exothermic-endothermic','rancidity'], types:['fill_blank','equation'], dmin:1, dmax:3, skills:['recall','application'], tags:[], pyq_only:false } },
+   { title:'Section D - Short II', pos:3, count:3, mpq:3, neg:0, instr:'Three-mark questions.',
+     filter:{ topic_slugs:['types-of-reactions','redox-reactions','corrosion','rancidity','balancing-equations'], types:['short'], dmin:2, dmax:3, skills:['application','reasoning'], tags:[], pyq_only:false } },
+   { title:'Section E - Long', pos:4, count:2, mpq:5, neg:0, instr:'Five-mark questions.',
+     filter:{ topic_slugs:['types-of-reactions','redox-reactions','balancing-equations'], types:['long'], dmin:3, dmax:3, skills:['reasoning'], tags:[], pyq_only:false } },
+  ] },
+];

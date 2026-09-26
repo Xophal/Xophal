@@ -64,3 +64,35 @@ export function getQuestionStatusLabel(status: Pick<QuestionStatus, "isAnswered"
 
   return "unanswered";
 }
+
+/**
+ * Visual state used by the exam question palette and legend.
+ * Kept separate from `QuestionStatus` so the existing status contract
+ * (and its unit tests) is untouched.
+ */
+export type QuestionVisualState =
+  | "current"
+  | "not-visited"
+  | "answered"
+  | "marked"
+  | "answered-marked";
+
+export function getQuestionVisualState(
+  status: Pick<QuestionStatus, "isAnswered" | "isMarkedForReview" | "isCurrent">
+): QuestionVisualState {
+  if (status.isCurrent) return "current";
+  if (status.isAnswered && status.isMarkedForReview) return "answered-marked";
+  if (status.isAnswered) return "answered";
+  if (status.isMarkedForReview) return "marked";
+  return "not-visited";
+}
+
+/** Short, human-readable description used in the palette legend. */
+export const QUESTION_STATE_LEGEND: Array<{ state: QuestionVisualState; label: string; hint: string }> = [
+  { state: "answered", label: "Answered", hint: "Saved" },
+  { state: "not-visited", label: "Not visited", hint: "Pending" },
+  { state: "marked", label: "For review", hint: "Flag" },
+  { state: "answered-marked", label: "Answered + review", hint: "Saved" },
+  { state: "current", label: "Current question", hint: "You are here" },
+];
+

@@ -15,6 +15,8 @@ export default defineConfig({
   },
   test: {
     environment: "node",
+    // Live tests (*.live.test.ts) are excluded by the glob below and skip themselves
+    // unless run through `npm run test:smoke`; see the note in that file.
     include: ["tests/unit/**/*.test.ts", "tests/integration/**/*.test.ts"],
     coverage: {
       provider: "v8",

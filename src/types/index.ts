@@ -85,6 +85,7 @@ export interface QuestionOption {
 export interface Question {
   id: string;
   question_type_id: string;
+  question_type?: QuestionType | null;
   difficulty_level_id: string | null;
   topic_id: string | null;
   chapter_id: string | null;
@@ -101,7 +102,6 @@ export interface Question {
   is_active: boolean;
   status?: "draft" | "review" | "approved" | "published" | "rejected" | "archived";
   tags?: string[] | null;
-  question_type?: QuestionType;
   difficulty_level?: DifficultyLevel;
   options?: QuestionOption[];
 }

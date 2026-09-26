@@ -35,7 +35,7 @@ export async function POST(_: Request, { params }: { params: Promise<{ slug: str
 
     const { data: questionRows, error: questionError } = await adminClient
       .from("mock_test_questions")
-      .select("question_id, sort_order, marks_override, questions(*, question_options(*))")
+      .select("question_id, sort_order, marks_override, questions(*, question_types(code), question_options(*))")
       .eq("mock_test_id", test.id)
       .order("sort_order", { ascending: true });
 
@@ -46,6 +46,7 @@ export async function POST(_: Request, { params }: { params: Promise<{ slug: str
         if (!question) return null;
         return {
           ...question,
+          question_type: Array.isArray(question.question_types) ? question.question_types[0] : question.question_types,
           marks: row.marks_override ?? question.marks,
           options: (question.question_options || []).map((option: { is_correct?: boolean }) => ({
             ...option,
@@ -81,10 +82,16 @@ export async function POST(_: Request, { params }: { params: Promise<{ slug: str
 
     if (!attempt) throw new ApiError(500, "Unable to start this mock test", "ATTEMPT_CREATE_FAILED");
 
+    const { data: savedResponses } = await adminClient
+      .from("test_responses")
+      .select("question_id, selected_option_ids, text_answer, numerical_answer, time_spent_seconds, is_bookmarked, is_review_later, is_visited")
+      .eq("attempt_id", attempt.id);
+
     return apiSuccess({
       attempt,
       test: { ...test, total_questions: questions.length, total_marks: questions.reduce((total, question) => total + Number(question.marks || 0), 0) },
       questions,
+      responses: savedResponses ?? [],
     });
   } catch (error) {
     return handleApiError(error);

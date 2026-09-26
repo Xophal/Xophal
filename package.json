@@ -15,11 +15,14 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "test:coverage": "vitest run --coverage",
+    "test:smoke": "vitest run tests/integration/engine-smoke.live.test.ts --no-file-parallelism",
     "db:types": "supabase gen types typescript --local > src/types/database.types.ts",
     "db:migrate": "node scripts/db-migrate.js",
     "db:start": "supabase start",
     "db:link": "supabase link --project-ref",
-    "deploy:check": "node scripts/deploy-check.js"
+    "deploy:check": "node scripts/deploy-check.js",
+    "qb:build": "node scripts/qbank_ch1/build_017.js",
+    "qb:verify": "node scripts/qbank_ch1/verify.cjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",

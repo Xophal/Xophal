@@ -18,6 +18,7 @@ interface TestState {
   isExpired: boolean;
 
   setAttempt: (attemptId: string, mockTest: MockTest, questions: Question[], startedAt?: number) => void;
+  hydrateResponses: (responses: TestResponse[]) => void;
   setCurrentIndex: (index: number) => void;
   saveResponse: (questionId: string, response: Partial<TestResponse>) => void;
   clearAnswer: (questionId: string) => void;
@@ -83,6 +84,8 @@ export const useTestStore = create<TestState>()(
             isExpired: false,
           };
         }),
+
+      hydrateResponses: (responses) => set({ responses: Object.fromEntries(responses.map((item) => [item.question_id, item])) }),
 
       setCurrentIndex: (index) => set((state) => ({ currentIndex: Math.max(0, Math.min(index, state.questions.length - 1)) })),
 

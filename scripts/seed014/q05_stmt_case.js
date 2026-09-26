@@ -1,0 +1,22 @@
+// Q23-Q27 statement / case parents (options where applicable)
+module.exports = [
+{ code:'Q23', t:'statement', topic:'types-of-reactions', sub:'decomposition-reactions', d:2, skill:'reasoning', marks:1, neg:0.25, time:70, board:'CBSE', pyq:null,
+stem:'Consider: Statement I: Silver chloride turns grey in sunlight. Statement II: The reaction is 2AgCl(s)->2Ag(s)+Cl2(g). Choose the correct option.',
+opts:[['Both statements true; II is photolytic decomposition',1],['Both true but unrelated',0],['I true, II false',0],['I false, II true',0]],
+rub:'Light decomposes AgCl into silver and chlorine.', expl:'Sunlight splits AgCl into grey silver and chlorine gas: a photolytic decomposition reaction used in black-and-white photography.', tags:['statement','photolysis'] },
+{ code:'Q24', t:'statement', topic:'types-of-reactions', sub:'double-displacement', d:2, skill:'application', marks:1, neg:0.25, time:70, board:'CBSE', pyq:null,
+stem:'Statement I: Mixing lead nitrate and potassium iodide gives a yellow precipitate. Statement II: The precipitate is lead iodide formed by double displacement.',
+opts:[['Both true; II correctly explains I',1],['Both true but unrelated',0],['I true, II false',0],['I false, II true',0]],
+rub:'Pb2+ and I- combine into insoluble PbI2.', expl:'Pb(NO3)2+2KI->PbI2(yellow)+2KNO3: ions exchange partners and insoluble lead iodide precipitates.', tags:['statement','precipitation'] },
+{ code:'Q25', t:'statement', topic:'balancing-equations', sub:'word-equations', d:1, skill:'recall', marks:1, neg:0, time:60, board:'CBSE', pyq:null,
+stem:'Statement I: A word equation shows reactants and products by name. Statement II: A skeletal equation is always balanced. Decide.',
+opts:[['I true, II false',1],['Both true',0],['I false, II true',0],['Both false',0]],
+rub:'Skeletal equations are unbalanced by definition.', expl:'Word equations use names; skeletal equations use formulae but are not yet balanced.', tags:['statement','word-equation'] },
+{ code:'Q26', t:'case_based', topic:'types-of-reactions', sub:'decomposition-reactions', d:2, skill:'application', marks:0, neg:0, time:30, board:'CBSE', pyq:null,
+stem:'CASE STUDY: A student heats green ferrous sulphate crystals in a dry boiling tube. The green colour fades, a reddish-brown solid remains, and a gas with the smell of burning sulphur evolves. The reaction is 2FeSO4(s)->Fe2O3(s)+SO2(g)+SO3(g). Answer Q27-Q29 below.',
+opts:[], rub:'Parent passage carries no marks; children are graded.', expl:'Thermal decomposition of ferrous sulphate into ferric oxide and sulphur oxides.', tags:['case-study','thermal-decomposition'] },
+{ code:'Q27', t:'mcq', topic:'types-of-reactions', sub:'decomposition-reactions', d:1, skill:'recall', marks:1, neg:0.25, time:45, board:'CBSE', pyq:null, parent:'Q26',
+stem:'(Case Q26) The reddish-brown residue left in the tube is:',
+opts:[['FeO',0],['Fe2O3',1],['Fe3O4',0],['FeS',0]],
+rub:'Ferric oxide is reddish-brown.', expl:'2FeSO4 decomposes to Fe2O3 (reddish-brown) plus SO2 and SO3.', tags:['case-child','ferric-oxide'] },
+];

@@ -1,13 +1,17 @@
-"use client";
+﻿"use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, ArrowRight, Bookmark, Flag, RotateCcw } from "lucide-react";
+import { ArrowLeft, ArrowRight, Bookmark, Eraser, Flag, RotateCcw, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import QuestionPalette from "@/components/mock/QuestionPalette";
-import TestTimer from "@/components/mock/TestTimer";
-import { getQuestionStatus } from "@/lib/question-state";
+import ExamAnswer from "@/components/mock/ExamAnswer";
+import ExamHeader from "@/components/mock/ExamHeader";
+import ExamSidebar from "@/components/mock/ExamSidebar";
+import SaveStatus, { type SaveState } from "@/components/mock/SaveStatus";
+import { getQuestionStatus, getQuestionVisualState, QUESTION_STATE_LEGEND } from "@/lib/question-state";
 import { useTestStore } from "@/stores/test-store";
+import { cn } from "@/lib/utils";
+import { EmptyState } from "@/components/shared/empty-state";
 
 export default function MockRunner({ slug }: { slug: string }) {
   const router = useRouter();
@@ -29,14 +33,18 @@ export default function MockRunner({ slug }: { slug: string }) {
   const submitTest = useTestStore((state) => state.submitTest);
   const expireTest = useTestStore((state) => state.expireTest);
   const resetTest = useTestStore((state) => state.resetTest);
+  const hydrateResponses = useTestStore((state) => state.hydrateResponses);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showConfirm, setShowConfirm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [saveState, setSaveState] = useState<SaveState>("idle");
+  const [paletteOpen, setPaletteOpen] = useState(false);
 
   useEffect(() => {
     if (!attemptId || isSubmitted || Object.keys(responses).length === 0) return;
     const timer = window.setTimeout(() => {
+      setSaveState("saving");
       void fetch(`/api/mock-tests/attempts/${attemptId}/responses`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -50,7 +58,11 @@ export default function MockRunner({ slug }: { slug: string }) {
           is_review_later: Boolean(item.is_review_later),
           is_visited: Boolean(item.is_visited),
         })) }),
-      }).catch(() => undefined);
+      })
+        .then((result) => {
+          setSaveState(result.ok ? "saved" : "error");
+        })
+        .catch(() => setSaveState("error"));
     }, 500);
     return () => window.clearTimeout(timer);
   }, [attemptId, isSubmitted, responses]);
@@ -64,7 +76,10 @@ export default function MockRunner({ slug }: { slug: string }) {
         const response = await fetch(`/api/mock-tests/${encodeURIComponent(slug)}/attempt`, { method: "POST" });
         const result = await response.json().catch(() => ({}));
         if (!response.ok || !result.success) throw new Error(result.error || "Unable to start this mock test.");
-        if (active) setAttempt(result.data.attempt.id, result.data.test, result.data.questions, Date.parse(result.data.attempt.started_at));
+        if (active) {
+          setAttempt(result.data.attempt.id, result.data.test, result.data.questions, Date.parse(result.data.attempt.started_at));
+          if (Array.isArray(result.data.responses)) hydrateResponses(result.data.responses);
+        }
       } catch (loadError) {
         if (active) setError(loadError instanceof Error ? loadError.message : "Unable to load this mock test.");
       } finally {
@@ -87,8 +102,18 @@ export default function MockRunner({ slug }: { slug: string }) {
 
   const selectOption = (optionId: string) => {
     if (!question || isSubmitted || !question.options?.some((option) => option.id === optionId)) return;
-    saveResponse(question.id, { selected_option_ids: [optionId] });
+    const isMultiple = question.question_type?.code === "multiple_correct";
+    if (!isMultiple) {
+      saveResponse(question.id, { selected_option_ids: [optionId] });
+      return;
+    }
+    const selected = new Set(response?.selected_option_ids ?? []);
+    if (selected.has(optionId)) selected.delete(optionId); else selected.add(optionId);
+    saveResponse(question.id, { selected_option_ids: [...selected] });
   };
+
+  const saveTextAnswer = (text_answer: string) => saveResponse(question.id, { text_answer: text_answer || null });
+  const saveNumericalAnswer = (value: string) => saveResponse(question.id, { numerical_answer: value === "" || Number.isNaN(Number(value)) ? null : Number(value) });
 
   async function completeSubmit() {
     if (!attemptId || submitting) return;
@@ -124,37 +149,331 @@ export default function MockRunner({ slug }: { slug: string }) {
     }
   }
 
-  if (loading) return <p className="p-6 text-sm text-muted-foreground">Loading mock test...</p>;
-  if (error) return <p role="alert" className="p-6 text-sm text-destructive">{error}</p>;
-  if (!question || !mockTest) return <p className="p-6 text-sm text-muted-foreground">This mock test is unavailable.</p>;
+  const currentState = getQuestionVisualState(getQuestionStatus(response, true));
+
+  // Close the mobile palette sheet on Escape.
+  useEffect(() => {
+    if (!paletteOpen) return;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setPaletteOpen(false);
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [paletteOpen]);
+
+  const goTo = useCallback(
+    (index: number) => {
+      handleSelectQuestion(index);
+      setPaletteOpen(false);
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [questions.length, setCurrentIndex, markVisited]
+  );
+
+  if (loading) {
+    return (
+      <div className="exam-shell">
+        <div className="mx-auto w-full max-w-3xl space-y-4 p-6" aria-busy="true" aria-live="polite">
+          <span className="sr-only">Loading mock testâ€¦</span>
+          <div className="h-8 w-64 animate-pulse rounded-md bg-muted" />
+          <div className="h-40 animate-pulse rounded-xl bg-muted" />
+          <div className="h-12 animate-pulse rounded-lg bg-muted" />
+          <div className="h-12 animate-pulse rounded-lg bg-muted" />
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="exam-shell">
+        <div className="mx-auto w-full max-w-lg p-6">
+          <div className="exam-panel p-8 text-center" role="alert">
+            <h1 className="text-lg font-bold">Something went wrong</h1>
+            <p className="mt-2 text-sm text-muted-foreground">
+              We could not load this mock test. Your progress is safe â€” nothing was submitted.
+            </p>
+            <p className="mt-3 text-xs text-muted-foreground">{error}</p>
+            <div className="mt-6 flex flex-wrap justify-center gap-3">
+              <Button onClick={() => window.location.reload()}>Try again</Button>
+              <Button variant="outline" asChild>
+                <a href="/mock-tests">Back to mock tests</a>
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!question || !mockTest) {
+    return (
+      <div className="exam-shell">
+        <EmptyState
+          icon="test"
+          title="This mock test is unavailable"
+          description="It may have been unpublished or removed. Browse the current catalogue to find a similar test."
+          actionLabel="Explore mock tests"
+          actionHref="/mock-tests"
+        />
+      </div>
+    );
+  }
+
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-4 border-b border-border pb-4">
-        <div><p className="text-sm text-muted-foreground">{mockTest.title}</p><h1 className="text-xl font-bold">Question {currentIndex + 1} of {questions.length}</h1></div>
-        <TestTimer expiresAt={expiresAt} onExpire={expireTest} />
-      </div>
-      {isSubmitted ? (
-        <div className="rounded-xl border border-primary/20 bg-primary/5 p-6 text-center">
-          <h2 className="text-lg font-bold">{isExpired ? "Time expired" : "Test submitted"}</h2>
-          <p className="mt-2 text-sm text-muted-foreground">{isExpired ? "Your answers have been submitted and this attempt is now closed." : `You answered ${answeredCount} of ${questions.length} questions.`}</p>
-          <Button variant="outline" className="mt-4 inline-flex items-center gap-2" onClick={() => { resetTest(); router.refresh(); }}><RotateCcw className="h-4 w-4" />Start again</Button>
-        </div>
-      ) : (
-        <>
-          <QuestionPalette questions={questions} responses={responses} currentIndex={currentIndex} onSelectQuestion={handleSelectQuestion} />
-          <article><p className="text-lg leading-8">{question.question_text}</p>{question.image_url && <img src={question.image_url} alt="Question illustration" className="mt-4 max-h-72 rounded-md" />}</article>
-          <fieldset className="grid gap-3"><legend className="sr-only">Choose an answer for question {currentIndex + 1}</legend>{question.options?.map((option, index) => {
-            const selected = response?.selected_option_ids?.includes(option.id);
-            return <label key={option.id} className={`flex cursor-pointer gap-3 rounded-lg border p-4 text-left text-sm transition ${selected ? "border-primary bg-primary/10 ring-1 ring-primary" : "border-border hover:bg-muted"}`}><input type="radio" name={`question-${question.id}`} checked={Boolean(selected)} onChange={() => selectOption(option.id)} className="mt-0.5 h-4 w-4 accent-primary" /><span><span className="mr-2 font-semibold">{String.fromCharCode(65 + index)}.</span>{option.option_text}</span></label>;
-          })}</fieldset>
-          <div className="flex flex-wrap justify-between gap-3 border-t border-border pt-5">
-            <div className="flex gap-2"><Button variant="outline" onClick={() => handleSelectQuestion(currentIndex - 1)} disabled={currentIndex === 0}><ArrowLeft className="h-4 w-4" />Previous</Button><Button variant="outline" onClick={() => handleSelectQuestion(currentIndex + 1)} disabled={currentIndex === questions.length - 1}>Next<ArrowRight className="h-4 w-4" /></Button></div>
-            <div className="flex gap-2"><Button variant="outline" onClick={() => toggleReviewLater(question.id)} aria-pressed={Boolean(response?.is_review_later)}><Flag className="h-4 w-4" />{response?.is_review_later ? "Unmark review" : "Mark review"}</Button><Button variant="outline" onClick={() => toggleBookmark(question.id)}><Bookmark className="h-4 w-4" />Save</Button><Button variant="ghost" onClick={() => clearAnswer(question.id)} disabled={!response?.selected_option_ids?.length}>Clear answer</Button><Button onClick={() => setShowConfirm(true)}>Submit</Button></div>
+    <div className="exam-shell">
+      <ExamHeader
+        title={mockTest.title}
+        currentIndex={currentIndex}
+        totalQuestions={questions.length}
+        answeredCount={answeredCount}
+        expiresAt={expiresAt}
+        saveState={saveState}
+        onExpire={expireTest}
+        onOpenPalette={() => setPaletteOpen(true)}
+      />
+
+      <div className="exam-body">
+        <aside className="exam-sidebar hidden lg:block lg:h-[calc(100vh-7.5rem)] lg:overflow-y-auto">
+          <ExamSidebar
+            questions={questions}
+            responses={responses}
+            currentIndex={currentIndex}
+            onSelectQuestion={goTo}
+            onSubmit={() => setShowConfirm(true)}
+            submitting={submitting}
+          />
+        </aside>
+
+        <main className="exam-main" id="exam-main">
+          <div className="mx-auto w-full max-w-3xl px-4 py-5 sm:px-6 sm:py-8">
+            {isSubmitted ? (
+              <div className="exam-panel p-8 text-center">
+                <h1 className="text-xl font-bold">{isExpired ? "Time expired" : "Test submitted"}</h1>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  {isExpired
+                    ? "Your answers have been submitted and this attempt is now closed."
+                    : `You answered ${answeredCount} of ${questions.length} questions.`}
+                </p>
+                <div className="mt-6 flex flex-wrap justify-center gap-3">
+                  <Button
+                    variant="outline"
+                    className="inline-flex items-center gap-2"
+                    onClick={() => {
+                      resetTest();
+                      router.refresh();
+                    }}
+                  >
+                    <RotateCcw className="h-4 w-4" />
+                    Start again
+                  </Button>
+                  {attemptId && (
+                    <Button asChild>
+                      <a href={`/test/result/${attemptId}`}>View result</a>
+                    </Button>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <>
+                <article className="exam-panel p-5 sm:p-6">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="exam-eyebrow">
+                      Question {currentIndex + 1} of {questions.length}
+                    </p>
+                    <span
+                      className="rounded-full border border-border px-2.5 py-1 text-[0.6875rem] font-semibold text-muted-foreground"
+                      data-state={currentState}
+                    >
+                      {currentState === "answered"
+                        ? "Answered"
+                        : currentState === "answered-marked"
+                          ? "Answered · marked for review"
+                          : currentState === "marked"
+                            ? "Marked for review"
+                            : "Not answered yet"}
+                    </span>
+                  </div>
+
+                  <h1 className="mt-3 text-lg font-bold leading-snug sm:text-xl">
+                    {question.question_text}
+                  </h1>
+                  {question.marks > 0 && (
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      {question.marks} mark{question.marks === 1 ? "" : "s"}
+                      {question.negative_marks > 0 && ` · −${question.negative_marks} for a wrong answer`}
+                    </p>
+                  )}
+                  {question.image_url && (
+                    <img
+                      src={question.image_url}
+                      alt={`Figure for question ${currentIndex + 1}`}
+                      className="exam-figure"
+                      loading="lazy"
+                    />
+                  )}
+                </article>
+
+                <div className="exam-panel mt-4 p-5 sm:p-6">
+                  <ExamAnswer
+                    question={question}
+                    response={response}
+                    onSelectOption={selectOption}
+                    onTextAnswer={saveTextAnswer}
+                    onNumericalAnswer={saveNumericalAnswer}
+                  />
+                </div>
+
+                <div className="mt-4 flex flex-wrap items-center gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => toggleReviewLater(question.id)}
+                    aria-pressed={Boolean(response?.is_review_later)}
+                    className={cn(response?.is_review_later && "border-warning text-warning")}
+                  >
+                    <Flag className="h-4 w-4" />
+                    {response?.is_review_later ? "Marked for review" : "Mark for review"}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => toggleBookmark(question.id)}
+                    aria-pressed={Boolean(response?.is_bookmarked)}
+                    className={cn(response?.is_bookmarked && "border-primary text-primary")}
+                  >
+                    <Bookmark className="h-4 w-4" />
+                    {response?.is_bookmarked ? "Bookmarked" : "Bookmark"}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={() => clearAnswer(question.id)}
+                    disabled={
+                      !response?.selected_option_ids?.length &&
+                      !response?.text_answer &&
+                      response?.numerical_answer == null
+                    }
+                  >
+                    <Eraser className="h-4 w-4" />
+                    Clear answer
+                  </Button>
+                  <SaveStatus state={saveState} className="ml-auto sm:hidden" />
+                </div>
+
+                <nav
+                  aria-label="Question navigation"
+                  className="mt-4 flex items-center justify-between gap-3 border-t border-border pt-4"
+                >
+                  <Button
+                    variant="outline"
+                    onClick={() => goTo(currentIndex - 1)}
+                    disabled={currentIndex === 0}
+                  >
+                    <ArrowLeft className="h-4 w-4" />
+                    Previous
+                  </Button>
+                  <span className="text-xs font-medium tabular-nums text-muted-foreground">
+                    {answeredCount} of {questions.length} answered
+                  </span>
+                  {currentIndex === questions.length - 1 ? (
+                    <Button onClick={() => setShowConfirm(true)}>Review &amp; submit</Button>
+                  ) : (
+                    <Button onClick={() => goTo(currentIndex + 1)}>
+                      Save &amp; next
+                      <ArrowRight className="h-4 w-4" />
+                    </Button>
+                  )}
+                </nav>
+              </>
+            )}
           </div>
-        </>
+        </main>
+      </div>
+
+      {/* Mobile / tablet palette sheet */}
+      {paletteOpen && !isSubmitted && (
+        <div className="fixed inset-0 z-50 lg:hidden">
+          <button
+            type="button"
+            aria-label="Close question palette"
+            className="absolute inset-0 h-full w-full bg-foreground/40"
+            onClick={() => setPaletteOpen(false)}
+          />
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Question palette"
+            className="absolute inset-x-0 bottom-0 max-h-[85vh] overflow-y-auto rounded-t-2xl border-t border-border bg-card p-4 shadow-2xl"
+          >
+            <div className="mb-3 flex items-center justify-between">
+              <h2 className="exam-section-title">Question palette</h2>
+              <button
+                type="button"
+                onClick={() => setPaletteOpen(false)}
+                aria-label="Close palette"
+                className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border text-muted-foreground transition hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <ExamSidebar
+              questions={questions}
+              responses={responses}
+              currentIndex={currentIndex}
+              onSelectQuestion={goTo}
+              onSubmit={() => {
+                setPaletteOpen(false);
+                setShowConfirm(true);
+              }}
+              submitting={submitting}
+              showLegend={false}
+            />
+          </div>
+        </div>
       )}
-      {showConfirm && <div role="dialog" aria-modal="true" aria-label="Confirm submission" className="rounded-xl p-4 glass-panel"><p className="font-semibold">Submit your test?</p><p className="mt-1 text-sm text-muted-foreground">You have answered {answeredCount} of {questions.length} questions.</p><div className="mt-4 flex gap-2"><Button variant="outline" onClick={() => setShowConfirm(false)}>Cancel</Button><Button onClick={completeSubmit} disabled={submitting}>{submitting ? "Submitting..." : "Submit test"}</Button></div></div>}
+
+      {showConfirm && (
+        <div className="fixed inset-0 z-[60] flex items-end justify-center bg-foreground/40 sm:items-center sm:p-6">
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="submit-confirm-title"
+            className="w-full max-w-md rounded-t-2xl border border-border bg-card p-6 shadow-2xl sm:rounded-2xl"
+          >
+            <h2 id="submit-confirm-title" className="text-lg font-bold">
+              Submit your test?
+            </h2>
+            <p className="mt-2 text-sm text-muted-foreground">
+              You have answered {answeredCount} of {questions.length} questions
+              {answeredCount < questions.length
+                ? `, leaving ${questions.length - answeredCount} unanswered.`
+                : "."}
+            </p>
+            <ul className="mt-4 space-y-1.5">
+              {QUESTION_STATE_LEGEND.filter((entry) => entry.state !== "current").map((entry) => (
+                <li key={entry.state} className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <span
+                    aria-hidden="true"
+                    data-state={entry.state}
+                    className="exam-palette-cell h-6 w-6 shrink-0 text-[0.625rem]"
+                  />
+                  {entry.label}
+                </li>
+              ))}
+            </ul>
+            <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <Button variant="outline" onClick={() => setShowConfirm(false)}>
+                Keep reviewing
+              </Button>
+              <Button onClick={completeSubmit} isLoading={submitting} loadingText="Submitting…">
+                Submit test
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

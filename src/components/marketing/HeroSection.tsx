@@ -1,7 +1,12 @@
+"use client";
+
 import Link from "next/link";
+import { motion, useReducedMotion } from "framer-motion";
 import { ArrowRight, BarChart3, Check, Play, Rocket, ShieldCheck, Sparkles, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ROUTES } from "@/constants";
+
+const trustPoints = ["Free to start", "No card needed", "CBSE & SEBA syllabus"];
 
 const featureHighlights = [
   { icon: ShieldCheck, title: "Real Exam\nPattern" },
@@ -19,33 +24,41 @@ const leaderRows = [
 ];
 
 export function HeroSection() {
+  const reduceMotion = useReducedMotion();
+
+  const rise = (delay: number) => ({
+    initial: { opacity: 0, y: reduceMotion ? 0 : 24, filter: reduceMotion ? "none" : "blur(8px)" },
+    animate: { opacity: 1, y: 0, filter: "blur(0px)" },
+    transition: { duration: reduceMotion ? 0 : 0.7, delay: reduceMotion ? 0 : delay, ease: [0.22, 1, 0.36, 1] as const },
+  });
+
   return (
     <section className="xophal-hero" aria-label="Xophal hero section">
-      <div className="xophal-hero__backdrop" aria-hidden="true" />
-
       <div className="container relative mx-auto max-w-7xl px-4 pb-14 pt-28 sm:px-6 lg:px-8 lg:pb-20 lg:pt-24">
         <div className="xophal-hero__grid">
           <div className="xophal-hero__content">
-            <div className="xophal-hero__brand" aria-label="Xophal">
+            <motion.div className="xophal-hero__brand" aria-label="Xophal" {...rise(0)}>
               <div className="xophal-hero__brand-wordmark">
                 <span>Xophal</span>
                 <small>MOCK TESTS</small>
               </div>
-            </div>
+            </motion.div>
 
-            <div className="xophal-hero__eyebrow">PRACTICE • IMPROVE • ACHIEVE</div>
+            <motion.div className="xophal-hero__eyebrow" {...rise(0.08)}>
+              PRACTICE • IMPROVE • ACHIEVE
+            </motion.div>
 
-            <h1 className="xophal-hero__heading">
+            <motion.h1 className="xophal-hero__heading" {...rise(0.16)}>
               Your Success
               <span>Starts with</span>
               <em>Xophal</em>
-            </h1>
+            </motion.h1>
 
-            <p className="xophal-hero__description">
+            <motion.p className="xophal-hero__description" {...rise(0.24)}>
               Take smart mock tests, track your progress and get one step closer to your dream career.
-            </p>
+            </motion.p>
 
-            <div className="xophal-hero__actions">
+            <motion.div className="xophal-hero__actions" {...rise(0.32)}>
               <Button asChild size="lg" className="xophal-hero__primary-btn">
                 <Link href={ROUTES.tests}>
                   Start Practicing
@@ -61,9 +74,18 @@ export function HeroSection() {
                   Watch Video
                 </Link>
               </Button>
-            </div>
+            </motion.div>
 
-            <div className="xophal-hero__features" aria-label="Platform highlights">
+            <motion.ul className="xophal-hero__trust" aria-label="Signup benefits" {...rise(0.4)}>
+              {trustPoints.map((point) => (
+                <li key={point}>
+                  <Check className="h-3.5 w-3.5" aria-hidden="true" />
+                  {point}
+                </li>
+              ))}
+            </motion.ul>
+
+            <motion.div className="xophal-hero__features" aria-label="Platform highlights" {...rise(0.48)}>
               {featureHighlights.map(({ icon: Icon, title }) => (
                 <div key={title} className="xophal-hero__feature-item">
                   <span className="xophal-hero__feature-icon">
@@ -72,10 +94,16 @@ export function HeroSection() {
                   <span>{title}</span>
                 </div>
               ))}
-            </div>
+            </motion.div>
           </div>
 
-          <div className="xophal-hero__visual" aria-label="Xophal dashboard illustration">
+          <motion.div
+            className="xophal-hero__visual"
+            aria-label="Xophal dashboard illustration"
+            initial={{ opacity: 0, scale: reduceMotion ? 1 : 0.94, y: reduceMotion ? 0 : 30 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            transition={{ duration: reduceMotion ? 0 : 0.9, delay: reduceMotion ? 0 : 0.2, ease: [0.22, 1, 0.36, 1] }}
+          >
             <div className="xophal-hero__visual-shell">
               <div className="xophal-hero__x xophal-hero__x--large" aria-hidden="true" />
               <div className="xophal-hero__x xophal-hero__x--small" aria-hidden="true" />
@@ -164,7 +192,7 @@ export function HeroSection() {
               <div className="xophal-hero__cup" aria-hidden="true" />
               <div className="xophal-hero__plant" aria-hidden="true" />
             </div>
-          </div>
+          </motion.div>
         </div>
       </div>
     </section>

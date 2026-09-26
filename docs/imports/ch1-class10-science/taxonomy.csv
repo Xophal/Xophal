@@ -1,0 +1,39 @@
+﻿level,code,name,slug,parent_slug
+exam,CLASS10,Class 10 (CBSE / SEBA),class-10,
+subject,SCI,Science,science,class-10
+chapter,CH1,Chapter 1: Chemical Reactions and Equations,chemical-reactions-and-equations,science
+topic,T1,Chemical Equations and Balancing,chemical-equations-balancing,chemical-reactions-and-equations
+subtopic,T1-S1,Identifying chemical reactions,identifying-chemical-reactions,chemical-equations-balancing
+subtopic,T1-S2,Writing equations,writing-equations,chemical-equations-balancing
+subtopic,T1-S3,Balancing equations,balancing-equations,chemical-equations-balancing
+subtopic,T1-S4,State symbols and conditions,state-symbols-and-conditions,chemical-equations-balancing
+topic,T2,Combination and Decomposition Reactions,combination-decomposition,chemical-reactions-and-equations
+subtopic,T2-S1,Combination,combination,combination-decomposition
+subtopic,T2-S2,Thermal decomposition,thermal-decomposition,combination-decomposition
+subtopic,T2-S3,Electrolytic decomposition,electrolytic-decomposition,combination-decomposition
+subtopic,T2-S4,Photolytic decomposition,photolytic-decomposition,combination-decomposition
+topic,T3,Displacement and Double Displacement Reactions,displacement-double-displacement,chemical-reactions-and-equations
+subtopic,T3-S1,Displacement,displacement,displacement-double-displacement
+subtopic,T3-S2,Double displacement,double-displacement,displacement-double-displacement
+subtopic,T3-S3,Precipitation,precipitation,displacement-double-displacement
+subtopic,T3-S4,Neutralisation,neutralisation,displacement-double-displacement
+topic,T4,Oxidation and Reduction (Redox),oxidation-reduction,chemical-reactions-and-equations
+subtopic,T4-S1,Oxidation and reduction,oxidation-and-reduction,oxidation-reduction
+subtopic,T4-S2,Oxidising and reducing agents,oxidising-and-reducing-agents,oxidation-reduction
+subtopic,T4-S3,Redox identification,redox-identification,oxidation-reduction
+subtopic,T4-S4,Redox in activities,redox-in-activities,oxidation-reduction
+topic,T5,Corrosion,corrosion,chemical-reactions-and-equations
+subtopic,T5-S1,Rusting,rusting,corrosion
+subtopic,T5-S2,Corrosion of other metals,corrosion-of-other-metals,corrosion
+subtopic,T5-S3,Prevention methods,prevention-methods,corrosion
+subtopic,T5-S4,Experiments,experiments,corrosion
+topic,T6,Rancidity,rancidity,chemical-reactions-and-equations
+subtopic,T6-S1,Meaning and cause,meaning-and-cause,rancidity
+subtopic,T6-S2,Effects,effects,rancidity
+subtopic,T6-S3,Prevention,prevention,rancidity
+subtopic,T6-S4,Applications,applications,rancidity
+topic,T7,Exothermic and Endothermic Reactions,exothermic-endothermic,chemical-reactions-and-equations
+subtopic,T7-S1,Exothermic,exothermic,exothermic-endothermic
+subtopic,T7-S2,Endothermic,endothermic,exothermic-endothermic
+subtopic,T7-S3,Identification,identification,exothermic-endothermic
+subtopic,T7-S4,Applications,applications,exothermic-endothermic

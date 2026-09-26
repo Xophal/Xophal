@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Clock3, TriangleAlert } from "lucide-react";
+import { cn } from "@/lib/utils";
 import {
   DEFAULT_TIMER_WARNING_SECONDS,
   formatTestTime,
@@ -12,12 +13,17 @@ interface TestTimerProps {
   expiresAt: number | null;
   onExpire: () => void;
   warningSeconds?: number;
+  /** "header" fits the exam top bar; "block" is the roomier standalone presentation. */
+  variant?: "header" | "block";
+  className?: string;
 }
 
 export default function TestTimer({
   expiresAt,
   onExpire,
   warningSeconds = DEFAULT_TIMER_WARNING_SECONDS,
+  variant = "block",
+  className,
 }: TestTimerProps) {
   const [remainingSeconds, setRemainingSeconds] = useState(() => getRemainingSeconds(expiresAt));
   const onExpireRef = useRef(onExpire);
@@ -55,20 +61,29 @@ export default function TestTimer({
   const isWarning = remainingSeconds > 0 && remainingSeconds <= warningSeconds;
   const isExpired = remainingSeconds === 0;
   const accessibleTime = formatTestTime(remainingSeconds);
+  const tone = isExpired ? "expired" : isWarning ? "warning" : "normal";
+  const statusText = isExpired ? "Time expired" : isWarning ? "Less than a minute left" : "On track";
 
   return (
     <div
       role="timer"
       aria-live={isWarning || isExpired ? "assertive" : "off"}
-      aria-label={`Time remaining: ${accessibleTime}${isWarning ? ", less than one minute remaining" : ""}${isExpired ? ", time expired" : ""}`}
-      className={`inline-flex items-center gap-2 rounded-md px-3 py-2 font-mono text-sm font-bold ${
-        isWarning || isExpired ? "bg-destructive/10 text-destructive" : "bg-muted"
-      }`}
+      aria-label={`Time remaining: ${accessibleTime}${
+        isWarning ? ", less than one minute remaining" : ""
+      }${isExpired ? ", time expired" : ""}`}
+      data-tone={tone}
+      className={cn("exam-timer", variant === "header" && "px-2.5 py-1.5 text-sm", className)}
     >
-      {isWarning || isExpired ? <TriangleAlert className="h-4 w-4" aria-hidden="true" /> : <Clock3 className="h-4 w-4" aria-hidden="true" />}
-      <span>Time left: {accessibleTime}</span>
-      {isWarning && <span className="font-sans text-xs">Less than one minute</span>}
-      {isExpired && <span className="font-sans text-xs">Time expired</span>}
+      {isWarning || isExpired ? (
+        <TriangleAlert className="h-4 w-4" aria-hidden="true" />
+      ) : (
+        <Clock3 className="h-4 w-4" aria-hidden="true" />
+      )}
+      <span className="sr-only">Time left: </span>
+      <span aria-hidden="true">{accessibleTime}</span>
+      {variant === "block" && (
+        <span className="font-sans text-xs font-medium opacity-80">{statusText}</span>
+      )}
     </div>
   );
 }

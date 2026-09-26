@@ -1,0 +1,546 @@
+/* ==========================================================================
+   Modern marketing homepage
+   Scoped under .hx-root so it never leaks into app/dashboard surfaces.
+   ========================================================================== */
+
+.hx-root {
+  --hx-ink: hsl(155 24% 12%);
+  --hx-ink-soft: hsl(155 14% 32%);
+  --hx-line: hsl(146 23% 88% / 0.9);
+  --hx-emerald: 158 64% 26%;
+  --hx-teal: 172 66% 38%;
+  --hx-gold: 38 88% 52%;
+  --hx-amber: 16 78% 52%;
+  --hx-violet: 262 72% 58%;
+}
+
+.dark .hx-root {
+  --hx-ink: hsl(150 20% 96%);
+  --hx-ink-soft: hsl(150 12% 72%);
+  --hx-line: hsl(154 18% 20% / 0.9);
+  --hx-emerald: 152 52% 46%;
+  --hx-teal: 174 62% 48%;
+  --hx-gold: 40 92% 58%;
+  --hx-amber: 18 78% 58%;
+  --hx-violet: 262 78% 68%;
+}
+
+/* --- Section shell ------------------------------------------------------ */
+
+.hx-section {
+  position: relative;
+  scroll-margin-top: 5.5rem;
+  padding-block: clamp(3.5rem, 7vw, 6.5rem);
+}
+
+.hx-shell {
+  width: 100%;
+  max-width: 76rem;
+  margin-inline: auto;
+  padding-inline: clamp(1rem, 4vw, 2rem);
+}
+
+.hx-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.3rem 0.85rem;
+  border: 1px solid var(--hx-line);
+  border-radius: 999px;
+  background: hsl(var(--card) / 0.7);
+  color: var(--hx-ink-soft);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.hx-title {
+  margin-top: 1rem;
+  font-family: var(--font-display, inherit);
+  font-size: clamp(2rem, 4.4vw, 3.25rem);
+  font-weight: 800;
+  line-height: 1.06;
+  letter-spacing: -0.03em;
+  color: var(--hx-ink);
+  text-wrap: balance;
+}
+
+.hx-subtitle {
+  margin-top: 1rem;
+  max-width: 40rem;
+  font-size: clamp(0.95rem, 1.4vw, 1.075rem);
+  line-height: 1.7;
+  color: var(--hx-ink-soft);
+}
+
+
+/* --- Ambient backgrounds ------------------------------------------------ */
+
+.hx-mesh {
+  position: relative;
+  isolation: isolate;
+  overflow: clip;
+}
+
+.hx-mesh::before {
+  position: absolute;
+  inset: -30% -10% auto -10%;
+  z-index: -1;
+  height: 130%;
+  content: "";
+  background:
+    radial-gradient(38% 42% at 12% 18%, hsl(var(--hx-emerald) / 0.16), transparent 70%),
+    radial-gradient(34% 38% at 82% 8%, hsl(var(--hx-teal) / 0.16), transparent 70%),
+    radial-gradient(42% 46% at 66% 82%, hsl(var(--hx-gold) / 0.16), transparent 70%),
+    radial-gradient(30% 34% at 30% 92%, hsl(var(--hx-violet) / 0.12), transparent 70%);
+  filter: blur(6px);
+  animation: hx-drift 22s ease-in-out infinite alternate;
+}
+
+.hx-mesh--dark {
+  background: radial-gradient(120% 90% at 50% -10%, hsl(158 60% 12% / 0.9), transparent 60%);
+}
+
+.hx-grid-lines {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image:
+    linear-gradient(to right, hsl(var(--foreground) / 0.05) 1px, transparent 1px),
+    linear-gradient(to bottom, hsl(var(--foreground) / 0.05) 1px, transparent 1px);
+  background-size: 64px 64px;
+  mask-image: radial-gradient(70% 60% at 50% 30%, black, transparent 78%);
+  -webkit-mask-image: radial-gradient(70% 60% at 50% 30%, black, transparent 78%);
+}
+
+/* --- Surfaces ----------------------------------------------------------- */
+
+.hx-glass {
+  position: relative;
+  border: 1px solid var(--hx-line);
+  border-radius: 1.5rem;
+  background: linear-gradient(180deg, hsl(var(--card) / 0.92), hsl(var(--card) / 0.66));
+  box-shadow:
+    0 1px 0 0 hsl(0 0% 100% / 0.6) inset,
+    0 18px 50px -28px hsl(155 40% 12% / 0.4);
+  backdrop-filter: blur(16px) saturate(150%);
+  -webkit-backdrop-filter: blur(16px) saturate(150%);
+}
+
+.dark .hx-glass {
+  background: linear-gradient(180deg, hsl(var(--card) / 0.75), hsl(var(--card) / 0.45));
+  box-shadow: 0 24px 60px -30px hsl(0 0% 0% / 0.8);
+}
+
+/* Gradient hairline border that brightens on hover */
+.hx-ring {
+  position: relative;
+}
+
+.hx-ring::after {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  content: "";
+  background: linear-gradient(135deg, hsl(var(--hx-emerald) / 0.55), hsl(var(--hx-teal) / 0.35) 45%, hsl(var(--hx-gold) / 0.5));
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  opacity: 0;
+  transition: opacity 320ms ease;
+  pointer-events: none;
+}
+
+.hx-ring:hover::after,
+.hx-ring:focus-within::after {
+  opacity: 1;
+}
+
+/* Cursor-follow spotlight (position set inline from JS) */
+.hx-spotlight::before {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  content: "";
+  background: radial-gradient(220px circle at var(--hx-x, 50%) var(--hx-y, 0%), hsl(var(--hx-teal) / 0.16), transparent 65%);
+  opacity: 0;
+  transition: opacity 300ms ease;
+  pointer-events: none;
+}
+
+.hx-spotlight:hover::before {
+  opacity: 1;
+}
+
+/* --- Icon chips --------------------------------------------------------- */
+
+.hx-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 0.9rem;
+  color: hsl(var(--primary));
+  background: linear-gradient(140deg, hsl(var(--primary) / 0.16), hsl(var(--accent) / 0.14));
+  box-shadow: inset 0 0 0 1px hsl(var(--primary) / 0.16);
+  transition: transform 320ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* --- Bento grid --------------------------------------------------------- */
+
+.hx-bento {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+}
+
+.hx-bento > * {
+  grid-column: span 12;
+}
+
+@media (min-width: 700px) {
+  .hx-bento > * {
+    grid-column: span 6;
+  }
+}
+
+@media (min-width: 1024px) {
+  .hx-bento > .hx-span-4 {
+    grid-column: span 4;
+  }
+
+  .hx-bento > .hx-span-6 {
+    grid-column: span 6;
+  }
+
+  .hx-bento > .hx-span-8 {
+    grid-column: span 8;
+  }
+}
+
+.hx-bento-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  height: 100%;
+  padding: clamp(1.25rem, 2.2vw, 1.75rem);
+  overflow: hidden;
+  transition: transform 320ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.hx-bento-card:hover {
+  transform: translateY(-4px);
+}
+
+.hx-bento-card__title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--hx-ink);
+}
+
+.hx-bento-card__body {
+  font-size: 0.925rem;
+  line-height: 1.65;
+  color: var(--hx-ink-soft);
+}
+
+.hx-bento-card--accent {
+  background:
+    radial-gradient(120% 120% at 0% 0%, hsl(var(--hx-teal) / 0.22), transparent 60%),
+    linear-gradient(180deg, hsl(var(--card) / 0.94), hsl(var(--card) / 0.7));
+}
+
+/* --- Stats -------------------------------------------------------------- */
+
+.hx-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: clamp(1.1rem, 2vw, 1.5rem);
+  border-radius: 1.25rem;
+  text-align: center;
+}
+
+.hx-stat__value {
+  font-size: clamp(1.75rem, 3.6vw, 2.5rem);
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.04em;
+}
+
+.hx-stat__label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--hx-ink-soft);
+}
+
+/* --- Steps -------------------------------------------------------------- */
+
+/* --- Board cards -------------------------------------------------------- */
+
+.hx-board {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  height: 100%;
+  padding: 1.5rem;
+  overflow: hidden;
+  transition: transform 320ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.hx-board:hover {
+  transform: translateY(-5px);
+}
+
+.hx-board__mark {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.hx-board__code {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.3rem 0.7rem;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: hsl(var(--primary));
+  background: hsl(var(--primary) / 0.1);
+  box-shadow: inset 0 0 0 1px hsl(var(--primary) / 0.18);
+}
+
+.hx-board__name {
+  font-size: 1.05rem;
+  font-weight: 700;
+  line-height: 1.35;
+  letter-spacing: -0.01em;
+  color: var(--hx-ink);
+}
+
+.hx-board__desc {
+  flex: 1;
+  font-size: 0.875rem;
+  line-height: 1.6;
+  color: var(--hx-ink-soft);
+}
+
+.hx-board__cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: hsl(var(--primary));
+}
+
+.hx-board:hover .hx-board__cta svg {
+  transform: translateX(3px);
+}
+
+.hx-board__cta svg {
+  transition: transform 260ms ease;
+}
+
+/* --- Marquee ------------------------------------------------------------ */
+
+.hx-marquee {
+  position: relative;
+  overflow: hidden;
+  mask-image: linear-gradient(90deg, transparent, black 12%, black 88%, transparent);
+  -webkit-mask-image: linear-gradient(90deg, transparent, black 12%, black 88%, transparent);
+}
+
+/* --- CTA ---------------------------------------------------------------- */
+
+.hx-cta {
+  position: relative;
+  overflow: hidden;
+  border-radius: clamp(1.5rem, 3vw, 2.25rem);
+  padding: clamp(2.5rem, 6vw, 4.5rem) clamp(1.25rem, 4vw, 3.5rem);
+  text-align: center;
+  color: #fff;
+  background: linear-gradient(120deg, #0a2b27 0%, #123c47 48%, #23194a 100%);
+  box-shadow: 0 40px 90px -50px hsl(158 70% 10% / 0.9);
+}
+
+.hx-cta::before {
+  position: absolute;
+  inset: -40% -20% auto -20%;
+  height: 180%;
+  content: "";
+  background:
+    radial-gradient(30% 40% at 20% 30%, hsl(var(--hx-teal) / 0.5), transparent 70%),
+    radial-gradient(30% 40% at 78% 22%, hsl(var(--hx-violet) / 0.45), transparent 70%),
+    radial-gradient(40% 44% at 50% 88%, hsl(var(--hx-gold) / 0.35), transparent 70%);
+  filter: blur(18px);
+  animation: hx-drift 18s ease-in-out infinite alternate;
+  pointer-events: none;
+}
+
+.hx-cta::after {
+  position: absolute;
+  inset: 0;
+  content: "";
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+  background-size: 40px 40px;
+  mask-image: radial-gradient(70% 60% at 50% 40%, black, transparent 80%);
+  -webkit-mask-image: radial-gradient(70% 60% at 50% 40%, black, transparent 80%);
+  pointer-events: none;
+}
+
+.hx-cta > * {
+  position: relative;
+  z-index: 1;
+}
+
+.hx-cta__title {
+  font-family: var(--font-display, inherit);
+  font-size: clamp(1.85rem, 4.2vw, 3rem);
+  font-weight: 800;
+  line-height: 1.08;
+  letter-spacing: -0.03em;
+  text-wrap: balance;
+}
+
+.hx-cta__body {
+  margin: 1rem auto 0;
+  max-width: 38rem;
+  font-size: clamp(0.95rem, 1.3vw, 1.05rem);
+  line-height: 1.7;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.hx-cta__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.95rem 1.9rem;
+  border-radius: 999px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: hsl(158 64% 14%);
+  background: linear-gradient(120deg, #fff, hsl(40 92% 84%));
+  box-shadow: 0 18px 40px -16px hsl(0 0% 0% / 0.7);
+  transition: transform 260ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 260ms ease;
+}
+
+.hx-cta__btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 26px 50px -18px hsl(0 0% 0% / 0.8);
+}
+
+.hx-cta__link {
+  color: rgba(255, 255, 255, 0.92);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-color: rgba(255, 255, 255, 0.4);
+  transition: text-decoration-color 200ms ease;
+}
+
+.hx-cta__link:hover {
+  text-decoration-color: rgba(255, 255, 255, 0.95);
+}
+
+/* --- Reduced motion ----------------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .hx-mesh::before,
+  .hx-cta::before,
+  .hx-marquee__track {
+    animation: none !important;
+  }
+
+  .hx-bento-card:hover,
+  .hx-board:hover,
+  .hx-cta__btn:hover,
+  .hx-ring:hover .hx-chip {
+    transform: none !important;
+  }
+}
+
+.hx-marquee__track {
+  display: flex;
+  width: max-content;
+  gap: 0.75rem;
+  animation: hx-scroll 32s linear infinite;
+}
+
+.hx-marquee:hover .hx-marquee__track {
+  animation-play-state: paused;
+}
+
+.hx-marquee__pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.55rem 1.1rem;
+  border: 1px solid var(--hx-line);
+  border-radius: 999px;
+  background: hsl(var(--card) / 0.6);
+  font-size: 0.85rem;
+  font-weight: 600;
+  white-space: nowrap;
+  color: var(--hx-ink-soft);
+}
+
+
+.hx-step {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  height: 100%;
+  padding: 1.5rem 1.25rem;
+  border-radius: 1.25rem;
+  border: 1px solid var(--hx-line);
+  background: hsl(var(--card) / 0.55);
+}
+
+.hx-step__index {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 800;
+  color: hsl(var(--primary-foreground));
+  background: linear-gradient(135deg, hsl(var(--hx-emerald)), hsl(var(--hx-teal)));
+}
+
+.hx-ring:hover .hx-chip {
+  transform: translateY(-2px) rotate(-4deg) scale(1.06);
+}
+
+.hx-chip--lg {
+  width: 3.25rem;
+  height: 3.25rem;
+  border-radius: 1.05rem;
+}
+
+/* Gradient ink used for emphasized words */
+.hx-grad {
+  background-image: linear-gradient(100deg, hsl(var(--hx-emerald)), hsl(var(--hx-teal)) 45%, hsl(var(--hx-gold)));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}

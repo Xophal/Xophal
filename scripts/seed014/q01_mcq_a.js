@@ -1,0 +1,28 @@
+// Phase-1 seed data: Q01-Q06 (MCQ). Compact rows expanded by scripts/seed014/build_014.js
+// Row fields: code,t=engine type,topic,sub,d,skill,marks,neg,time,board,pyq,stem,opts,rub,expl,tags
+module.exports = [
+{ code:'Q01', t:'mcq', topic:'balancing-equations', sub:'hit-and-trial', d:1, skill:'recall', marks:1, neg:0.25, time:45, board:'CBSE', pyq:2023,
+stem:'Which of the following is a correctly balanced equation for the reaction of magnesium with dilute hydrochloric acid? $\\text{Mg} + \\text{HCl} \\rightarrow \\text{MgCl}_2 + \\text{H}_2$',
+opts:[['$\\text{Mg} + \\text{HCl} \\rightarrow \\text{MgCl}_2 + \\text{H}_2$',0],['$\\text{Mg} + 2\\text{HCl} \\rightarrow \\text{MgCl}_2 + \\text{H}_2$',1],['$2\\text{Mg} + 2\\text{HCl} \\rightarrow 2\\text{MgCl}_2 + \\text{H}_2$',0],['$\\text{Mg} + 2\\text{HCl} \\rightarrow \\text{MgCl}_2 + 2\\text{H}_2$',0]],
+rub:'One Mg, two H and two Cl on each side.', expl:'LHS: 1 Mg, 2 H, 2 Cl. RHS: $\\text{MgCl}_2$ gives 1 Mg and 2 Cl, $\\text{H}_2$ gives 2 H. Hence option B balances all atoms.', tags:['balancing','acids','cbse-pyq'] },
+{ code:'Q02', t:'mcq', topic:'types-of-reactions', sub:'combination-reactions', d:1, skill:'recall', marks:1, neg:0.25, time:40, board:'CBSE', pyq:2020,
+stem:'Quicklime ($\\text{CaO}$) reacts with water to form slaked lime with evolution of heat: $\\text{CaO} + \\text{H}_2\\text{O} \\rightarrow \\text{Ca(OH)}_2 + \\text{Heat}$. This reaction is:',
+opts:[['Combination and exothermic',1],['Combination and endothermic',0],['Decomposition and exothermic',0],['Displacement and endothermic',0]],
+rub:'Two reactants form one product; heat is released.', expl:'Two substances combine into a single product (combination) and heat is evolved (exothermic).', tags:['combination','quicklime','exothermic'] },
+{ code:'Q03', t:'mcq', topic:'types-of-reactions', sub:'displacement-reactions', d:2, skill:'application', marks:1, neg:0.25, time:60, board:'CBSE', pyq:2022,
+stem:'An iron nail is dipped in copper sulphate solution: $\\text{Fe} + \\text{CuSO}_4 \\rightarrow \\text{FeSO}_4 + \\text{Cu}$. The blue colour fades because:',
+opts:[['Iron is less reactive than copper',0],['Iron is more reactive and displaces copper',1],['Copper deposits dissolve back',0],['Sulphate ions are reduced to sulphur',0]],
+rub:'Higher reactivity metal displaces lower from salt solution.', expl:'Iron lies above copper in the reactivity series, so it displaces copper from $\\text{CuSO}_4$; blue colour of the solution fades as $\\text{FeSO}_4$ forms.', tags:['displacement','reactivity-series'] },
+{ code:'Q04', t:'mcq', topic:'types-of-reactions', sub:'decomposition-reactions', d:2, skill:'reasoning', marks:1, neg:0.25, time:50, board:'SEBA', pyq:2019,
+stem:'During electrolysis of acidified water, the volume ratio of hydrogen collected at cathode to oxygen at anode is: $2\\text{H}_2\\text{O} \\rightarrow 2\\text{H}_2 + \\text{O}_2$',
+opts:[['$1 : 2$',0],['$2 : 1$',1],['$1 : 1$',0],['$8 : 1$',0]],
+rub:'Two volumes of hydrogen per one volume of oxygen.', expl:'Two moles (volumes) of $\\text{H}_2$ form per mole of $\\text{O}_2$, so the ratio $\\text{H}_2 : \\text{O}_2 = 2:1$.', tags:['electrolysis','decomposition','seba-pyq'] },
+{ code:'Q05', t:'mcq', topic:'redox-reactions', sub:'oxidation-reduction-defs', d:2, skill:'application', marks:1, neg:0.25, time:60, board:'CBSE', pyq:2021,
+stem:'In the reaction $\\text{CuO} + \\text{H}_2 \\rightarrow \\text{Cu} + \\text{H}_2\\text{O}$, which substance is oxidised?',
+opts:[['$\\text{CuO}$, it loses oxygen',0],['$\\text{H}_2$, it gains oxygen',1],['$\\text{Cu}$, it gains oxygen',0],['$\\text{H}_2\\text{O}$, it loses hydrogen',0]],
+rub:'Oxidation = gain of oxygen or loss of hydrogen.', expl:'$\\text{H}_2$ gains oxygen to form $\\text{H}_2\\text{O}$ (oxidised); $\\text{CuO}$ loses oxygen (reduced).', tags:['redox','oxidation'] },
+{ code:'Q06', t:'mcq', topic:'corrosion', sub:'rusting-of-iron', d:1, skill:'recall', marks:1, neg:0.25, time:40, board:'CBSE', pyq:null,
+stem:'Rusting of iron requires the presence of:',
+opts:[['Only oxygen gas',0],['Only water vapour',0],['Both air (oxygen) and moisture',1],['Carbon dioxide and sunlight',0]],
+rub:'Rusting needs oxygen and water together.', expl:'Iron rusts ($\\text{Fe}_2\\text{O}_3 \\cdot x\\text{H}_2\\text{O}$) only when exposed to both oxygen in air and moisture.', tags:['corrosion','rusting'] },
+];
