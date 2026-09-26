@@ -52,6 +52,13 @@ const publicEnvSchema = z.object({
     .string()
     .url("NEXT_PUBLIC_APP_URL must be a valid URL")
     .default("http://localhost:3000"),
+  // Google sign-in is opt-in: the button is only rendered when explicitly
+  // enabled, because it requires the Google OAuth provider to be configured in
+  // Supabase first. Unset/false keeps the button hidden.
+  NEXT_PUBLIC_ENABLE_GOOGLE_AUTH: z
+    .string()
+    .optional()
+    .transform((value) => value?.trim().toLowerCase() === "true"),
 });
 
 export const publicEnv = publicEnvSchema.parse({
@@ -64,4 +71,5 @@ export const publicEnv = publicEnvSchema.parse({
     normalizeOptionalString(process.env.SUPABASE_ANON_KEY)
   ),
   NEXT_PUBLIC_APP_URL: normalizeOptionalString(process.env.NEXT_PUBLIC_APP_URL) ?? "http://localhost:3000",
+  NEXT_PUBLIC_ENABLE_GOOGLE_AUTH: normalizeOptionalString(process.env.NEXT_PUBLIC_ENABLE_GOOGLE_AUTH),
 });

@@ -3,6 +3,7 @@ node_modules
 out
 .env
 .env.*
+!.env.example
 .DS_Store
 npm-debug.log*
 dev-server.log

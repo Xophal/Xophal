@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
 import { otpRequestSchema, otpVerifySchema } from "@/lib/validations";
+import { publicEnv } from "@/lib/env";
 import { getFallbackBoards, getFallbackClassesForBoard } from "@/lib/board-data";
 import type { Board, Class } from "@/types";
 import { GoogleAuthButton } from "@/components/auth/google-auth-button";
@@ -34,6 +35,9 @@ export function OtpForm({ intent, initialEmail = "", onUsePassword }: OtpFormPro
   const [loading, setLoading] = useState(false);
   const isSignup = intent === "signup";
   const isAdmin = intent === "admin-login";
+  // Hidden unless NEXT_PUBLIC_ENABLE_GOOGLE_AUTH=true, so an unconfigured
+  // Google provider cannot leave a visible-but-broken button on the form.
+  const googleAuthEnabled = publicEnv.NEXT_PUBLIC_ENABLE_GOOGLE_AUTH;
 
   useEffect(() => {
     if (!isSignup) return;
@@ -183,7 +187,9 @@ export function OtpForm({ intent, initialEmail = "", onUsePassword }: OtpFormPro
         )}
       </CardContent>
       <CardFooter className="relative z-10 flex flex-col gap-3 text-center text-sm text-white/80">
-        <div className="w-full"><GoogleAuthButton next={isAdmin ? "/admin" : "/dashboard"} /></div>
+        {googleAuthEnabled && (
+          <div className="w-full"><GoogleAuthButton next={isAdmin ? "/admin" : "/dashboard"} /></div>
+        )}
         {onUsePassword && <Button type="button" variant="link" onClick={onUsePassword} className="text-white/80">Use password instead</Button>}
       </CardFooter>
     </Card>
