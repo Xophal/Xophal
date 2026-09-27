@@ -3,6 +3,7 @@ import { NextRequest } from "next/server";
 import { ApiError, apiSuccess, handleApiError, validateBody, assertTrustedOrigin } from "@/lib/api-utils";
 import { createRouteHandlerClient } from "@/lib/supabase/route-handler";
 import { authRateLimit } from "@/lib/redis";
+import { publicEnv } from "@/lib/env";
 
 // Minimum seconds the client must wait before requesting another code.
 // Supabase Auth enforces its own per-email resend interval (default ~60s);
@@ -35,15 +36,12 @@ export async function POST(request: NextRequest) {
     let error: { status?: number; code?: string; message?: string } | null = null;
     try {
       const supabase = await createRouteHandlerClient();
+      const appUrl = publicEnv.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
       ({ error } = await supabase.auth.signInWithOtp({
         email: data.email,
         options: {
-          // Opt intentionally out of a Magic Link email redirect URL. Verified
-          // via 6-digit OTP, so no callback URL is required and no localhost
-          // link is embedded in the email (which breaks when opened from a
-          // phone/another device). Configure the Supabase "Magic Link" email
-          // template to render `{{ .Token }}` so the code is visible.
           shouldCreateUser: data.intent === "signup",
+          emailRedirectTo: `${appUrl}/verify-email?email=${encodeURIComponent(data.email)}`,
           data: data.intent === "signup"
             ? { full_name: data.fullName, board_id: data.boardId ?? null, class_id: data.classId ?? null }
             : undefined,

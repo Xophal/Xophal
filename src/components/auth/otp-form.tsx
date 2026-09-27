@@ -177,10 +177,10 @@ export function OtpForm({ intent, initialEmail = "", initialSendFailed = false, 
         ) : (
           <>
             <div className="space-y-2">
-              <Label htmlFor="otp-code">6-digit verification code</Label>
-              <Input id="otp-code" inputMode="numeric" autoComplete="one-time-code" maxLength={6} autoFocus value={code} onChange={(event) => setCode(event.target.value.replace(/\D/g, "").slice(0, 6))} placeholder="123456" className="text-center text-xl tracking-[0.35em]" aria-label="6-digit verification code" />
+              <Label htmlFor="otp-code">6-8 digit verification code</Label>
+              <Input id="otp-code" inputMode="numeric" autoComplete="one-time-code" maxLength={8} autoFocus value={code} onChange={(event) => setCode(event.target.value.replace(/\D/g, "").slice(0, 8))} placeholder="123456" className="text-center text-xl tracking-[0.35em]" aria-label="6-8 digit verification code" />
             </div>
-            <Button type="button" onClick={verifyCode} disabled={loading || code.length !== 6} className="w-full">
+            <Button type="button" onClick={verifyCode} disabled={loading || code.length < 6 || code.length > 8} className="w-full">
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Verify and continue
             </Button>

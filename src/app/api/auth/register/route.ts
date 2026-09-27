@@ -259,10 +259,15 @@ export async function POST(request: NextRequest) {
     let verificationEmailSent = true;
     try {
       const { createRouteHandlerClient } = await import("@/lib/supabase/route-handler");
+      const { publicEnv } = await import("@/lib/env");
       const routeClient = await createRouteHandlerClient();
+      const appUrl = publicEnv.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
       const { error: otpError } = await routeClient.auth.signInWithOtp({
         email: data.email,
-        options: { shouldCreateUser: false },
+        options: {
+          shouldCreateUser: false,
+          emailRedirectTo: `${appUrl}/verify-email?email=${encodeURIComponent(data.email)}`,
+        },
       });
       if (otpError) {
         verificationEmailSent = false;

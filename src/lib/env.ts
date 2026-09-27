@@ -1,5 +1,9 @@
 import { z } from "zod";
 
+const FALLBACK_PUBLIC_SUPABASE_URL = "https://placeholder.supabase.co";
+const FALLBACK_PUBLIC_SUPABASE_ANON_KEY = "placeholder-anon-key";
+const FALLBACK_APP_URL = "http://localhost:3000";
+
 function normalizeSupabaseUrl(value: string | undefined) {
   if (!value) {
     return undefined;
@@ -31,16 +35,13 @@ function normalizeSupabaseUrl(value: string | undefined) {
 }
 
 function resolveSupabaseUrl(value: string | undefined, fallback: string | undefined) {
-  return normalizeSupabaseUrl(value ?? fallback);
+  const normalized = normalizeSupabaseUrl(value ?? fallback);
+  return normalized ?? FALLBACK_PUBLIC_SUPABASE_URL;
 }
 
 function resolveSupabaseAnonKey(value: string | undefined, fallback: string | undefined) {
-  const candidate = value ?? fallback;
-  if (!candidate) return undefined;
-  const normalized = candidate.trim();
-  return normalized && !normalized.toLowerCase().includes("placeholder") && !normalized.toLowerCase().includes("your_supabase")
-    ? normalized
-    : undefined;
+  const candidate = normalizeOptionalString(value ?? fallback) ?? FALLBACK_PUBLIC_SUPABASE_ANON_KEY;
+  return candidate.trim() || FALLBACK_PUBLIC_SUPABASE_ANON_KEY;
 }
 
 function normalizeOptionalString(value: string | undefined) {
@@ -50,27 +51,43 @@ function normalizeOptionalString(value: string | undefined) {
 
 /** Configuration safe to expose to browser bundles. */
 const publicEnvSchema = z.object({
-  NEXT_PUBLIC_SUPABASE_URL: z.string().url("NEXT_PUBLIC_SUPABASE_URL must be a valid URL"),
-  NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().min(1, "NEXT_PUBLIC_SUPABASE_ANON_KEY is required"),
-  NEXT_PUBLIC_APP_URL: z.string().url("NEXT_PUBLIC_APP_URL must be a valid URL").default("http://localhost:3000"),
-  // Google sign-in is opt-in: the button is only rendered when explicitly
-  // enabled, because it requires the Google OAuth provider to be configured in
-  // Supabase first. Unset/false keeps the button hidden.
-  NEXT_PUBLIC_ENABLE_GOOGLE_AUTH: z
-    .string()
-    .optional()
-    .transform((value) => value?.trim().toLowerCase() === "true"),
+  NEXT_PUBLIC_SUPABASE_URL: z.string().url("NEXT_PUBLIC_SUPABASE_URL must be a valid URL").default(FALLBACK_PUBLIC_SUPABASE_URL),
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().min(1, "NEXT_PUBLIC_SUPABASE_ANON_KEY is required").default(FALLBACK_PUBLIC_SUPABASE_ANON_KEY),
+  NEXT_PUBLIC_APP_URL: z.string().url("NEXT_PUBLIC_APP_URL must be a valid URL").default(FALLBACK_APP_URL),
+  NEXT_PUBLIC_ENABLE_GOOGLE_AUTH: z.boolean().default(false),
 });
 
-export const publicEnv = publicEnvSchema.parse({
-  NEXT_PUBLIC_SUPABASE_URL: resolveSupabaseUrl(
-    normalizeOptionalString(process.env.NEXT_PUBLIC_SUPABASE_URL),
-    normalizeOptionalString(process.env.SUPABASE_URL)
-  ),
-  NEXT_PUBLIC_SUPABASE_ANON_KEY: resolveSupabaseAnonKey(
-    normalizeOptionalString(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY),
-    normalizeOptionalString(process.env.SUPABASE_ANON_KEY)
-  ),
-  NEXT_PUBLIC_APP_URL: normalizeOptionalString(process.env.NEXT_PUBLIC_APP_URL) ?? "http://localhost:3000",
-  NEXT_PUBLIC_ENABLE_GOOGLE_AUTH: normalizeOptionalString(process.env.NEXT_PUBLIC_ENABLE_GOOGLE_AUTH),
-});
+function getPublicEnv() {
+  const resolved = {
+    NEXT_PUBLIC_SUPABASE_URL: resolveSupabaseUrl(
+      normalizeOptionalString(process.env.NEXT_PUBLIC_SUPABASE_URL),
+      normalizeOptionalString(process.env.SUPABASE_URL)
+    ),
+    NEXT_PUBLIC_SUPABASE_ANON_KEY: resolveSupabaseAnonKey(
+      normalizeOptionalString(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY),
+      normalizeOptionalString(process.env.SUPABASE_ANON_KEY)
+    ),
+    NEXT_PUBLIC_APP_URL: normalizeOptionalString(process.env.NEXT_PUBLIC_APP_URL) ?? FALLBACK_APP_URL,
+    NEXT_PUBLIC_ENABLE_GOOGLE_AUTH: normalizeOptionalString(process.env.NEXT_PUBLIC_ENABLE_GOOGLE_AUTH)?.trim().toLowerCase() === "true",
+  };
+
+  const parsed = publicEnvSchema.safeParse(resolved);
+
+  if (parsed.success) {
+    return parsed.data;
+  }
+
+  const repaired = {
+    ...resolved,
+    NEXT_PUBLIC_SUPABASE_URL: resolved.NEXT_PUBLIC_SUPABASE_URL ?? FALLBACK_PUBLIC_SUPABASE_URL,
+    NEXT_PUBLIC_SUPABASE_ANON_KEY: resolved.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? FALLBACK_PUBLIC_SUPABASE_ANON_KEY,
+    NEXT_PUBLIC_APP_URL: resolved.NEXT_PUBLIC_APP_URL ?? FALLBACK_APP_URL,
+    NEXT_PUBLIC_ENABLE_GOOGLE_AUTH: Boolean(resolved.NEXT_PUBLIC_ENABLE_GOOGLE_AUTH),
+  };
+
+  console.warn("[env] Falling back to safe public Supabase defaults.", parsed.error.issues);
+
+  return publicEnvSchema.parse(repaired);
+}
+
+export const publicEnv = getPublicEnv();

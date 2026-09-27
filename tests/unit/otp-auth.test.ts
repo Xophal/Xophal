@@ -33,9 +33,10 @@ describe("OTP authentication", () => {
     expect(otpRequestSchema.safeParse({ email: "student@example.com", intent: "signup" }).success).toBe(false);
   });
 
-  it("accepts only six-digit verification codes", () => {
+  it("accepts verified OTP codes from Supabase-compatible lengths", () => {
     expect(otpVerifySchema.safeParse({ email: "student@example.com", intent: "login", token: "12345" }).success).toBe(false);
     expect(otpVerifySchema.safeParse({ email: "student@example.com", intent: "login", token: "123456" }).success).toBe(true);
+    expect(otpVerifySchema.safeParse({ email: "student@example.com", intent: "login", token: "12345678" }).success).toBe(true);
   });
 
   it("sends a signup OTP without exposing account state", async () => {
@@ -56,8 +57,9 @@ describe("OTP authentication", () => {
         shouldCreateUser: true,
       }),
     }));
-    // The OTP flow must not embed a Magic Link / localhost callback URL.
-    expect(signInWithOtp.mock.calls[0][0].options.emailRedirectTo).toBeUndefined();
+    expect(signInWithOtp.mock.calls[0][0].options.emailRedirectTo).toBe(
+      "http://localhost:3000/verify-email?email=student%40example.com"
+    );
   });
 
   it("returns a temporary service error when the auth provider is unreachable", async () => {

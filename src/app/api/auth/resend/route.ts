@@ -38,10 +38,11 @@ export async function POST(request: NextRequest) {
     const { publicEnv } = await import("@/lib/env");
     const routeClient = await createRouteHandlerClient();
 
+    const appUrl = publicEnv.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
     const { error } = await routeClient.auth.resend({
       type: "signup",
       email: parsed.data.email,
-      options: { emailRedirectTo: `${publicEnv.NEXT_PUBLIC_APP_URL}/auth/callback` },
+      options: { emailRedirectTo: `${appUrl}/auth/callback` },
     });
 
     if (error) {

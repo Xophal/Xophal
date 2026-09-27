@@ -21,7 +21,7 @@ export const otpRequestSchema = otpEmailSchema.extend({
 });
 
 export const otpVerifySchema = otpEmailSchema.extend({
-  token: z.string().trim().regex(/^\d{6}$/, "Enter the 6-digit code"),
+  token: z.string().trim().regex(/^\d{6,8}$/, "Enter the 6-8 digit code"),
   intent: z.enum(["login", "signup", "admin-login"]),
 });
 
