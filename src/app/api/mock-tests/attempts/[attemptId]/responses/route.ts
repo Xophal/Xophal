@@ -28,15 +28,19 @@ export async function PATCH(request: NextRequest, { params }: Params) {
     const admin = createAdminClient();
     const { data: attempt } = await admin
       .from("test_attempts")
-      .select("id, user_id, status, started_at, mock_tests(duration_minutes)")
+      .select("id, user_id, status, started_at, mock_test_id")
       .eq("id", attemptId)
       .maybeSingle();
     if (!attempt) throw new ApiError(404, "Attempt not found", "ATTEMPT_NOT_FOUND");
     if (attempt.user_id !== session.user.id) throw new ApiError(403, "Forbidden", "FORBIDDEN");
     if (attempt.status !== "in_progress") throw new ApiError(409, "This attempt is already closed", "ATTEMPT_CLOSED");
-    const durationMinutes = Array.isArray(attempt.mock_tests)
-      ? attempt.mock_tests[0]?.duration_minutes
-      : attempt.mock_tests?.duration_minutes;
+    const { data: mockTest } = await admin
+      .from("mock_tests")
+      .select("duration_minutes")
+      .eq("id", attempt.mock_test_id)
+      .maybeSingle();
+    if (!mockTest) throw new ApiError(404, "Mock test not found", "TEST_NOT_FOUND");
+    const durationMinutes = mockTest.duration_minutes;
     const deadline = new Date(attempt.started_at).getTime() + Number(durationMinutes) * 60 * 1000;
     if (!Number.isFinite(deadline) || Date.now() >= deadline) {
       throw new ApiError(409, "This attempt has reached its time limit", "ATTEMPT_EXPIRED");

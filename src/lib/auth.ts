@@ -2,7 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { ApiError } from "@/lib/api-utils";
 import type { Profile } from "@/types";
-import { isAdminRole } from "@/lib/roles";
+import { isAdminRole, normalizeRoleCode } from "@/lib/roles";
 import { isMainAdminEmail } from "@/lib/admin-approval";
 import type { User } from "@supabase/supabase-js";
 

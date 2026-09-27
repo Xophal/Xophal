@@ -2,9 +2,7 @@
 
 import Link from "next/link";
 import { motion, useReducedMotion } from "framer-motion";
-import { ArrowRight, BarChart3, Check, Play, Rocket, ShieldCheck, Sparkles, Star } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { ROUTES } from "@/constants";
+import { ArrowRight, ArrowUpRight, BarChart3, BookOpen, Check, Rocket, ShieldCheck, Star, Timer } from "lucide-react";
 
 const trustPoints = ["Free to start", "No card needed", "CBSE & SEBA syllabus"];
 
@@ -13,14 +11,6 @@ const featureHighlights = [
   { icon: BarChart3, title: "Detailed\nAnalysis" },
   { icon: Star, title: "Track Your\nProgress" },
   { icon: Rocket, title: "Achieve\nYour Goals" },
-];
-
-const leaderRows = [
-  { rank: 1, name: "You", value: "98%" },
-  { rank: 2, name: "Aisha", value: "95%" },
-  { rank: 3, name: "Rohit", value: "93%" },
-  { rank: 4, name: "Neha", value: "91%" },
-  { rank: 5, name: "Arjun", value: "89%" },
 ];
 
 export function HeroSection() {
@@ -33,167 +23,80 @@ export function HeroSection() {
   });
 
   return (
-    <section className="xophol-hero" aria-label="Xophol hero section">
-      <div className="container relative mx-auto max-w-7xl px-4 pb-14 pt-28 sm:px-6 lg:px-8 lg:pb-20 lg:pt-24">
-        <div className="xophol-hero__grid">
-          <div className="xophol-hero__content">
-            <motion.div className="xophol-hero__brand" aria-label="Xophol" {...rise(0)}>
-              <div className="xophol-hero__brand-wordmark">
-                <span>Xophol</span>
-                <small>MOCK TESTS</small>
-              </div>
-            </motion.div>
+    <section className="xophol-hero hx-hero-premium" aria-label="Xophol exam preparation">
+      <div className="hx-shell hx-hero-premium__shell">
+        <div className="hx-hero-topline">
+          <span>Focused preparation for Class 9 &amp; 10</span>
+          <span className="hx-hero-topline__right">CBSE <i /> Assam Board</span>
+        </div>
 
-            <motion.div className="xophol-hero__eyebrow" {...rise(0.08)}>
-              PRACTICE • IMPROVE • ACHIEVE
-            </motion.div>
-
-            <motion.h1 className="xophol-hero__heading" {...rise(0.16)}>
-              Your Success
-              <span>Starts with</span>
-              <em>Xophol</em>
-            </motion.h1>
-
-            <motion.p className="xophol-hero__description" {...rise(0.24)}>
-              Take smart mock tests, track your progress and get one step closer to your dream career.
+        <div className="hx-hero-grid">
+          <div className="hx-hero-copy">
+            <motion.p className="hx-hero-eyebrow" {...rise(0)}>
+              <span aria-hidden="true" /> A clearer way to prepare
             </motion.p>
 
-            <motion.div className="xophol-hero__actions" {...rise(0.32)}>
-              <Button asChild size="lg" className="xophol-hero__primary-btn">
-                <Link href={ROUTES.tests}>
-                  Start Practicing
-                  <ArrowRight className="h-4 w-4" />
-                </Link>
-              </Button>
+            <motion.h1 className="hx-hero-title" {...rise(0.08)}>
+              <span>Make your next</span>
+              <span>score your <em>best.</em></span>
+            </motion.h1>
 
-              <Button asChild variant="secondary" size="lg" className="xophol-hero__secondary-btn">
-                <Link href={ROUTES.learn}>
-                  <span className="xophol-hero__play-badge">
-                    <Play className="h-4 w-4 fill-current" />
-                  </span>
-                  Watch Video
-                </Link>
-              </Button>
+            <motion.p className="hx-hero-description" {...rise(0.16)}>
+              Board-aligned practice, calm exam-day simulations, and useful feedback that tells you what to do next.
+            </motion.p>
+
+            <motion.div className="hx-hero-actions" {...rise(0.24)}>
+              <Link href="/mock-tests" className="hx-hero-primary">
+                Explore mock tests <ArrowRight className="h-4 w-4" aria-hidden="true" />
+              </Link>
+              <Link href="/register" className="hx-hero-secondary">
+                Create your free account <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
+              </Link>
             </motion.div>
 
-            <motion.ul className="xophol-hero__trust" aria-label="Signup benefits" {...rise(0.4)}>
+            <motion.ul className="hx-hero-trust" aria-label="Platform benefits" {...rise(0.32)}>
               {trustPoints.map((point) => (
-                <li key={point}>
-                  <Check className="h-3.5 w-3.5" aria-hidden="true" />
-                  {point}
-                </li>
+                <li key={point}><Check aria-hidden="true" />{point}</li>
               ))}
             </motion.ul>
-
-            <motion.div className="xophol-hero__features" aria-label="Platform highlights" {...rise(0.48)}>
-              {featureHighlights.map(({ icon: Icon, title }) => (
-                <div key={title} className="xophol-hero__feature-item">
-                  <span className="xophol-hero__feature-icon">
-                    <Icon className="h-4 w-4" />
-                  </span>
-                  <span>{title}</span>
-                </div>
-              ))}
-            </motion.div>
           </div>
 
-          <motion.div
-            className="xophol-hero__visual"
-            aria-label="Xophol dashboard illustration"
-            initial={{ opacity: 0, scale: reduceMotion ? 1 : 0.94, y: reduceMotion ? 0 : 30 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            transition={{ duration: reduceMotion ? 0 : 0.9, delay: reduceMotion ? 0 : 0.2, ease: [0.22, 1, 0.36, 1] }}
-          >
-            <div className="xophol-hero__visual-shell">
-              <div className="xophol-hero__x xophol-hero__x--large" aria-hidden="true" />
-              <div className="xophol-hero__x xophol-hero__x--small" aria-hidden="true" />
-
-              <div className="xophol-hero__card xophol-hero__card--mock">
-                <div className="xophol-hero__card-header">
-                  <div className="xophol-hero__mini-icon">
-                    <Check className="h-4 w-4" />
-                  </div>
-                  <span>Mock Test</span>
-                </div>
-                <div className="xophol-hero__card-body">
-                  <div className="xophol-hero__list-lines" aria-hidden="true">
-                    <span />
-                    <span />
-                    <span />
-                  </div>
-                  <div className="xophol-hero__card-cta">
-                    <span>Attempt • Improve • Succeed</span>
-                    <button type="button" aria-label="Start test">
-                      Start Test <ArrowRight className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              <div className="xophol-hero__card xophol-hero__card--accuracy">
-                <div className="xophol-hero__accuracy-circle">
-                  <span>85%</span>
-                </div>
-                <div className="xophol-hero__accuracy-legend">
-                  <div><span className="dot dot--correct" />Correct <strong>42</strong></div>
-                  <div><span className="dot dot--wrong" />Wrong <strong>6</strong></div>
-                  <div><span className="dot dot--skipped" />Skipped <strong>2</strong></div>
-                </div>
-              </div>
-
-              <div className="xophol-hero__card xophol-hero__card--progress">
-                <div className="xophol-hero__progress-head">
-                  <span>Your Progress</span>
-                  <Sparkles className="h-4 w-4" />
-                </div>
-                <div className="xophol-hero__progress-bars" aria-hidden="true">
-                  <span style={{ height: "30%" }} />
-                  <span style={{ height: "42%" }} />
-                  <span style={{ height: "52%" }} />
-                  <span style={{ height: "70%" }} />
-                  <span style={{ height: "86%" }} />
-                  <span style={{ height: "100%" }} />
-                </div>
-              </div>
-
-              <div className="xophol-hero__card xophol-hero__card--leaderboard">
-                <div className="xophol-hero__leaderboard-head">
-                  <span>Top Performers</span>
-                </div>
-                <div className="xophol-hero__leaderboard-list">
-                  {leaderRows.map((item) => (
-                    <div key={item.rank} className="xophol-hero__leaderboard-row">
-                      <span>{item.rank}</span>
-                      <span>{item.name}</span>
-                      <strong>{item.value}</strong>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="xophol-hero__student" aria-label="Student illustration">
-                <div className="xophol-hero__student-head" />
-                <div className="xophol-hero__student-body" />
-                <div className="xophol-hero__student-laptop">
-                  <div className="xophol-hero__laptop-screen">
-                    <div className="xophol-hero__laptop-mark" aria-hidden="true" />
-                  </div>
-                  <div className="xophol-hero__laptop-base" />
-                </div>
-              </div>
-
-              <div className="xophol-hero__book-stack" aria-hidden="true">
-                <span>MATHS</span>
-                <span>REASONING</span>
-                <span>ENGLISH</span>
-                <span>CURRENT AFFAIRS</span>
-              </div>
-
-              <div className="xophol-hero__cup" aria-hidden="true" />
-              <div className="xophol-hero__plant" aria-hidden="true" />
+          <motion.aside className="hx-prep-path" aria-label="Your preparation path" {...rise(0.18)}>
+            <div className="hx-prep-path__head">
+              <span className="hx-prep-path__overline">The Xophol method</span>
+              <span className="hx-prep-path__index">01 — 03</span>
             </div>
-          </motion.div>
+            <h2>A good prep rhythm.</h2>
+            <ol>
+              <li>
+                <span className="hx-prep-path__icon"><BookOpen aria-hidden="true" /></span>
+                <span className="hx-prep-path__step"><small>01 / FIND YOUR FOCUS</small><strong>Start with your board</strong></span>
+                <Link href="#boards" aria-label="Choose your board"><ArrowUpRight aria-hidden="true" /></Link>
+              </li>
+              <li>
+                <span className="hx-prep-path__icon"><Timer aria-hidden="true" /></span>
+                <span className="hx-prep-path__step"><small>02 / PRACTISE WITH PURPOSE</small><strong>Take a timed mock</strong></span>
+                <Link href="/mock-tests" aria-label="Browse timed mock tests"><ArrowUpRight aria-hidden="true" /></Link>
+              </li>
+              <li>
+                <span className="hx-prep-path__icon"><BarChart3 aria-hidden="true" /></span>
+                <span className="hx-prep-path__step"><small>03 / KNOW WHAT&apos;S NEXT</small><strong>Learn from every result</strong></span>
+                <Link href="/register" aria-label="Create an account to track results"><ArrowUpRight aria-hidden="true" /></Link>
+              </li>
+            </ol>
+            <div className="hx-prep-path__foot"><span>Built around your syllabus</span><span>Made for steady progress</span></div>
+          </motion.aside>
         </div>
+
+        <motion.div className="hx-hero-capabilities" aria-label="Learning platform highlights" {...rise(0.36)}>
+          {featureHighlights.map(({ icon: Icon, title }, index) => (
+            <div key={title} className="hx-hero-capability">
+              <span className="hx-hero-capability__index">0{index + 1}</span>
+              <Icon aria-hidden="true" />
+              <span>{title.replace("\n", " ")}</span>
+            </div>
+          ))}
+        </motion.div>
       </div>
     </section>
   );

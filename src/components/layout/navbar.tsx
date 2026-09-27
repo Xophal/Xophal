@@ -78,7 +78,7 @@ export function Navbar() {
   ].join(" ");
 
   return (
-    <header className="site-header fixed inset-x-0 top-0 z-50 px-3 py-3 sm:px-4" data-testid="site-header">
+    <header className="site-header fixed inset-x-0 top-0 z-50 px-3 py-3 sm:px-4" data-testid="site-header" data-home={pathname === "/" ? "true" : undefined}>
       <nav aria-label="Primary navigation" className="site-navbar mx-auto flex max-w-7xl items-center justify-between gap-3 rounded-2xl px-3 py-2 shadow-lg shadow-primary/5 glass-panel sm:px-4">
           <Link href="/" className="flex min-h-10 shrink-0 items-center rounded-md px-2 text-base font-bold tracking-tight text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2" aria-label={`${APP_NAME} home`}>
             {APP_NAME}

@@ -55,13 +55,13 @@ export async function POST(_: Request, { params }: { params: Promise<{ slug: str
           ...question,
           question_type: Array.isArray(question.question_types) ? question.question_types[0] : question.question_types,
           marks: row.marks_override ?? question.marks,
-          options: (question.question_options || []).map((option: { is_correct?: boolean }) => ({
+          options: (question.question_options || []).map((option) => ({
             ...option,
             is_correct: false,
           })),
         };
       })
-      .filter(Boolean);
+      .filter((question) => question !== null);
 
     if (questions.length === 0) throw new ApiError(400, "This mock test has no questions yet", "TEST_EMPTY");
 

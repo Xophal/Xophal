@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { ArrowRight, GraduationCap, Sparkles } from "lucide-react";
-import { ROUTES } from "@/constants";
 import { Reveal, RevealGroup, RevealItem, SpotlightCard } from "./Reveal";
 
 export type BoardItem = {
@@ -30,10 +29,10 @@ export default function BoardShowcase({ boards }: { boards: BoardItem[] }) {
             </p>
           </div>
           <Link
-            href={ROUTES.learn}
+            href="/mock-tests"
             className="inline-flex w-fit items-center gap-1 text-sm font-bold text-primary hover:underline"
           >
-            Explore all learning
+            Browse practice tests
             <ArrowRight className="h-4 w-4" />
           </Link>
         </Reveal>
@@ -54,10 +53,10 @@ export default function BoardShowcase({ boards }: { boards: BoardItem[] }) {
                   <p className="hx-board__desc">{board.description ?? "Complete syllabus, tests and solutions."}</p>
 
                   <Link
-                    href={`${ROUTES.learn}?boardSlug=${encodeURIComponent(board.slug)}`}
+                    href="/mock-tests"
                     className="hx-board__cta"
                   >
-                    Explore {board.code.toUpperCase()}
+                    Browse mock tests
                     <ArrowRight className="h-4 w-4" />
                   </Link>
                 </SpotlightCard>
