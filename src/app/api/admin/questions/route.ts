@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { z } from "zod";
-import { requireAdminAuth } from "@/lib/auth";
+import { requireAdminAuth, requireAdminRole } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { apiSuccess, handleApiError, validateBody, getPaginationParams, paginatedResponse } from "@/lib/api-utils";
 
@@ -70,7 +70,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    await requireAdminAuth();
+    await requireAdminRole(["super_admin", "admin", "content_manager"]);
     const body = await request.json();
     const payload = await validateBody(createQuestionSchema, body);
     const admin = createAdminClient();

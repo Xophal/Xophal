@@ -18,7 +18,7 @@ export default function BlogPage() {
           <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
             <div className="space-y-3">
               <span className="inline-flex items-center rounded-full border border-emerald-200 bg-white/80 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700">
-                Xophal Blog
+                Xophol Blog
               </span>
               <h1 className="text-3xl font-bold tracking-tight text-slate-900 md:text-5xl">Learning ideas for Assam Board students</h1>
             </div>

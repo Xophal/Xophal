@@ -19,10 +19,11 @@ type OtpIntent = "login" | "signup" | "admin-login";
 type OtpFormProps = {
   intent: OtpIntent;
   initialEmail?: string;
+  initialSendFailed?: boolean;
   onUsePassword?: () => void;
 };
 
-export function OtpForm({ intent, initialEmail = "", onUsePassword }: OtpFormProps) {
+export function OtpForm({ intent, initialEmail = "", initialSendFailed = false, onUsePassword }: OtpFormProps) {
   const router = useRouter();
   const [email, setEmail] = useState(initialEmail);
   const [fullName, setFullName] = useState("");
@@ -124,7 +125,7 @@ export function OtpForm({ intent, initialEmail = "", onUsePassword }: OtpFormPro
   return (
     <Card className={isAdmin ? "glass w-full max-w-md admin-auth-card border-primary/30 bg-slate-950/50 text-slate-50 shadow-2xl shadow-primary/10" : "glass w-full max-w-xl student-auth-card auth-panel-login text-white shadow-2xl"}>
       <CardHeader className="relative z-10 space-y-2 text-center">
-        <div className={isAdmin ? "admin-auth-kicker" : "student-auth-kicker"}>{isAdmin ? "XOPHAL CONTROL ROOM" : "XOPHAL LEARNING HUB"}</div>
+        <div className={isAdmin ? "admin-auth-kicker" : "student-auth-kicker"}>{isAdmin ? "XOPHOL CONTROL ROOM" : "XOPHOL LEARNING HUB"}</div>
         <CardTitle className={isAdmin ? "text-2xl text-white" : "text-3xl font-semibold tracking-tight text-white"}>
           {isSignup ? "Create your account" : isAdmin ? "Admin portal" : "Sign in with email"}
         </CardTitle>
@@ -133,6 +134,11 @@ export function OtpForm({ intent, initialEmail = "", onUsePassword }: OtpFormPro
         </CardDescription>
       </CardHeader>
       <CardContent className="relative z-10 space-y-4">
+        {initialSendFailed && (
+          <p role="alert" className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-white">
+            Your account was created, but the verification email could not be sent. Check your address and select “Send verification code” to try again.
+          </p>
+        )}
         {step === "email" ? (
           <>
             {isSignup && (

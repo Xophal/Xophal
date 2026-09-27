@@ -50,7 +50,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
       <div className="flex flex-1 flex-col">
         <header className="flex h-14 items-center justify-between border-b px-4 md:px-6">
           <Link href="/admin" className="font-semibold md:hidden">
-            Xophal Admin
+            Xophol Admin
           </Link>
           <div className="ml-auto flex items-center gap-2">
             <form action="/api/auth/logout" method="post">

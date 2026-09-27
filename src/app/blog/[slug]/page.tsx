@@ -57,7 +57,7 @@ export default async function PostPage({ params }: { params: { slug: string } })
             ← Back to blog
           </Link>
           <Link href="/" className="font-semibold text-slate-700 transition hover:text-slate-900">
-            Explore Xophal
+            Explore Xophol
           </Link>
         </div>
       </motion.article>

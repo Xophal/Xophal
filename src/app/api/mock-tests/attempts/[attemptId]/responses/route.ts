@@ -26,10 +26,21 @@ export async function PATCH(request: NextRequest, { params }: Params) {
     const { attemptId } = await params;
     const { responses } = await validateBody(saveSchema, await request.json());
     const admin = createAdminClient();
-    const { data: attempt } = await admin.from("test_attempts").select("id, user_id, status").eq("id", attemptId).maybeSingle();
+    const { data: attempt } = await admin
+      .from("test_attempts")
+      .select("id, user_id, status, started_at, mock_tests(duration_minutes)")
+      .eq("id", attemptId)
+      .maybeSingle();
     if (!attempt) throw new ApiError(404, "Attempt not found", "ATTEMPT_NOT_FOUND");
     if (attempt.user_id !== session.user.id) throw new ApiError(403, "Forbidden", "FORBIDDEN");
     if (attempt.status !== "in_progress") throw new ApiError(409, "This attempt is already closed", "ATTEMPT_CLOSED");
+    const durationMinutes = Array.isArray(attempt.mock_tests)
+      ? attempt.mock_tests[0]?.duration_minutes
+      : attempt.mock_tests?.duration_minutes;
+    const deadline = new Date(attempt.started_at).getTime() + Number(durationMinutes) * 60 * 1000;
+    if (!Number.isFinite(deadline) || Date.now() >= deadline) {
+      throw new ApiError(409, "This attempt has reached its time limit", "ATTEMPT_EXPIRED");
+    }
 
     const { error } = await admin.from("test_responses").upsert(
       responses.map((response) => ({ attempt_id: attemptId, ...response })),

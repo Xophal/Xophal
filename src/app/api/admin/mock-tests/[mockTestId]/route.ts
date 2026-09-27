@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { z } from "zod";
-import { requireAdminAuth } from "@/lib/auth";
+import { requireAdminRole } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { ApiError, apiSuccess, handleApiError, validateBody } from "@/lib/api-utils";
 
@@ -8,6 +8,7 @@ const updateSchema = z.object({
   title: z.string().min(2).max(500).optional(),
   slug: z.string().min(2).max(500).optional(),
   duration_minutes: z.number().int().positive().optional(),
+    access_price: z.number().min(0).finite().optional(),
   passing_marks: z.number().optional(),
   is_premium: z.boolean().optional(),
   is_published: z.boolean().optional(),
@@ -19,7 +20,7 @@ type Params = { params: Promise<{ mockTestId: string }> };
 
 export async function PATCH(request: NextRequest, { params }: Params) {
   try {
-    await requireAdminAuth();
+    await requireAdminRole(["super_admin", "admin", "content_manager"]);
     const { mockTestId } = await params;
     const payload = await validateBody(updateSchema, await request.json());
     const admin = createAdminClient();
@@ -38,7 +39,7 @@ export async function PATCH(request: NextRequest, { params }: Params) {
 
 export async function DELETE(_: NextRequest, { params }: Params) {
   try {
-    await requireAdminAuth();
+    await requireAdminRole(["super_admin", "admin", "content_manager"]);
     const { mockTestId } = await params;
     const admin = createAdminClient();
     const { data, error } = await admin.from("mock_tests").update({ is_active: false, is_published: false }).eq("id", mockTestId).select().maybeSingle();

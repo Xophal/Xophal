@@ -206,7 +206,7 @@ export default async function DashboardPage() {
         </div>
       </section>
 
-      <div className="mt-5 flex items-center justify-between border-t border-white/10 px-1 pt-5 text-xs text-slate-500"><span>Stay connected with Xophal</span><div className="flex items-center gap-2"><a href="https://t.me/xopholstudent" target="_blank" rel="noreferrer" aria-label="Telegram" className="dashboard-social"><MessageCircle className="h-4 w-4" /></a><a href="https://www.instagram.com/xopholofficial" target="_blank" rel="noreferrer" aria-label="Instagram" className="dashboard-social"><Instagram className="h-4 w-4" /></a><a href="https://www.facebook.com/share/195Xu881nV/" target="_blank" rel="noreferrer" aria-label="Facebook" className="dashboard-social"><Facebook className="h-4 w-4" /></a></div></div>
+      <div className="mt-5 flex items-center justify-between border-t border-white/10 px-1 pt-5 text-xs text-slate-500"><span>Stay connected with Xophol</span><div className="flex items-center gap-2"><a href="https://t.me/xopholstudent" target="_blank" rel="noreferrer" aria-label="Telegram" className="dashboard-social"><MessageCircle className="h-4 w-4" /></a><a href="https://www.instagram.com/xopholofficial" target="_blank" rel="noreferrer" aria-label="Instagram" className="dashboard-social"><Instagram className="h-4 w-4" /></a><a href="https://www.facebook.com/share/195Xu881nV/" target="_blank" rel="noreferrer" aria-label="Facebook" className="dashboard-social"><Facebook className="h-4 w-4" /></a></div></div>
     </div>
   );
 }

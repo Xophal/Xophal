@@ -16,11 +16,11 @@ function createRateLimit(limit: number, window: `${number} ${"m" | "h"}`, prefix
   });
 }
 
-export const apiRateLimit = createRateLimit(60, "1 m", "xophal:api");
+export const apiRateLimit = createRateLimit(60, "1 m", "xophol:api");
 
-export const authRateLimit = createRateLimit(10, "1 m", "xophal:auth");
+export const authRateLimit = createRateLimit(10, "1 m", "xophol:auth");
 
-export const aiRateLimit = createRateLimit(20, "1 h", "xophal:ai");
+export const aiRateLimit = createRateLimit(20, "1 h", "xophol:ai");
 
 export { redis };
 

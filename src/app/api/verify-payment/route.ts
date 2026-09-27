@@ -6,12 +6,13 @@ import { requireAuth } from "@/lib/auth";
 import { requireVerifiedSession } from "@/lib/auth-policy";
 import { serverEnv } from "@/lib/env.server";
 import { unlockTestForUser } from "@/lib/test-access";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 const verifyPaymentSchema = z.object({
   razorpay_order_id: z.string().min(1),
   razorpay_payment_id: z.string().min(1),
   razorpay_signature: z.string().min(1),
-  testId: z.string().min(1).max(200),
+  testId: z.string().uuid(),
 });
 
 function isValidSignature(orderId: string, paymentId: string, signature: string, secret: string) {
@@ -38,11 +39,39 @@ export async function POST(request: NextRequest) {
       return apiError("Payments are not configured yet.", 503, "PAYMENTS_NOT_CONFIGURED");
     }
 
+    const admin = createAdminClient();
+    const { data: payment, error: paymentError } = await admin
+      .from("payments")
+      .select("id, user_id, amount, currency, status, metadata")
+      .eq("razorpay_order_id", payload.razorpay_order_id)
+      .maybeSingle();
+    if (paymentError) throw paymentError;
+    if (!payment || payment.user_id !== session.user.id || payment.status !== "pending") {
+      return apiError("Payment order is invalid", 400, "PAYMENT_ORDER_INVALID");
+    }
+    if ((payment.metadata as { test_id?: string } | null)?.test_id !== payload.testId) {
+      return apiError("Payment is not linked to this test", 400, "PAYMENT_TEST_MISMATCH");
+    }
+
+    const Razorpay = (await import("razorpay")).default;
+    const razorpay = new Razorpay({ key_id: serverEnv.RAZORPAY_KEY_ID || "", key_secret: serverEnv.RAZORPAY_KEY_SECRET });
+    const order = await razorpay.orders.fetch(payload.razorpay_order_id);
+    if (order.currency !== payment.currency || Number(order.amount) !== Math.round(Number(payment.amount) * 100)) {
+      return apiError("Payment amount mismatch", 400, "PAYMENT_AMOUNT_MISMATCH");
+    }
+
     if (!isValidSignature(payload.razorpay_order_id, payload.razorpay_payment_id, payload.razorpay_signature, serverEnv.RAZORPAY_KEY_SECRET)) {
       return apiSuccess({ success: false, message: "Payment verification failed." });
     }
 
     const unlock = await unlockTestForUser(session.user.id, payload.testId);
+    const { error: updateError } = await admin.from("payments").update({
+      razorpay_payment_id: payload.razorpay_payment_id,
+      razorpay_signature: payload.razorpay_signature,
+      status: "completed",
+      updated_at: new Date().toISOString(),
+    }).eq("id", payment.id).eq("status", "pending");
+    if (updateError) throw updateError;
     return apiSuccess({ success: true, unlock });
   } catch (error) {
     return handleApiError(error);

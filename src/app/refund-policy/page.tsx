@@ -26,7 +26,7 @@ export default function RefundPolicyPage() {
 
           <h3 className="mt-4 text-lg font-semibold">How to request a refund</h3>
           <ol className="list-inside list-decimal text-sm text-muted-foreground">
-            <li>Contact support at support@xophal.example (demo address) with your order details.</li>
+            <li>Contact support at support@xophol.example (demo address) with your order details.</li>
             <li>Provide a brief reason and any supporting evidence.</li>
             <li>We will review and respond within 5–10 business days.</li>
           </ol>

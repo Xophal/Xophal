@@ -43,7 +43,7 @@ async function main() {
   }
 
   const id = user.id;
-  const tmp = 'XophalTemp' + Math.floor(10000 + Math.random() * 90000);
+  const tmp = 'XopholTemp' + Math.floor(10000 + Math.random() * 90000);
   const patchRes = await fetch(`${SUPA.replace(/\/$/, '')}/auth/v1/admin/users/${id}`, {
     method: 'PUT',
     headers: { apikey: SR, Authorization: `Bearer ${SR}`, 'Content-Type': 'application/json' },

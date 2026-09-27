@@ -34,7 +34,7 @@ export function PaymentButton({ amount, testId }: { amount: number; testId: stri
         key: orderResult.data.keyId,
         amount: orderResult.data.order.amount,
         currency: orderResult.data.order.currency,
-        name: "Xophal",
+        name: "Xophol",
         description: "Mock test access",
         order_id: orderResult.data.order.id,
         handler: async (response) => {

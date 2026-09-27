@@ -19,6 +19,7 @@ export async function POST(request: NextRequest) {
     if (error) {
       if (error.message.includes("not found")) throw new ApiError(404, "Attempt not found", "ATTEMPT_NOT_FOUND");
       if (error.message.includes("forbidden")) throw new ApiError(403, "Forbidden", "FORBIDDEN");
+      if (error.message.includes("expired")) throw new ApiError(409, "This attempt has reached its time limit", "ATTEMPT_EXPIRED");
       throw new ApiError(400, error.message, "SUBMISSION_REJECTED");
     }
 

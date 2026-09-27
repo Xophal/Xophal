@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { requireAdminAuth } from "@/lib/auth";
+import { requireAdminRole } from "@/lib/auth";
 import { apiSuccess, apiError, handleApiError } from "@/lib/api-utils";
 
 async function processJob(adminClient: ReturnType<typeof createAdminClient>, job: any) {
@@ -131,7 +131,7 @@ async function processJob(adminClient: ReturnType<typeof createAdminClient>, job
 
 export async function POST(request: NextRequest) {
   try {
-    const { user, profile } = await requireAdminAuth();
+    const { user, profile } = await requireAdminRole(["super_admin", "admin", "content_manager"]);
     const body = await request.json();
     const jobId = body?.jobId;
     if (!jobId) return apiError("jobId is required", 400, "MISSING_JOB_ID");

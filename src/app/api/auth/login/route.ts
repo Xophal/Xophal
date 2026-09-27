@@ -47,14 +47,21 @@ export async function POST(request: NextRequest) {
     });
 
     if (error || !data?.session) {
+      const providerCode = (error?.code ?? "").toLowerCase();
+      const providerMessage = (error?.message ?? "").toLowerCase();
       const isUnconfirmed =
-        (error?.code ?? "") === "user_requires_confirm" ||
-        (error?.message ?? "").toLowerCase() ===
-          "your account needs to be confirmed before signing in. Please check your email.";
-      const message = isUnconfirmed
-        ? "Invalid email or password. If your email is not verified, check your inbox."
-        : "Invalid email or password.";
-      throw new ApiError(401, message, "UNAUTHORIZED");
+        ["user_requires_confirm", "email_not_confirmed", "user_not_confirmed"].includes(providerCode) ||
+        /email.*not confirmed|confirm.*email/.test(providerMessage);
+
+      if (isUnconfirmed) {
+        throw new ApiError(
+          403,
+          "Your email address is not verified yet. Use the email code option to verify it, or request a new code from the verification page.",
+          "EMAIL_NOT_VERIFIED"
+        );
+      }
+
+      throw new ApiError(401, "Invalid email or password.", "UNAUTHORIZED");
     }
 
     // Ensure a configured main administrator is raised to super_admin even if

@@ -22,3 +22,4 @@ MAIN_ADMIN_EMAILS=*
 
 # Generated TypeScript incremental build cache
 *.tsbuildinfo
+.env.local

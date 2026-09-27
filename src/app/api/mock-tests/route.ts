@@ -3,7 +3,7 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { getPaginationParams, paginatedResponse, apiSuccess, apiError, handleApiError, validateBody, ApiError } from "@/lib/api-utils";
 import { checkRateLimit } from "@/lib/rate-limit";
-import { requireAdminAuth } from "@/lib/auth";
+import { requireAdminRole } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 const mockTestCreateSchema = z.object({
@@ -14,6 +14,7 @@ const mockTestCreateSchema = z.object({
   subject_id: z.string().uuid().nullable().optional(),
   chapter_id: z.string().uuid().nullable().optional(),
   duration_minutes: z.number().int().positive().optional().default(45),
+  access_price: z.number().min(0).finite().optional().default(0),
   passing_marks: z.number().optional(),
   negative_marking: z.boolean().optional().default(false),
   negative_marks_ratio: z.number().min(0).max(1).optional().default(0.25),
@@ -44,6 +45,7 @@ export async function GET(request: NextRequest) {
       data: { user },
     } = await supabase.auth.getUser();
     let hasPremiumAccess = false;
+    const grantedTestIds = new Set<string>();
 
     if (user?.email_confirmed_at) {
       const { data: subscription } = await supabase
@@ -55,6 +57,13 @@ export async function GET(request: NextRequest) {
         .limit(1)
         .maybeSingle();
       hasPremiumAccess = !!subscription;
+      if (!hasPremiumAccess) {
+        const { data: grants } = await supabase
+          .from("test_access_grants")
+          .select("mock_test_id")
+          .eq("user_id", user.id);
+        for (const grant of grants ?? []) grantedTestIds.add(grant.mock_test_id);
+      }
     }
 
     let query = supabase
@@ -68,7 +77,10 @@ export async function GET(request: NextRequest) {
       .gt("total_questions", 0)
       .gt("duration_minutes", 0);
 
-    if (!hasPremiumAccess) query = query.eq("is_premium", false);
+    if (!hasPremiumAccess && grantedTestIds.size === 0) query = query.eq("is_premium", false);
+    if (!hasPremiumAccess && grantedTestIds.size > 0) {
+      query = query.or(`is_premium.eq.false,id.in.(${Array.from(grantedTestIds).join(",")})`);
+    }
 
     if (testTypeCode) {
       const { data: testType } = await supabase
@@ -112,7 +124,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    await requireAdminAuth();
+    await requireAdminRole(["super_admin", "admin", "content_manager"]);
     const body = await request.json();
     const payload = await validateBody(mockTestCreateSchema, body);
     const adminClient = createAdminClient();
@@ -144,6 +156,7 @@ export async function POST(request: NextRequest) {
           total_questions: 0,
           total_marks: 0,
           duration_minutes: payload.duration_minutes,
+          access_price: payload.access_price,
           passing_marks: payload.passing_marks ?? 0,
           negative_marking: payload.negative_marking,
           negative_marks_ratio: payload.negative_marks_ratio,

@@ -77,7 +77,7 @@ export function AdminRegisterForm() {
     <Card className="glass w-full max-w-xl admin-auth-card border-primary/20 bg-slate-950/40 text-slate-50 shadow-2xl shadow-primary/10">
       <CardHeader className="space-y-4 text-center">
         <div className="admin-auth-kicker">
-          XOPHAL CONTROL ROOM
+          XOPHOL CONTROL ROOM
         </div>
         <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full border border-primary/30 bg-primary/10 text-primary">
           <ShieldCheck className="h-6 w-6" />
@@ -109,7 +109,7 @@ export function AdminRegisterForm() {
               <Input
                 id="email"
                 type="email"
-                placeholder="admin@xophal.com"
+                placeholder="admin@xophol.com"
                 className="border-slate-700 bg-slate-900/80 text-white placeholder:text-slate-400"
                 {...register("email")}
               />

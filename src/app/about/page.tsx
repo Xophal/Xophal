@@ -12,7 +12,7 @@ export default function AboutPage() {
     <main className="min-h-screen bg-background">
       <section className="mx-auto flex max-w-6xl flex-col gap-8 px-6 py-20 lg:px-8">
         <div className="space-y-4">
-          <p className="text-sm font-semibold uppercase tracking-[0.3em] text-primary">About Xophal</p>
+          <p className="text-sm font-semibold uppercase tracking-[0.3em] text-primary">About Xophol</p>
           <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">Empowering every learner with smart, affordable education.</h1>
           <p className="max-w-3xl text-lg text-muted-foreground">
             {APP_NAME} brings together live-ready learning content, practice questions, mock tests, notes, and AI-guided study tools in one modern platform.

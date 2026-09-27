@@ -1,44 +1,22 @@
-/* Design tokens for futuristic glassmorphic system
-   - Place all CSS variables here and reference from tailwind and components
-   - Light and dark theme variables are defined for easy theming
-*/
+/* Shared aliases and visual tokens for components that still use the legacy names. */
 :root {
-  /* COLOR TOKENS (HSL / accessible mapping) */
-  --color-background: 210 12% 8%; /* dark base */
-  --color-surface: 210 14% 10%;
-  --color-elevated: 210 16% 12%;
-  --color-glass: 210 18% 14%;
+  --color-background: var(--background);
+  --color-surface: var(--card);
+  --color-elevated: var(--popover);
+  --color-glass: var(--card);
+  --color-border: var(--border);
 
-  --color-primary: 188 95% 60%; /* cyan/teal */
-  --color-primary-foreground: 210 16% 96%;
-  --color-secondary: 278 72% 62%; /* purple */
-  --color-success: 150 60% 40%;
-  --color-warning: 40 95% 55%;
-  --color-error: 10 80% 55%;
-  --color-info: 210 80% 70%;
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-error: var(--destructive);
+  --color-info: var(--accent);
 
-  --text-primary: 210 16% 96%;
-  --text-secondary: 210 14% 86%;
-  --text-muted: 210 12% 68%;
-
-  /* LEGACY TOKEN MAPPINGS (for existing code compatibility) */
-  --background: var(--color-background);
-  --foreground: var(--text-primary);
-  --card: var(--color-surface);
-  --card-foreground: var(--text-primary);
-  --popover: var(--color-surface);
-  --popover-foreground: var(--text-primary);
-  --primary: var(--color-primary);
-  --primary-foreground: var(--color-primary-foreground);
-  --secondary: var(--color-secondary);
-  --muted: 210 10% 12%;
-  --muted-foreground: var(--text-muted);
-  --accent: var(--color-info);
-  --accent-foreground: var(--text-primary);
-  --destructive: var(--color-error);
-  --destructive-foreground: var(--text-primary);
-
-  --border: 210 20% 30%;
+  --text-primary: var(--foreground);
+  --text-secondary: var(--muted-foreground);
+  --text-muted: var(--muted-foreground);
 
   /* GLASS TOKENS */
   --glass-opacity: 0.14;
@@ -76,20 +54,6 @@
   --backdrop-blur-sm: 6px;
   --backdrop-blur-md: 12px;
   --backdrop-blur-lg: 20px;
-}
-
-/* Dark theme mapping (inherits where possible) */
-.dark {
-  --color-background: 220 18% 6%;
-  --color-surface: 220 16% 8%;
-  --color-elevated: 220 18% 10%;
-  --color-glass: 220 20% 12%;
-
-  --text-primary: 220 18% 96%;
-  --text-secondary: 220 16% 86%;
-  --text-muted: 220 14% 68%;
-
-  --border: 220 18% 22%;
 }
 
 /* Utility glass surface classes for consistent usage */

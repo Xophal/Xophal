@@ -36,7 +36,7 @@ export default function ExamHeader({
             href="/mock-tests"
             className="shrink-0 rounded-lg px-1.5 py-1 text-sm font-black tracking-[0.18em] text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
-            XOPHAL
+            XOPHOL
           </Link>
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-semibold text-foreground" title={title}>

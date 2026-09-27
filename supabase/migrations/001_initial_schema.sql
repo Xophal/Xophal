@@ -1,4 +1,4 @@
--- Xophal Platform - Initial Database Schema
+-- Xophol Platform - Initial Database Schema
 -- Fully normalized, dynamic, scalable for all boards/exams
 
 -- Extensions

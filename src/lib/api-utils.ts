@@ -94,7 +94,7 @@ function normalizeOrigin(value: string | null | undefined): string {
 }
 
 /**
- * Extra origins (e.g. "https://www.xophal.com") that are trusted in addition to
+ * Extra origins (e.g. "https://www.xophol.com") that are trusted in addition to
  * the canonical app origin. Configured explicitly via TRUSTED_ORIGINS so an
  * operator can permit known aliases without trusting every subdomain of the
  * app's registrable domain (which would be a CSRF bypass).

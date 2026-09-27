@@ -1,0 +1,73 @@
+html:not(.dark) .student-dashboard {
+  color: hsl(var(--foreground));
+  min-height: 0;
+  background: transparent;
+}
+
+html:not(.dark) .student-dashboard .dashboard-surface,
+html:not(.dark) .student-dashboard .dashboard-metric {
+  border-color: hsl(var(--border));
+  background: hsl(var(--card));
+  box-shadow: 0 8px 24px hsl(155 24% 16% / 0.06);
+  backdrop-filter: none;
+}
+
+html:not(.dark) .student-dashboard .dashboard-metric .text-white,
+html:not(.dark) .student-dashboard .dashboard-surface .text-white {
+  color: hsl(var(--foreground));
+}
+
+html:not(.dark) .student-dashboard .dashboard-metric .text-slate-200,
+html:not(.dark) .student-dashboard .dashboard-metric .text-slate-300,
+html:not(.dark) .student-dashboard .dashboard-surface .text-slate-200,
+html:not(.dark) .student-dashboard .dashboard-surface .text-slate-300 {
+  color: hsl(var(--foreground) / 0.86);
+}
+
+html:not(.dark) .student-dashboard .dashboard-metric .text-slate-400,
+html:not(.dark) .student-dashboard .dashboard-metric .text-slate-500,
+html:not(.dark) .student-dashboard .dashboard-surface .text-slate-400,
+html:not(.dark) .student-dashboard .dashboard-surface .text-slate-500 {
+  color: hsl(var(--muted-foreground));
+}
+
+html:not(.dark) .student-dashboard .dashboard-eyebrow,
+html:not(.dark) .student-dashboard .dashboard-surface .text-cyan-300 {
+  color: hsl(var(--primary));
+}
+
+html:not(.dark) .student-dashboard .dashboard-tool,
+html:not(.dark) .student-dashboard .dashboard-attempt {
+  border-color: hsl(var(--border));
+  background: hsl(var(--background));
+}
+
+html:not(.dark) .student-dashboard .dashboard-tool:hover {
+  border-color: hsl(var(--primary) / 0.42);
+  background: hsl(var(--primary) / 0.05);
+}
+
+html:not(.dark) .student-dashboard .dashboard-attempt {
+  border-radius: 0.75rem;
+}
+
+html:not(.dark) .student-dashboard .dashboard-empty-state {
+  border-color: hsl(var(--border));
+}
+
+html:not(.dark) .student-dashboard .dashboard-social {
+  border-color: hsl(var(--border));
+  color: hsl(var(--muted-foreground));
+}
+
+html:not(.dark) .student-dashboard .dashboard-social:hover {
+  border-color: hsl(var(--primary) / 0.45);
+  color: hsl(var(--primary));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .student-dashboard .dashboard-tool,
+  .student-dashboard .dashboard-social {
+    transition: none;
+  }
+}

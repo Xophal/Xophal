@@ -12,7 +12,7 @@ export default function CareersPage() {
       <section className="mx-auto max-w-4xl px-6 py-20 lg:px-8">
         <div className="mb-8 space-y-3">
           <p className="text-sm font-semibold uppercase tracking-[0.3em] text-primary">Careers</p>
-          <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">Join the Xophal team.</h1>
+          <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">Join the Xophol team.</h1>
         </div>
         <div className="rounded-2xl border bg-card p-8 shadow-sm">
           <div className="mb-4 flex items-center gap-3">

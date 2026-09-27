@@ -101,7 +101,7 @@ describe("profile payload helpers", () => {
   it("accepts admin-only registration data without student board or class fields", () => {
     const result = adminRegisterSchema.safeParse({
       fullName: "Saurabh Sharma",
-      email: "admin@xophal.com",
+      email: "admin@xophol.com",
       phone: "+91 9876543210",
       role: "content_manager",
       password: "securepassword",

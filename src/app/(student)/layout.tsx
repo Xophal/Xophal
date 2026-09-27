@@ -59,7 +59,7 @@ export default async function StudentLayout({ children }: { children: React.Reac
               <div className="flex min-w-0 items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-2.5 py-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-primary lg:text-[11px]">
                 <Sparkles className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
                 <span className="hidden sm:inline">Student app</span>
-                <span className="sm:hidden">Xophal</span>
+                <span className="sm:hidden">Xophol</span>
               </div>
               <span className="hidden truncate text-sm font-medium text-muted-foreground md:inline">
                 {firstName}&apos;s learning hub

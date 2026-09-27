@@ -1,6 +1,6 @@
 # Deployment checklist
 
-Quick checklist to prepare `Xophal` for staging/production deployment.
+Quick checklist to prepare `Xophol` for staging/production deployment.
 
 1. Build & runtime
    - Ensure Node >= 20.

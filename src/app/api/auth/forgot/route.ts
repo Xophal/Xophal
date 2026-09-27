@@ -45,7 +45,14 @@ export async function POST(request: NextRequest) {
     const { error } = await supabase.auth.resetPasswordForEmail(parsed.data.email.toLowerCase(), {
       redirectTo: `${publicEnv.NEXT_PUBLIC_APP_URL}/auth/callback?next=/reset-password`,
     });
-    if (error) console.error("Password reset request failed", error);
+    if (error) {
+      console.error("Password reset email request failed", { code: error.code, status: error.status });
+      throw new ApiError(
+        503,
+        "We couldn't request a password reset email right now. Please try again later.",
+        "RESET_EMAIL_UNAVAILABLE"
+      );
+    }
 
     // This response deliberately does not reveal whether the address has an
     // account, preventing email-account enumeration.

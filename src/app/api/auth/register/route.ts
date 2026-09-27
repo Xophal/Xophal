@@ -157,7 +157,7 @@ export async function POST(request: NextRequest) {
     if (duplicateUser) {
       throw new ApiError(
         409,
-        "This email is already registered in the current Xophal database. Please use a different email address or remove the stale user from Supabase Auth > Users.",
+        "This email is already registered in the current Xophol database. Please use a different email address or remove the stale user from Supabase Auth > Users.",
         "EMAIL_ALREADY_REGISTERED"
       );
     }
@@ -177,7 +177,7 @@ export async function POST(request: NextRequest) {
     if (createUserError || !userData?.user) {
       const supabaseMessage = formatSupabaseError(createUserError) || "We could not create your account.";
       const message = /already registered|already exists|email.*registered/i.test(supabaseMessage)
-        ? "This email is already registered in the current Xophal database. Please use a different email address or remove the stale user from Supabase Auth > Users."
+        ? "This email is already registered in the current Xophol database. Please use a different email address or remove the stale user from Supabase Auth > Users."
         : supabaseMessage;
       console.error("Supabase account creation failed", createUserError);
       throw new ApiError(409, message, "REGISTRATION_FAILED");
@@ -256,6 +256,7 @@ export async function POST(request: NextRequest) {
     // verification used by login and sign-up OTP flows. `signInWithOtp`
     // with `shouldCreateUser: false` sends a code to an existing user
     // without attempting to create a new session.
+    let verificationEmailSent = true;
     try {
       const { createRouteHandlerClient } = await import("@/lib/supabase/route-handler");
       const routeClient = await createRouteHandlerClient();
@@ -264,12 +265,15 @@ export async function POST(request: NextRequest) {
         options: { shouldCreateUser: false },
       });
       if (otpError) {
-        console.warn("Failed to send verification OTP after signup:", otpError);
+        verificationEmailSent = false;
+        console.error("Verification email request failed after signup", {
+          code: otpError.code,
+          status: otpError.status,
+        });
       }
     } catch (err) {
-      // Non-fatal: log and continue. The UI guides users to "Check your
-      // inbox" on the verify-email page regardless.
-      console.warn("Failed to trigger verification OTP:", err);
+      verificationEmailSent = false;
+      console.error("Verification email service failed after signup", err);
     }
 
     return apiSuccess({
@@ -280,6 +284,7 @@ export async function POST(request: NextRequest) {
         : "Account created successfully.",
       pendingApproval: isAdminRequest && !isMainAdmin,
       approvalEmailSent,
+      verificationEmailSent,
     });
   } catch (error) {
     return handleApiError(error);

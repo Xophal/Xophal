@@ -21,7 +21,7 @@ export const blogDemoPosts: BlogDemoPost[] = [
       "A realistic weekly plan that balances SEBA subjects, revision, and recovery time for healthier exam prep.",
     category: "Study Tips",
     readTime: "5 min read",
-    author: "Xophal Learning Desk",
+    author: "Xophol Learning Desk",
     published_at: "2026-08-20T09:00:00.000Z",
     featured: true,
     coverTone: "from-emerald-600 via-teal-500 to-yellow-400",
@@ -82,7 +82,7 @@ export const blogDemoPosts: BlogDemoPost[] = [
       "Use regular mini-tests to spot weak chapters, improve time management, and build confidence before the final exam.",
     category: "Mock Tests",
     readTime: "5 min read",
-    author: "Xophal Team",
+    author: "Xophol Team",
     published_at: "2026-07-09T09:00:00.000Z",
     coverTone: "from-sky-600 via-emerald-500 to-lime-400",
     contentHtml: `

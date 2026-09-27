@@ -39,9 +39,9 @@ const features = [
 ];
 
 const faqs: [string, string][] = [
-  ["Who can use Xophal?", "Xophal is built for Class 9 and 10 students preparing for CBSE and Assam Board exams."],
+  ["Who can use Xophol?", "Xophol is built for Class 9 and 10 students preparing for CBSE and Assam Board exams."],
   ["How do I start a mock test?", "Choose a test from the featured section or the mock-tests page, then select Start test."],
-  ["Can I use Xophal on my phone?", "Yes. The learning and test discovery experience is designed to work across phones, tablets, and desktops."],
+  ["Can I use Xophol on my phone?", "Yes. The learning and test discovery experience is designed to work across phones, tablets, and desktops."],
 ];
 
 function getTestType(test: MockTest) {

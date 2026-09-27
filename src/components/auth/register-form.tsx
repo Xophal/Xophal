@@ -146,14 +146,16 @@ export function RegisterForm({ mode = "student", onSuccess, allowAdminSignup = f
         return;
       }
 
-      const destination = `${ROUTES.verifyEmail}?email=${encodeURIComponent(payload.email)}`;
+      const verificationEmailSent = result.data?.verificationEmailSent !== false;
+      const destination = `${ROUTES.verifyEmail}?email=${encodeURIComponent(payload.email)}${verificationEmailSent ? "" : "&delivery=failed"}`;
 
       toast({
-        title: "Account created!",
-        description:
-          mode === "admin"
-            ? "Check your email to verify the admin account before signing in."
-            : "Check your email to verify your account before signing in.",
+        title: verificationEmailSent ? "Account created" : "Account created, but email couldn't be sent",
+        description: verificationEmailSent
+          ? mode === "admin"
+            ? "Check your inbox and spam folder for the verification code."
+            : "Check your inbox and spam folder for the verification code."
+          : "Your account is saved. On the next screen, request another verification code or try again later.",
       });
       onSuccess?.();
       router.push(destination);
@@ -178,7 +180,7 @@ export function RegisterForm({ mode = "student", onSuccess, allowAdminSignup = f
     <Card className="glass w-full max-w-md student-auth-card auth-panel-register">
       <CardHeader className="relative z-10 text-center">
         <div className="student-auth-kicker mb-3">
-          XOPHAL LEARNING HUB
+          XOPHOL LEARNING HUB
         </div>
         <CardTitle className="text-2xl font-bold tracking-tight text-slate-900">
           {isAdminMode ? "Create admin account" : "Create your account"}

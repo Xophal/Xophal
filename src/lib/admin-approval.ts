@@ -41,7 +41,7 @@ export async function sendAdminApprovalRequest(input: { email: string; fullName:
     body: JSON.stringify({
       from,
       to: recipients,
-      subject: "Xophal admin signup approval required",
+      subject: "Xophol admin signup approval required",
       html: `<p>A new admin signup request needs review.</p><p><strong>Name:</strong> ${escapeHtml(input.fullName)}<br/><strong>Email:</strong> ${escapeHtml(input.email)}<br/><strong>Requested role:</strong> ${escapeHtml(input.requestedRole)}</p><p><a href="${escapeHtml(appUrl)}/admin/admin-requests">Review admin request</a></p>`,
     }),
   });

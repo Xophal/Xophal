@@ -193,7 +193,7 @@ export const useTestStore = create<TestState>()(
       },
     }),
     {
-      name: "xophal-test",
+      name: "xophol-test",
       partialize: (state) => ({
         attemptId: state.attemptId,
         mockTest: state.mockTest,

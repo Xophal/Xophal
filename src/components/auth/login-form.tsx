@@ -41,6 +41,7 @@ export function LoginForm({ mode = "student", onSuccess, allowSelfRegistration =
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [authMethod, setAuthMethod] = useState<"otp" | "password">("password");
+  const [submitError, setSubmitError] = useState<string | null>(null);
   // Hidden unless NEXT_PUBLIC_ENABLE_GOOGLE_AUTH=true, so an unconfigured
   // Google provider cannot leave a visible-but-broken button on the form.
   const googleAuthEnabled = publicEnv.NEXT_PUBLIC_ENABLE_GOOGLE_AUTH;
@@ -70,6 +71,7 @@ export function LoginForm({ mode = "student", onSuccess, allowSelfRegistration =
 
   async function onSubmit(data: LoginInput) {
     setLoading(true);
+    setSubmitError(null);
     try {
       const res = await fetch("/api/auth/login", {
         method: "POST",
@@ -79,9 +81,11 @@ export function LoginForm({ mode = "student", onSuccess, allowSelfRegistration =
 
       const result = await res.json().catch(() => ({}));
       if (!res.ok || !result.success) {
+        const message = result?.error || "Invalid email or password.";
+        setSubmitError(message);
         toast({
           title: "Login failed",
-          description: result?.error || "Invalid email or password.",
+          description: message,
           variant: "destructive",
         });
         return;
@@ -93,6 +97,12 @@ export function LoginForm({ mode = "student", onSuccess, allowSelfRegistration =
       try {
         const meResponse = await fetch("/api/auth/me", { cache: "no-store" });
         const meResult = await meResponse.json();
+        if (!meResponse.ok || !meResult?.success || !meResult.data?.user) {
+          const message = "We couldn't keep your sign-in active. Please try again, or use the email code option.";
+          setSubmitError(message);
+          toast({ title: "Sign-in didn't complete", description: message, variant: "destructive" });
+          return;
+        }
         const isUserAdmin = meResponse.ok && meResult?.success && isAdminRole(meResult.data?.profile);
 
         if (isUserAdmin) {
@@ -109,18 +119,25 @@ export function LoginForm({ mode = "student", onSuccess, allowSelfRegistration =
             description: "This sign-in is for administrators and content managers only.",
             variant: "destructive",
           });
+          setSubmitError("This account doesn't have admin access. Use a student sign-in or contact a super administrator.");
           router.replace(ROUTES.adminLogin);
           router.refresh();
           return;
         }
       } catch {
-        // Do not leak implementation details. The protected destination will
-        // independently verify the session and role on the server.
+        const message = "We couldn't confirm your sign-in. Check your connection and try again.";
+        setSubmitError(message);
+        toast({ title: "Sign-in couldn't be confirmed", description: message, variant: "destructive" });
+        return;
       }
 
       onSuccess?.();
       router.push(destination);
       router.refresh();
+    } catch {
+      const message = "We couldn't reach the sign-in service. Check your connection and try again.";
+      setSubmitError(message);
+      toast({ title: "Sign-in unavailable", description: message, variant: "destructive" });
     } finally {
       setLoading(false);
     }
@@ -141,7 +158,7 @@ export function LoginForm({ mode = "student", onSuccess, allowSelfRegistration =
     <Card className={isAdminMode ? "glass w-full max-w-md admin-auth-card border-primary/30 bg-slate-950/50 text-slate-50 shadow-2xl shadow-primary/10" : "glass w-full max-w-md student-auth-card auth-panel-login text-white shadow-2xl"}>
       <CardHeader className="relative z-10 text-center py-8">
         <div className={isAdminMode ? "admin-auth-kicker mb-3" : "student-auth-kicker mb-3"}>
-          {isAdminMode ? "XOPHAL CONTROL ROOM" : "XOPHAL LEARNING HUB"}
+          {isAdminMode ? "XOPHOL CONTROL ROOM" : "XOPHOL LEARNING HUB"}
         </div>
         <CardTitle className={isAdminMode ? "text-2xl text-white" : "text-3xl font-semibold tracking-tight text-white"}>
           {isAdminMode ? "Admin portal" : "Welcome Back"}
@@ -152,12 +169,13 @@ export function LoginForm({ mode = "student", onSuccess, allowSelfRegistration =
       </CardHeader>
       <form onSubmit={handleSubmit(onSubmit)}>
         <CardContent className="space-y-4 card-content">
+          {submitError && <p role="alert" className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">{submitError}</p>}
           <div className="space-y-2">
             <Label htmlFor="email" className={isAdminMode ? "text-slate-200" : "text-white/90"}>Email address</Label>
             <Input
               id="email"
               type="email"
-              placeholder={isAdminMode ? "admin@xophal.com" : "you@example.com"}
+              placeholder={isAdminMode ? "admin@xophol.com" : "you@example.com"}
               className={isAdminMode ? "auth-input border-slate-700 text-white" : "auth-input"}
               aria-invalid={errors.email ? "true" : "false"}
               {...register("email")}

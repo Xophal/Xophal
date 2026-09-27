@@ -3,7 +3,7 @@ import { expect, test } from "@playwright/test";
 test("homepage is reachable and guides visitors to registration", async ({ page }) => {
   await page.goto("/");
 
-  await expect(page.getByRole("heading", { name: /Master Your Exams with Xophal/i })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /Master Your Exams with Xophol/i })).toBeVisible();
   await expect(page.getByRole("link", { name: /Start Free/i })).toHaveAttribute("href", "/register");
 });
 

@@ -4,12 +4,12 @@ import { publicEnv } from "@/lib/env";
 
 declare global {
   // store cached client on globalThis to avoid multiple instances during HMR
-  var __xophal_supabase_client: SupabaseClient | undefined;
+  var __xophol_supabase_client: SupabaseClient | undefined;
 }
 
 export function createClient() {
-  if (globalThis.__xophal_supabase_client) {
-    return globalThis.__xophal_supabase_client;
+  if (globalThis.__xophol_supabase_client) {
+    return globalThis.__xophol_supabase_client;
   }
 
   // Keep browser and server authentication state in the same cookie store.  The
@@ -20,7 +20,7 @@ export function createClient() {
     publicEnv.NEXT_PUBLIC_SUPABASE_ANON_KEY
   );
 
-  globalThis.__xophal_supabase_client = client;
+  globalThis.__xophol_supabase_client = client;
 
   return client;
 }

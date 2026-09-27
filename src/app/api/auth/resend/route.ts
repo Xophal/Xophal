@@ -45,8 +45,12 @@ export async function POST(request: NextRequest) {
     });
 
     if (error) {
-      // Do not reveal whether the email exists; give a generic response.
-      console.warn("Resend verification error:", error);
+      console.error("Verification email resend failed", { code: error.code, status: error.status });
+      throw new ApiError(
+        503,
+        "We couldn't send a verification email right now. Please try again later.",
+        "RESEND_EMAIL_UNAVAILABLE"
+      );
     }
 
     return apiSuccess({ message: "If this email exists, a verification link has been sent." });

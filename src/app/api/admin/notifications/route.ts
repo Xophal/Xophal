@@ -1,11 +1,11 @@
 import { NextRequest } from "next/server";
 import { apiSuccess, handleApiError } from "@/lib/api-utils";
-import { requireAdminAuth } from "@/lib/auth";
+import { requireAdminRole } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export async function POST(request: NextRequest) {
   try {
-    await requireAdminAuth();
+    await requireAdminRole(["super_admin", "admin"]);
     const body = await request.json();
     const { title, message, type = "info", link_url = null, user_ids = [], is_global = false } = body;
     if (!title || !message) return new Response(JSON.stringify({ success: false, error: "Missing title or message" }), { status: 400 });

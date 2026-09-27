@@ -20,7 +20,7 @@ export default function ModernCta() {
             </h2>
 
             <p className="hx-cta__body">
-              Join thousands of Class 9 and 10 students preparing with Xophal. Free forever for the core practice
+              Join thousands of Class 9 and 10 students preparing with Xophol. Free forever for the core practice
               experience.
             </p>
 

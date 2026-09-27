@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import { usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import * as Icons from "lucide-react";
 
 type NavItem = { href: string; icon: string; label: string };
@@ -17,6 +18,7 @@ type SideNavProfile = {
 export function Sidenav({ items, profile, variant = "student" }: { items: NavItem[]; profile?: SideNavProfile | null; variant?: "student" | "admin" }) {
   const pathname = usePathname() || "/";
   const [collapsed, setCollapsed] = useState(false);
+  const reduceMotion = useReducedMotion();
   const profileRole = Array.isArray(profile?.roles) ? profile.roles[0] : profile?.roles;
 
   useEffect(() => {
@@ -42,29 +44,31 @@ export function Sidenav({ items, profile, variant = "student" }: { items: NavIte
   };
 
   return (
-    <aside className={`relative z-10 ${collapsed ? "w-20" : "w-72"} transition-all duration-300`}>
+    <aside className={`relative z-10 ${collapsed ? "w-20" : "w-72"} transition-[width] duration-300 motion-reduce:transition-none`}>
       <motion.div
-        initial={{ opacity: 0, x: -12 }}
+        initial={{ opacity: reduceMotion ? 1 : 0, x: reduceMotion ? 0 : -12 }}
         animate={{ opacity: 1, x: 0 }}
-        transition={{ duration: 0.3 }}
+        transition={{ duration: reduceMotion ? 0 : 0.3 }}
         className="flex h-full min-h-[calc(100vh-1.5rem)] flex-col overflow-hidden rounded-[28px] border border-slate-200/80 bg-[linear-gradient(180deg,rgba(12,18,29,0.96),rgba(9,13,20,0.92))] text-slate-100 shadow-[0_30px_80px_rgba(15,23,42,0.28)] backdrop-blur-xl dark:border-white/10"
       >
         <div className="flex items-center justify-between border-b border-white/10 px-4 py-4 md:px-5">
           <div className="flex items-center overflow-hidden">
             {!collapsed && (
               <div className="min-w-0">
-                <div className="text-sm font-black tracking-[0.2em] text-white/90">XOPHAL</div>
+                <div className="text-sm font-black tracking-[0.2em] text-white/90">XOPHOL</div>
                 <div className="text-[10px] uppercase tracking-[0.2em] text-slate-400">{variant === "admin" ? "control room" : "student"}</div>
               </div>
             )}
           </div>
 
           <button
-            aria-label="Toggle sidebar"
+            type="button"
+            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+            aria-expanded={!collapsed}
             onClick={toggle}
-            className="flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-white/5 text-slate-200 transition hover:bg-white/10"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-slate-200 transition hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 motion-reduce:transition-none"
           >
-            {collapsed ? "›" : "‹"}
+            {collapsed ? <ChevronRight className="h-4 w-4" aria-hidden="true" /> : <ChevronLeft className="h-4 w-4" aria-hidden="true" />}
           </button>
         </div>
 
@@ -104,7 +108,7 @@ export function Sidenav({ items, profile, variant = "student" }: { items: NavIte
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-semibold text-white">{profile?.full_name || "Student"}</p>
-                  <p className="truncate text-xs text-slate-400">{profile?.email || "student@xophal.com"}</p>
+                  <p className="truncate text-xs text-slate-400">{profile?.email || "student@xophol.com"}</p>
                 </div>
               </div>
               <div className="mt-3 flex items-center justify-between rounded-xl bg-emerald-500/10 px-2 py-1.5 text-[11px] font-medium text-emerald-300">

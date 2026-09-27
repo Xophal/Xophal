@@ -37,7 +37,7 @@ function buildClient(): any {
 
 describe("promoteMainAdminProfile", () => {
   beforeAll(() => {
-    process.env.MAIN_ADMIN_EMAILS = "main@xophal.com,second@xophal.com";
+    process.env.MAIN_ADMIN_EMAILS = "main@xophol.com,second@xophol.com";
   });
 
   afterAll(() => {
@@ -64,11 +64,11 @@ describe("promoteMainAdminProfile", () => {
   });
 
   it("promotes a main administrator whose profile still has a student role", async () => {
-    const profile = { id: "u2", email: "main@xophal.com", is_active: true, role_id: null, roles: [{ code: "student" }] } as any;
+    const profile = { id: "u2", email: "main@xophol.com", is_active: true, role_id: null, roles: [{ code: "student" }] } as any;
 
     const result = await authModule.promoteMainAdminProfile({
       userId: "u2",
-      email: "main@xophal.com",
+      email: "main@xophol.com",
       profile,
     });
 
@@ -79,11 +79,11 @@ describe("promoteMainAdminProfile", () => {
   });
 
   it("leaves an already-privileged main administrator alone (no database write)", async () => {
-    const profile = { id: "u3", email: "second@xophal.com", role_id: "role-admin", roles: [{ code: "admin" }] } as any;
+    const profile = { id: "u3", email: "second@xophol.com", role_id: "role-admin", roles: [{ code: "admin" }] } as any;
 
     const result = await authModule.promoteMainAdminProfile({
       userId: "u3",
-      email: "second@xophal.com",
+      email: "second@xophol.com",
       profile,
     });
 
@@ -94,7 +94,7 @@ describe("promoteMainAdminProfile", () => {
   it("returns an admin-shaped profile when no profile row exists yet", async () => {
     const result = await authModule.promoteMainAdminProfile({
       userId: "u4",
-      email: "main@xophal.com",
+      email: "main@xophol.com",
       profile: null,
     });
 
@@ -107,7 +107,7 @@ describe("promoteMainAdminProfile", () => {
   it("is case-insensitive when matching a main administrator email", async () => {
     const result = await authModule.promoteMainAdminProfile({
       userId: "u5",
-      email: " Main@Xophal.com ",
+      email: " Main@Xophol.com ",
       profile: null,
     });
 

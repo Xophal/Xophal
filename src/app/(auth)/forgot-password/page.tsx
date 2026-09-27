@@ -21,7 +21,7 @@ export default function ForgotPasswordPage() {
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json?.error || 'Failed to request password reset');
-      toast({ title: 'Reset email sent', description: 'Check your inbox for the password reset link.' });
+      toast({ title: 'Check your email', description: 'If an account exists for that address, a reset link was sent. Check your spam folder too.' });
     } catch (err) {
       toast({ title: 'Error', description: err instanceof Error ? err.message : String(err), variant: 'destructive' });
     } finally { setLoading(false); }

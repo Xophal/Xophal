@@ -28,14 +28,21 @@ export async function POST(_: Request, { params }: { params: Promise<{ slug: str
       .limit(1)
       .maybeSingle();
 
+    const { data: grant } = await adminClient
+      .from("test_access_grants")
+      .select("id")
+      .eq("user_id", session.user.id)
+      .eq("mock_test_id", test.id)
+      .maybeSingle();
+
     const premiumAccess = canAccessPremiumContent(session.profile, session.user, subscription);
-    if (test.is_premium && !premiumAccess.allowed) {
+    if (test.is_premium && !premiumAccess.allowed && !grant) {
       throw new ApiError(403, premiumAccess.reason || "Premium access required", "PREMIUM_REQUIRED");
     }
 
     const { data: questionRows, error: questionError } = await adminClient
       .from("mock_test_questions")
-      .select("question_id, sort_order, marks_override, questions(*, question_types(code), question_options(*))")
+      .select("question_id, sort_order, marks_override, questions(id, question_text, question_html, image_url, marks, negative_marks, time_seconds, topic_id, chapter_id, subject_id, question_types(code), question_options(id, option_text, option_html, image_url, sort_order, label, body, position))")
       .eq("mock_test_id", test.id)
       .order("sort_order", { ascending: true });
 

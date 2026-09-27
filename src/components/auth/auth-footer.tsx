@@ -77,7 +77,7 @@ export function AuthFooter() {
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             {/* Copyright */}
             <p className="text-sm text-slate-600">
-              &copy; {currentYear} Xophal. All rights reserved.
+              &copy; {currentYear} Xophol. All rights reserved.
             </p>
 
             {/* Social/Contact Links */}

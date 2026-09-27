@@ -62,7 +62,7 @@ export default function StatsBand() {
   const inView = useInView(ref, { once: true, amount: 0.4 });
 
   return (
-    <section className="hx-section" aria-label="Xophal by the numbers">
+    <section className="hx-section" aria-label="Xophol by the numbers">
       <div className="hx-shell">
         <div ref={ref}>
           <RevealGroup className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4" stagger={0.1}>

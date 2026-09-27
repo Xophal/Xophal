@@ -187,3 +187,12 @@ export async function requireAdminAuth() {
 
   return { user, profile };
 }
+
+export async function requireAdminRole(allowedRoles: string[]) {
+  const session = await requireAdminAuth();
+  const roleCode = normalizeRoleCode(session.profile);
+  if (!roleCode || !allowedRoles.includes(roleCode)) {
+    throw new ApiError(403, "Forbidden", "FORBIDDEN");
+  }
+  return session;
+}
