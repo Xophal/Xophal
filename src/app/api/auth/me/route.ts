@@ -11,11 +11,16 @@ export async function GET() {
       error,
     } = await supabase.auth.getUser();
 
-    if (error || !user || !user.email_confirmed_at) {
+    if (error || !user) {
       return apiSuccess({ user: null, profile: null, isAdmin: false });
     }
 
     const profile = await ensureProfile(user);
+    const isVerified = Boolean(user.email_confirmed_at || profile?.email_verified);
+
+    if (!isVerified) {
+      return apiSuccess({ user: null, profile: null, isAdmin: false });
+    }
 
     const roleCode = (profile as { roles?: { code?: string } } | null)?.roles?.code;
 

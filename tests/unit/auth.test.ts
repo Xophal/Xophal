@@ -58,6 +58,20 @@ describe("requireAdminAuth", () => {
     await expect(authModule.requireAdminAuth()).rejects.toBeInstanceOf(ApiError);
     await expect(authModule.requireAdminAuth()).rejects.toMatchObject({ statusCode: 403 });
   });
+
+  it("accepts a verified profile even if email_confirmed_at is missing", async () => {
+    const mockClient: any = {};
+    mockClient.auth = { getUser: vi.fn().mockResolvedValue({ data: { user: { id: "u4", email: "u4@x.com" } } }) };
+    const singleMock = vi.fn().mockResolvedValue({ data: { id: "u4", is_active: true, email_verified: true, roles: { code: "student" } } });
+    mockClient.from = vi.fn(() => ({ select: () => ({ eq: () => ({ single: singleMock }) }) }));
+
+    vi.spyOn(supabaseServer, "createClient").mockResolvedValue(mockClient as any);
+
+    await expect(authModule.requireAuth()).resolves.toMatchObject({
+      user: { id: "u4" },
+      profile: { id: "u4", email_verified: true },
+    });
+  });
 });
 
 import { buildProfileUpsertPayload, isAdminRole, isStudentRole, normalizeRoleCode } from "@/lib/auth";

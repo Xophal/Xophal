@@ -37,7 +37,15 @@ export async function getSessionUser() {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  return user?.email_confirmed_at ? user : null;
+
+  if (!user) return null;
+
+  if (user.email_confirmed_at) return user;
+
+  const profile = await getProfile(user.id);
+  if (profile?.email_verified) return user;
+
+  return null;
 }
 
 export async function getProfile(userId: string): Promise<Profile | null> {
