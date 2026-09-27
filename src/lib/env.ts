@@ -10,6 +10,11 @@ function normalizeSupabaseUrl(value: string | undefined) {
     return undefined;
   }
 
+  const lower = trimmed.toLowerCase();
+  if (lower.includes("placeholder") || lower.includes("your_supabase") || lower.includes("your-project")) {
+    return undefined;
+  }
+
   try {
     const url = new URL(trimmed);
     const pathname = url.pathname.replace(/\/+$|\/rest\/v1\/?$/i, "");
@@ -30,7 +35,12 @@ function resolveSupabaseUrl(value: string | undefined, fallback: string | undefi
 }
 
 function resolveSupabaseAnonKey(value: string | undefined, fallback: string | undefined) {
-  return value ?? fallback;
+  const candidate = value ?? fallback;
+  if (!candidate) return undefined;
+  const normalized = candidate.trim();
+  return normalized && !normalized.toLowerCase().includes("placeholder") && !normalized.toLowerCase().includes("your_supabase")
+    ? normalized
+    : undefined;
 }
 
 function normalizeOptionalString(value: string | undefined) {
@@ -40,18 +50,9 @@ function normalizeOptionalString(value: string | undefined) {
 
 /** Configuration safe to expose to browser bundles. */
 const publicEnvSchema = z.object({
-  NEXT_PUBLIC_SUPABASE_URL: z
-    .string()
-    .url("NEXT_PUBLIC_SUPABASE_URL must be a valid URL")
-    .default("https://placeholder.supabase.co"),
-  NEXT_PUBLIC_SUPABASE_ANON_KEY: z
-    .string()
-    .min(1, "NEXT_PUBLIC_SUPABASE_ANON_KEY is required")
-    .default("placeholder-anon-key"),
-  NEXT_PUBLIC_APP_URL: z
-    .string()
-    .url("NEXT_PUBLIC_APP_URL must be a valid URL")
-    .default("http://localhost:3000"),
+  NEXT_PUBLIC_SUPABASE_URL: z.string().url("NEXT_PUBLIC_SUPABASE_URL must be a valid URL"),
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().min(1, "NEXT_PUBLIC_SUPABASE_ANON_KEY is required"),
+  NEXT_PUBLIC_APP_URL: z.string().url("NEXT_PUBLIC_APP_URL must be a valid URL").default("http://localhost:3000"),
   // Google sign-in is opt-in: the button is only rendered when explicitly
   // enabled, because it requires the Google OAuth provider to be configured in
   // Supabase first. Unset/false keeps the button hidden.

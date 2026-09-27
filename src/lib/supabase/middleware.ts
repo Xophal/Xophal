@@ -3,8 +3,14 @@ import { NextResponse, type NextRequest } from "next/server";
 import { publicEnv } from "@/lib/env";
 import { isAdminRole } from "@/lib/roles";
 
+function copySupabaseCookies(target: NextResponse, source: NextResponse) {
+  for (const cookie of source.headers.getSetCookie()) {
+    target.headers.append("set-cookie", cookie);
+  }
+}
+
 export async function updateSession(request: NextRequest) {
-  let supabaseResponse = NextResponse.next({ request });
+  const supabaseResponse = NextResponse.next({ request });
 
   const supabase = createServerClient(
     publicEnv.NEXT_PUBLIC_SUPABASE_URL,
@@ -15,21 +21,21 @@ export async function updateSession(request: NextRequest) {
           return request.cookies.getAll();
         },
         setAll(cookiesToSet: { name: string; value: string; options: CookieOptions }[]) {
-          cookiesToSet.forEach(({ name, value }) =>
-            request.cookies.set(name, value)
-          );
-          supabaseResponse = NextResponse.next({ request });
-          cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, options)
-          );
+          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
+          cookiesToSet.forEach(({ name, value, options }) => {
+            supabaseResponse.cookies.set(name, value, options);
+          });
         },
       },
     }
   );
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { data: claimsData, error: claimsError } = await supabase.auth.getClaims();
+  const userId = (claimsData?.claims as { sub?: string } | null | undefined)?.sub ?? null;
+
+  if (claimsError) {
+    console.warn("[proxy] supabase auth claims check failed", claimsError.message);
+  }
 
   const pathname = request.nextUrl.pathname;
 
@@ -55,13 +61,8 @@ export async function updateSession(request: NextRequest) {
     "/cookie-policy",
     "/refund-policy",
   ];
-  // NOTE: the `/blog/` prefix test must be evaluated once for the pathname, not
-  // inside the per-entry `some()` callback where it was OR-ed against every
-  // public path (making any `/blog/*` URL public regardless of the list).
   const isPublicPath =
     pathname === "/blog" || pathname.startsWith("/blog/") || publicPaths.includes(pathname);
-  // Exact/segment matching: the previous `startsWith` also matched unrelated
-  // paths such as "/loginfoo" or "/registration-help".
   const isAuthPath = ["/login", "/register", "/admin/login", "/admin/register"].some(
     (p) => pathname === p || pathname.startsWith(`${p}/`)
   );
@@ -69,50 +70,76 @@ export async function updateSession(request: NextRequest) {
   const isAdminPath = pathname.startsWith("/admin");
   const isApiPath = pathname.startsWith("/api");
 
-  if (!user && !isPublicPath && !isApiPath) {
+  if (!userId && !isPublicPath && !isApiPath) {
     const url = request.nextUrl.clone();
     url.pathname = isAdminPath ? "/admin/login" : "/login";
     url.searchParams.set("redirect", pathname);
-    return NextResponse.redirect(url);
+    const redirectResponse = NextResponse.redirect(url);
+    copySupabaseCookies(redirectResponse, supabaseResponse);
+    return redirectResponse;
   }
 
-  // Unverified users must be sent to /verify-email before the auth-path
-  // redirect below, otherwise they bounce /login -> /dashboard -> /verify-email.
-  if (user && !user.email_confirmed_at && !isVerificationPath && !isApiPath) {
-    const url = request.nextUrl.clone();
-    url.pathname = "/verify-email";
-    url.search = "";
-    return NextResponse.redirect(url);
-  }
-
-  if (user && isAuthPath) {
+  if (userId && !isPublicPath && !isApiPath) {
     const { data: profile } = await supabase
       .from("profiles")
       .select("role_id, roles(code)")
-      .eq("id", user.id)
-      .single();
+      .eq("id", userId)
+      .maybeSingle();
 
-    const url = request.nextUrl.clone();
-    if (isAdminRole(profile)) {
-      url.pathname = "/admin";
-    } else {
-      url.pathname = "/dashboard";
+    if (!profile && !isVerificationPath) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/verify-email";
+      url.search = "";
+      const redirectResponse = NextResponse.redirect(url);
+      copySupabaseCookies(redirectResponse, supabaseResponse);
+      return redirectResponse;
     }
-
-    return NextResponse.redirect(url);
   }
 
-  if (isAdminPath && user) {
+  if (userId && !isVerificationPath && !isApiPath) {
     const { data: profile } = await supabase
       .from("profiles")
       .select("role_id, roles(code)")
-      .eq("id", user.id)
-      .single();
+      .eq("id", userId)
+      .maybeSingle();
+
+    if (profile && !profile.role_id && !isAuthPath && !isAdminPath) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/verify-email";
+      url.search = "";
+      const redirectResponse = NextResponse.redirect(url);
+      copySupabaseCookies(redirectResponse, supabaseResponse);
+      return redirectResponse;
+    }
+  }
+
+  if (userId && isAuthPath) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role_id, roles(code)")
+      .eq("id", userId)
+      .maybeSingle();
+
+    const url = request.nextUrl.clone();
+    url.pathname = isAdminRole(profile) ? "/admin" : "/dashboard";
+    const redirectResponse = NextResponse.redirect(url);
+    copySupabaseCookies(redirectResponse, supabaseResponse);
+    return redirectResponse;
+  }
+
+  if (isAdminPath && userId) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role_id, roles(code)")
+      .eq("id", userId)
+      .maybeSingle();
 
     if (!isAdminRole(profile)) {
       const url = request.nextUrl.clone();
       url.pathname = "/dashboard";
-      return NextResponse.redirect(url);
+      const redirectResponse = NextResponse.redirect(url);
+      copySupabaseCookies(redirectResponse, supabaseResponse);
+      return redirectResponse;
     }
   }
 
