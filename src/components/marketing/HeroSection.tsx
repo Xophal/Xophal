@@ -85,6 +85,28 @@ export function HeroSection() {
               </li>
             </ol>
             <div className="hx-prep-path__foot"><span>Built around your syllabus</span><span>Made for steady progress</span></div>
+
+            <div className="hx-prep-path__pulse" aria-label="Current performance pulse">
+              <div className="hx-prep-path__pulse-top">
+                <span>Score pulse</span>
+                <strong>84%</strong>
+              </div>
+
+              <div className="hx-prep-path__meter" aria-hidden="true">
+                <span style={{ width: "84%" }} />
+              </div>
+
+              <div className="hx-prep-path__mini-grid">
+                <div>
+                  <small>Accuracy</small>
+                  <strong>88%</strong>
+                </div>
+                <div>
+                  <small>Streak</small>
+                  <strong>12 days</strong>
+                </div>
+              </div>
+            </div>
           </motion.aside>
         </div>
 

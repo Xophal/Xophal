@@ -60,6 +60,8 @@ export async function updateSession(request: NextRequest) {
     "/terms-and-conditions",
     "/cookie-policy",
     "/refund-policy",
+    "/robots.txt",
+    "/sitemap.xml",
   ];
   const isPublicPath =
     pathname === "/blog" || pathname.startsWith("/blog/") || publicPaths.includes(pathname);

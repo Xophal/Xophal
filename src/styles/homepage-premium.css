@@ -144,6 +144,72 @@
 .hx-prep-path li > a svg { width: 1rem; height: 1rem; }
 .hx-prep-path__foot { justify-content: flex-start; flex-wrap: wrap; gap: 0.45rem 1.1rem; margin-top: 1.1rem; color: #aec5bd; font-size: 0.58rem; }
 
+.hx-prep-path__pulse {
+  margin-top: 1.2rem;
+  padding: 1rem 1rem 0.85rem;
+  border: 1px solid rgba(240, 212, 131, 0.15);
+  border-radius: 1rem;
+  background: linear-gradient(180deg, rgba(240, 212, 131, 0.08), rgba(255, 255, 255, 0.02));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.05);
+}
+.hx-prep-path__pulse-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  color: #dfeae3;
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.hx-prep-path__pulse-top strong {
+  color: #f5d88d;
+  font-size: 1.3rem;
+  letter-spacing: -0.04em;
+  text-transform: none;
+}
+.hx-prep-path__meter {
+  position: relative;
+  margin-top: 0.8rem;
+  height: 0.6rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.07);
+  overflow: hidden;
+}
+.hx-prep-path__meter span {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #f0d483 0%, #98d6b3 100%);
+  box-shadow: 0 0 20px rgba(240, 212, 131, 0.4);
+}
+.hx-prep-path__mini-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin-top: 0.9rem;
+}
+.hx-prep-path__mini-grid div {
+  padding: 0.7rem 0.75rem;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 0.8rem;
+  background: rgba(9, 17, 19, 0.28);
+}
+.hx-prep-path__mini-grid small {
+  display: block;
+  color: #b1c5bf;
+  font-size: 0.54rem;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+.hx-prep-path__mini-grid strong {
+  display: block;
+  margin-top: 0.35rem;
+  color: #f3f6f5;
+  font-size: 0.92rem;
+}
+
 .hx-hero-capabilities { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-top: 1px solid rgba(255, 255, 255, 0.08); background: rgba(255, 255, 255, 0.02); }
 .hx-hero-capability { display: flex; min-height: 4.5rem; align-items: center; gap: 0.7rem; padding: 0.75rem 1rem; border-right: 1px solid rgba(255, 255, 255, 0.08); color: rgba(228, 235, 228, 0.78); font-size: 0.75rem; font-weight: 700; }
 .hx-hero-capability:first-child { padding-left: 0; }
