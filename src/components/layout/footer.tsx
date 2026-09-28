@@ -1,5 +1,19 @@
 import Link from "next/link";
-import { Facebook, Instagram, Mail, MessageCircle, Phone, ShieldCheck, FileText, HelpCircle } from "lucide-react";
+import {
+  ArrowRight,
+  BookOpen,
+  Facebook,
+  FileText,
+  HelpCircle,
+  Instagram,
+  Mail,
+  MessageCircle,
+  NotebookTabs,
+  Phone,
+  ShieldCheck,
+  Sparkles,
+  Trophy,
+} from "lucide-react";
 import { APP_NAME } from "@/constants";
 import { SUPPORT_EMAIL, SUPPORT_PHONE, SUPER_ADMIN_EMAIL, ADMIN_EMAIL, ADMIN_PHONE, phoneHref } from "@/lib/legal";
 
@@ -9,89 +23,192 @@ const SOCIALS = [
   { name: "Facebook", href: "https://www.facebook.com/share/195Xu881nV/", icon: Facebook },
 ];
 
+const learningLinks = [
+  { label: "Home", href: "/" },
+  { label: "Courses", href: "/courses" },
+  { label: "Subjects", href: "/subjects" },
+  { label: "Notes", href: "/notes" },
+  { label: "Mock Tests", href: "/mock-tests" },
+  { label: "PYQ Papers", href: "/previous-year-papers" },
+];
+
+const companyLinks = [
+  { label: "About Us", href: "/about" },
+  { label: "Board Prep", href: "/board" },
+  { label: "FAQ", href: "/faq" },
+  { label: "Help Center", href: "/help-center" },
+  { label: "Contact", href: "/contact" },
+];
+
+const legalLinks = [
+  { label: "Privacy Policy", href: "/privacy-policy", icon: ShieldCheck },
+  { label: "Terms & Conditions", href: "/terms-and-conditions", icon: FileText },
+  { label: "Cookie Policy", href: "/cookie-policy", icon: ShieldCheck },
+  { label: "Help Center", href: "/help-center", icon: HelpCircle },
+];
+
 export function Footer() {
   return (
-    <footer className="border-t bg-card/50">
-      <div className="container mx-auto px-4 py-12">
-        <div className="grid gap-8 md:grid-cols-4">
-          <div className="space-y-3">
-            <p className="text-sm text-muted-foreground">Empowering students through smart learning and mock practice.</p>
-            <p className="text-sm text-muted-foreground">Learn • Practice • Improve</p>
+    <footer className="relative overflow-hidden border-t border-slate-200/70 bg-slate-950 text-slate-50">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(59,130,246,0.25),transparent_32%),radial-gradient(circle_at_bottom_right,_rgba(168,85,247,0.22),transparent_28%)]" />
 
-            <div className="mt-3 flex items-center gap-3">
-              {SOCIALS.map((s) => {
-                const Icon = s.icon;
-                return (
-                  <a
-                    key={s.name}
-                    href={s.href}
-                    target="_blank"
-                    rel="noreferrer"
-                    aria-label={s.name}
-                    className="inline-flex h-9 w-9 items-center justify-center rounded-md border bg-transparent text-muted-foreground hover:border-primary hover:text-foreground"
-                  >
-                    <Icon className="h-4 w-4" />
-                  </a>
-                );
-              })}
+      <div className="container relative mx-auto px-4 py-12 md:py-16">
+        <div className="rounded-[28px] border border-white/10 bg-white/5 p-5 shadow-[0_25px_80px_rgba(15,23,42,0.5)] backdrop-blur-xl md:p-8">
+          <div className="flex flex-col gap-6 border-b border-white/10 pb-8 md:flex-row md:items-center md:justify-between">
+            <div className="max-w-xl">
+              <div className="inline-flex items-center gap-2 rounded-full border border-cyan-400/30 bg-cyan-500/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.25em] text-cyan-200">
+                <Sparkles className="h-3.5 w-3.5" />
+                Smart learning ecosystem
+              </div>
+              <h3 className="mt-4 text-2xl font-black tracking-tight text-white md:text-3xl">
+                Study smarter with structured learning, tests, and past papers.
+              </h3>
+            </div>
+
+            <div className="flex flex-wrap gap-2 text-xs font-medium text-slate-200">
+              {[
+                "Board prep",
+                "Mock tests",
+                "PYQ practice",
+                "Revision notes",
+              ].map((item) => (
+                <span
+                  key={item}
+                  className="rounded-full border border-white/10 bg-slate-900/70 px-3 py-1.5"
+                >
+                  {item}
+                </span>
+              ))}
             </div>
           </div>
 
-          <div>
-            <h3 className="mb-3 text-sm font-semibold">Quick Links</h3>
-            <ul className="space-y-2 text-sm text-muted-foreground">
-              <li><Link href="/" className="hover:text-foreground">Home</Link></li>
-              <li><Link href="/mock-tests" className="hover:text-foreground">Mock Tests</Link></li>
-              <li><Link href="/about" className="hover:text-foreground">About</Link></li>
-              <li><Link href="/faq" className="hover:text-foreground">FAQ</Link></li>
-            </ul>
-          </div>
+          <div className="mt-8 grid gap-8 md:grid-cols-2 xl:grid-cols-[1.4fr_1fr_1fr_1fr_1.2fr]">
+            <div className="space-y-5">
+              <div className="flex items-center gap-3">
+                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-cyan-400 via-blue-500 to-violet-500 shadow-lg shadow-cyan-500/20">
+                  <NotebookTabs className="h-5 w-5 text-white" />
+                </div>
+                <div>
+                  <div className="text-lg font-bold tracking-tight text-white">{APP_NAME}</div>
+                  <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Learn • Practice • Excel</div>
+                </div>
+              </div>
 
-          <div>
-            <h3 className="mb-3 text-sm font-semibold">Legal & Help</h3>
-            <ul className="space-y-2 text-sm text-muted-foreground">
-              <li><Link href="/privacy-policy" className="inline-flex items-center gap-2 hover:text-foreground"><ShieldCheck className="h-3.5 w-3.5" />Privacy Policy</Link></li>
-              <li><Link href="/terms-and-conditions" className="inline-flex items-center gap-2 hover:text-foreground"><FileText className="h-3.5 w-3.5" />Terms</Link></li>
-              <li><Link href="/cookie-policy" className="inline-flex items-center gap-2 hover:text-foreground"><ShieldCheck className="h-3.5 w-3.5" />Cookies</Link></li>
-              <li><Link href="/help-center" className="inline-flex items-center gap-2 hover:text-foreground"><HelpCircle className="h-3.5 w-3.5" />Help Center</Link></li>
-              <li><Link href="/faq" className="inline-flex items-center gap-2 hover:text-foreground"><HelpCircle className="h-3.5 w-3.5" />FAQ</Link></li>
-            </ul>
-          </div>
+              <p className="max-w-sm text-sm leading-6 text-slate-300">
+                Empowering students with focused boards, revision notes, mock test practice,
+                and previous year question mastery for better exam performance.
+              </p>
 
-          <div>
-            <h3 className="mb-3 text-sm font-semibold">Support</h3>
-            <div className="space-y-3 text-sm text-muted-foreground">
-            <a href={`mailto:${SUPPORT_EMAIL}`} className="inline-flex items-center gap-2 hover:text-foreground">
-              <Mail className="h-4 w-4" />
-              {SUPPORT_EMAIL}
-            </a>
-            <a href={phoneHref(SUPPORT_PHONE)} className="inline-flex items-center gap-2 hover:text-foreground">
-              <Phone className="h-4 w-4" />
-              {SUPPORT_PHONE}
-            </a>
-            <a href={phoneHref(ADMIN_PHONE)} className="inline-flex items-center gap-2 hover:text-foreground">
-              <Phone className="h-4 w-4" />
-              Admin: {ADMIN_PHONE}
-            </a>
-            <a href={`mailto:${SUPER_ADMIN_EMAIL}`} className="inline-flex items-center gap-2 hover:text-foreground">
-              <Mail className="h-4 w-4" />
-              Super Admin: {SUPER_ADMIN_EMAIL}
-            </a>
-            <a href={`mailto:${ADMIN_EMAIL}`} className="inline-flex items-center gap-2 hover:text-foreground">
-              <Mail className="h-4 w-4" />
-              Admin: {ADMIN_EMAIL}
-            </a>
-            <div className="text-xs">Jorhat, Assam, India</div>
-              <Link href="/contact" className="inline-flex items-center gap-2 hover:text-foreground">
-                Contact page
+              <div className="flex items-center gap-3">
+                {SOCIALS.map((s) => {
+                  const Icon = s.icon;
+                  return (
+                    <a
+                      key={s.name}
+                      href={s.href}
+                      target="_blank"
+                      rel="noreferrer"
+                      aria-label={s.name}
+                      className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-slate-200 transition duration-200 hover:border-cyan-400/50 hover:bg-cyan-500/10 hover:text-white"
+                    >
+                      <Icon className="h-4 w-4" />
+                    </a>
+                  );
+                })}
+              </div>
+
+              <Link
+                href="/mock-tests"
+                className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-cyan-500 to-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-cyan-500/25 transition hover:brightness-110"
+              >
+                Start practice
+                <ArrowRight className="h-4 w-4" />
               </Link>
+            </div>
+
+            <div>
+              <h4 className="mb-4 text-sm font-semibold uppercase tracking-[0.24em] text-slate-300">Explore</h4>
+              <ul className="space-y-3 text-sm text-slate-300">
+                {learningLinks.map((link) => (
+                  <li key={link.label}>
+                    <Link href={link.href} className="inline-flex items-center gap-2 transition hover:text-white">
+                      <BookOpen className="h-3.5 w-3.5 text-cyan-300" />
+                      {link.label}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <div>
+              <h4 className="mb-4 text-sm font-semibold uppercase tracking-[0.24em] text-slate-300">Company</h4>
+              <ul className="space-y-3 text-sm text-slate-300">
+                {companyLinks.map((link) => (
+                  <li key={link.label}>
+                    <Link href={link.href} className="transition hover:text-white">
+                      {link.label}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <div>
+              <h4 className="mb-4 text-sm font-semibold uppercase tracking-[0.24em] text-slate-300">Legal</h4>
+              <ul className="space-y-3 text-sm text-slate-300">
+                {legalLinks.map((link) => {
+                  const Icon = link.icon;
+                  return (
+                    <li key={link.label}>
+                      <Link href={link.href} className="inline-flex items-center gap-2 transition hover:text-white">
+                        <Icon className="h-3.5 w-3.5 text-violet-300" />
+                        {link.label}
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+
+            <div>
+              <h4 className="mb-4 text-sm font-semibold uppercase tracking-[0.24em] text-slate-300">Support</h4>
+              <div className="space-y-3 text-sm text-slate-300">
+                <a href={`mailto:${SUPPORT_EMAIL}`} className="inline-flex items-center gap-2 transition hover:text-white">
+                  <Mail className="h-4 w-4 text-cyan-300" />
+                  {SUPPORT_EMAIL}
+                </a>
+                <a href={phoneHref(SUPPORT_PHONE)} className="inline-flex items-center gap-2 transition hover:text-white">
+                  <Phone className="h-4 w-4 text-cyan-300" />
+                  {SUPPORT_PHONE}
+                </a>
+                <a href={phoneHref(ADMIN_PHONE)} className="inline-flex items-center gap-2 transition hover:text-white">
+                  <Phone className="h-4 w-4 text-cyan-300" />
+                  Admin: {ADMIN_PHONE}
+                </a>
+                <a href={`mailto:${SUPER_ADMIN_EMAIL}`} className="inline-flex items-center gap-2 transition hover:text-white">
+                  <Mail className="h-4 w-4 text-cyan-300" />
+                  Super Admin: {SUPER_ADMIN_EMAIL}
+                </a>
+                <a href={`mailto:${ADMIN_EMAIL}`} className="inline-flex items-center gap-2 transition hover:text-white">
+                  <Mail className="h-4 w-4 text-cyan-300" />
+                  Admin: {ADMIN_EMAIL}
+                </a>
+                <div className="pt-1 text-xs text-slate-400">Jorhat, Assam, India</div>
+                <div className="flex items-center gap-2 pt-1">
+                  <Trophy className="h-4 w-4 text-amber-300" />
+                  <span className="text-slate-200">Exam-ready guidance for every stage</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
 
-        <div className="mt-10 flex flex-col items-center justify-between gap-4 border-t pt-6 md:flex-row">
-          <div className="text-sm text-muted-foreground">© 2026 {APP_NAME}. All rights reserved.</div>
-          <div className="text-sm text-muted-foreground">Study smarter, not harder.</div>
+        <div className="mt-6 flex flex-col items-center justify-between gap-3 border-t border-white/10 pt-5 text-sm text-slate-400 md:flex-row">
+          <div>© 2026 {APP_NAME}. All rights reserved.</div>
+          <div className="flex items-center gap-2">
+            <span className="inline-flex h-2 w-2 rounded-full bg-emerald-400" />
+            Study smarter, not harder.
+          </div>
         </div>
       </div>
     </footer>

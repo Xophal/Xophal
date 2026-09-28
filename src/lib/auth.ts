@@ -168,7 +168,59 @@ export async function isAdmin(userId: string): Promise<boolean> {
   return isAdminRole(profile);
 }
 
+function getDevBypassSession(): { user: User; profile: Profile } | null {
+  const enableFlag = process.env.LOCAL_DEV_SKIP_AUTH;
+  const isTestRuntime = process.env.NODE_ENV === "test" || process.env.VITEST === "true" || process.env.CI === "true";
+  const isLocalDev = !isTestRuntime && process.env.NODE_ENV !== "production" && (enableFlag === "true" || enableFlag === "1");
+
+  if (!isLocalDev) return null;
+
+  const role = (process.env.LOCAL_DEV_AUTH_ROLE ?? "student").trim().toLowerCase();
+  const allowedRoles = new Set(["student", "admin", "super_admin", "content_manager"]);
+  const resolvedRole = allowedRoles.has(role) ? role : "student";
+
+  const userId = process.env.LOCAL_DEV_AUTH_USER_ID ?? "local-dev-user";
+  const email = process.env.LOCAL_DEV_AUTH_EMAIL ?? "dev@example.com";
+  const fullName = process.env.LOCAL_DEV_AUTH_NAME ?? "Local Dev User";
+
+  const profile: Profile = {
+    id: userId,
+    email,
+    full_name: fullName,
+    avatar_url: null,
+    phone: null,
+    is_premium: false,
+    premium_expires_at: null,
+    email_verified: true,
+    daily_goal_minutes: 0,
+    current_streak: 0,
+    longest_streak: 0,
+    total_xp: 0,
+    level: 1,
+    board_id: null,
+    class_id: null,
+    role_id: null,
+    is_active: true,
+    roles: [{ code: resolvedRole, name: resolvedRole === "student" ? "Student" : "Admin" }],
+  };
+
+  const user: User = {
+    id: userId,
+    email,
+    app_metadata: {},
+    user_metadata: { full_name: fullName },
+    aud: "authenticated",
+    created_at: new Date().toISOString(),
+    email_confirmed_at: new Date().toISOString(),
+  };
+
+  return { user, profile };
+}
+
 export async function requireAuth() {
+  const devSession = getDevBypassSession();
+  if (devSession) return devSession;
+
   const user = await getSessionUser();
   if (!user) return null;
   const profile = await ensureProfile(user);
@@ -179,6 +231,14 @@ export async function requireAuth() {
 }
 
 export async function requireAdminAuth() {
+  const devSession = getDevBypassSession();
+  if (devSession) {
+    if (!isAdminRole(devSession.profile)) {
+      throw new ApiError(403, "Forbidden", "FORBIDDEN");
+    }
+    return devSession;
+  }
+
   const user = await getSessionUser();
   if (!user) {
     throw new ApiError(401, "Authentication required", "UNAUTHORIZED");

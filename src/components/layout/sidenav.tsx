@@ -49,7 +49,7 @@ export function Sidenav({ items, profile, variant = "student" }: { items: NavIte
         initial={{ opacity: reduceMotion ? 1 : 0, x: reduceMotion ? 0 : -12 }}
         animate={{ opacity: 1, x: 0 }}
         transition={{ duration: reduceMotion ? 0 : 0.3 }}
-        className="flex h-full min-h-[calc(100vh-1.5rem)] flex-col overflow-hidden rounded-[28px] border border-slate-200/80 bg-[linear-gradient(180deg,rgba(12,18,29,0.96),rgba(9,13,20,0.92))] text-slate-100 shadow-[0_30px_80px_rgba(15,23,42,0.28)] backdrop-blur-xl dark:border-white/10"
+        className="flex h-full min-h-[calc(100vh-1.5rem)] flex-col overflow-hidden rounded-[28px] border border-white/10 bg-[radial-gradient(circle_at_top,_rgba(34,211,238,0.14),transparent_22%),linear-gradient(180deg,rgba(12,18,29,0.98),rgba(9,13,20,0.96))] text-slate-100 shadow-[0_30px_80px_rgba(15,23,42,0.28)] backdrop-blur-xl dark:border-white/10"
       >
         <div className="flex items-center justify-between border-b border-white/10 px-4 py-4 md:px-5">
           <div className="flex items-center overflow-hidden">
@@ -83,11 +83,11 @@ export function Sidenav({ items, profile, variant = "student" }: { items: NavIte
                 href={it.href}
                 className={`group relative flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-medium transition-all ${
                   active
-                    ? "bg-[linear-gradient(90deg,rgba(16,185,129,0.2),rgba(59,130,246,0.12))] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]"
+                    ? "bg-[linear-gradient(90deg,rgba(16,185,129,0.18),rgba(59,130,246,0.18))] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_12px_30px_rgba(34,211,238,0.12)]"
                     : "text-slate-300 hover:bg-white/5 hover:text-white"
                 }`}
               >
-                <motion.span whileHover={{ scale: 1.04 }} className="flex h-8 w-8 items-center justify-center rounded-xl bg-white/5 text-xs">
+                <motion.span whileHover={{ scale: 1.04 }} className={`flex h-8 w-8 items-center justify-center rounded-xl text-xs ${active ? "bg-[linear-gradient(135deg,rgba(52,211,153,0.28),rgba(59,130,246,0.2))] text-emerald-100" : "bg-white/5"}`}>
                   <Icon className="h-4 w-4" />
                 </motion.span>
                 {!collapsed && <span className="truncate">{it.label}</span>}
@@ -101,9 +101,9 @@ export function Sidenav({ items, profile, variant = "student" }: { items: NavIte
 
         <div className="border-t border-white/10 p-3">
           {!collapsed ? (
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
+            <div className="rounded-2xl border border-white/10 bg-[linear-gradient(135deg,rgba(15,23,42,0.8),rgba(30,41,59,0.7))] p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
               <div className="flex items-center gap-3">
-                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[linear-gradient(135deg,#d1fae5,#bfdbfe)] text-sm font-bold text-slate-900">
+                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[linear-gradient(135deg,#d1fae5,#bfdbfe)] text-sm font-bold text-slate-900 shadow-[0_12px_30px_rgba(125,211,252,0.25)]">
                   {profile?.full_name?.charAt(0)?.toUpperCase() || "S"}
                 </div>
                 <div className="min-w-0 flex-1">
@@ -111,14 +111,14 @@ export function Sidenav({ items, profile, variant = "student" }: { items: NavIte
                   <p className="truncate text-xs text-slate-400">{profile?.email || "student@xophol.com"}</p>
                 </div>
               </div>
-              <div className="mt-3 flex items-center justify-between rounded-xl bg-emerald-500/10 px-2 py-1.5 text-[11px] font-medium text-emerald-300">
+              <div className="mt-3 flex items-center justify-between rounded-xl border border-emerald-400/20 bg-emerald-500/10 px-2 py-1.5 text-[11px] font-medium text-emerald-300">
                 <span>{variant === "admin" ? "Access level" : "Learning streak"}</span>
                 <span>{variant === "admin" ? profileRole?.name || profileRole?.code || "Admin" : `${profile?.current_streak || 0}d`}</span>
               </div>
             </div>
           ) : (
             <div className="flex items-center justify-center">
-              <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[linear-gradient(135deg,#d1fae5,#bfdbfe)] text-sm font-bold text-slate-900">
+              <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[linear-gradient(135deg,#d1fae5,#bfdbfe)] text-sm font-bold text-slate-900 shadow-[0_12px_30px_rgba(125,211,252,0.25)]">
                 {profile?.full_name?.charAt(0)?.toUpperCase() || "S"}
               </div>
             </div>

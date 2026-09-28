@@ -72,6 +72,22 @@ describe("requireAdminAuth", () => {
       profile: { id: "u4", email_verified: true },
     });
   });
+
+  it("allows a local development bypass when explicitly enabled", async () => {
+    vi.stubEnv("NODE_ENV", "development");
+    vi.stubEnv("VITEST", "false");
+    vi.stubEnv("LOCAL_DEV_SKIP_AUTH", "true");
+    vi.stubEnv("LOCAL_DEV_AUTH_ROLE", "student");
+
+    try {
+      await expect(authModule.requireAuth()).resolves.toMatchObject({
+        user: { id: "local-dev-user", email: "dev@example.com" },
+        profile: { id: "local-dev-user", full_name: "Local Dev User" },
+      });
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
 });
 
 import { buildProfileUpsertPayload, isAdminRole, isStudentRole, normalizeRoleCode } from "@/lib/auth";

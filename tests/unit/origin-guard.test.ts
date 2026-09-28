@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 import { assertTrustedOrigin, getAppOrigin } from "@/lib/api-utils";
 
@@ -7,22 +7,14 @@ function makeRequest(headers: Record<string, string>) {
 }
 
 describe("assertTrustedOrigin", () => {
-  const originalNodeEnv = process.env.NODE_ENV;
-  const originalAppUrl = process.env.NEXT_PUBLIC_APP_URL;
-  const originalTrustedOrigins = process.env.TRUSTED_ORIGINS;
-
   beforeEach(() => {
-    (process.env as Record<string, string | undefined>).NODE_ENV = "production";
-    process.env.NEXT_PUBLIC_APP_URL = "https://app.xophol.com";
-    delete process.env.TRUSTED_ORIGINS;
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("NEXT_PUBLIC_APP_URL", "https://app.xophol.com");
+    vi.stubEnv("TRUSTED_ORIGINS", "");
   });
 
   afterEach(() => {
-    (process.env as Record<string, string | undefined>).NODE_ENV = originalNodeEnv ?? "test";
-    if (originalAppUrl === undefined) delete process.env.NEXT_PUBLIC_APP_URL;
-    else process.env.NEXT_PUBLIC_APP_URL = originalAppUrl;
-    if (originalTrustedOrigins === undefined) delete process.env.TRUSTED_ORIGINS;
-    else process.env.TRUSTED_ORIGINS = originalTrustedOrigins;
+    vi.unstubAllEnvs();
   });
 
   it("returns the canonical app origin", () => {
@@ -59,7 +51,7 @@ describe("assertTrustedOrigin", () => {
   });
 
   it("never blocks mismatched origins outside production", () => {
-    (process.env as Record<string, string | undefined>).NODE_ENV = "development";
+    vi.stubEnv("NODE_ENV", "development");
     expect(() => assertTrustedOrigin(makeRequest({ origin: "https://evil.example" }))).not.toThrow();
   });
 });

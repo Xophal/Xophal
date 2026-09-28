@@ -44,17 +44,17 @@ export default async function AdminLayout({ children }: { children: ReactNode })
   }
 
   return (
-    <div className="flex min-h-screen">
+    <div className="flex min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(14,165,233,0.12),transparent_24%),radial-gradient(circle_at_bottom_right,_rgba(168,85,247,0.12),transparent_20%),hsl(var(--background))]">
       <Sidenav items={adminNavItems} profile={session.profile} variant="admin" />
 
       <div className="flex flex-1 flex-col">
-        <header className="flex h-14 items-center justify-between border-b px-4 md:px-6">
-          <Link href="/admin" className="font-semibold md:hidden">
+        <header className="flex h-16 items-center justify-between border-b border-border/80 bg-[linear-gradient(135deg,rgba(15,23,42,0.82),rgba(15,23,42,0.68))] px-4 shadow-[0_18px_50px_rgba(15,23,42,0.08)] backdrop-blur-xl md:px-6">
+          <Link href="/admin" className="font-semibold text-white md:hidden">
             Xophol Admin
           </Link>
           <div className="ml-auto flex items-center gap-2">
             <form action="/api/auth/logout" method="post">
-              <button type="submit" className="rounded-md border border-slate-200 px-3 py-1.5 text-sm text-muted-foreground hover:bg-muted">
+              <button type="submit" className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-sm text-slate-200 transition hover:bg-white/10 hover:text-white">
                 Log out
               </button>
             </form>
@@ -62,7 +62,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
           </div>
         </header>
 
-        <main className="flex-1 bg-background">{children}</main>
+        <main className="flex-1">{children}</main>
       </div>
     </div>
   );

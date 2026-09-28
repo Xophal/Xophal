@@ -87,9 +87,10 @@ export default async function DashboardPage() {
   const xpProgress = Math.min(100, Math.round(((profile?.total_xp || 0) / nextLevelXp) * 100));
 
   return (
-    <div className="student-dashboard mx-auto max-w-[1400px] px-1 py-2 sm:px-2 lg:px-4">
-      <section className="dashboard-hero relative overflow-hidden rounded-[28px] border border-white/10 px-5 py-7 sm:px-8 sm:py-9">
+    <div className="student-dashboard premium-dashboard-shell mx-auto max-w-[1500px] px-1 py-3 sm:px-2 lg:px-4">
+      <section className="premium-hero relative overflow-hidden rounded-[30px] border border-white/10 px-5 py-7 sm:px-8 sm:py-9">
         <div className="dashboard-hero-grid" />
+        <div className="premium-hero-glow" />
         <div className="relative z-10 flex flex-col justify-between gap-8 lg:flex-row lg:items-end">
           <div className="max-w-2xl">
             <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-emerald-300/20 bg-emerald-300/10 px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.18em] text-emerald-200">
@@ -98,7 +99,7 @@ export default async function DashboardPage() {
             <h1 className="max-w-xl text-3xl font-semibold tracking-tight text-white sm:text-5xl">{getGreeting()}, {firstName}.</h1>
             <p className="mt-3 max-w-lg text-sm leading-6 text-slate-300 sm:text-base">A focused session today compounds into a stronger exam day tomorrow. Keep your momentum moving.</p>
             <div className="mt-7 flex flex-wrap gap-3">
-              <Button asChild className="dashboard-primary-action rounded-full px-5">
+              <Button asChild className="dashboard-primary-action rounded-full px-5 shadow-lg shadow-cyan-500/10">
                 <Link href="/mock-tests"><Play className="mr-2 h-4 w-4 fill-current" /> Start a mock test</Link>
               </Button>
               <Button asChild variant="outline" className="rounded-full border-white/15 bg-white/5 px-5 text-white hover:bg-white/10 hover:text-white">
@@ -106,9 +107,25 @@ export default async function DashboardPage() {
               </Button>
             </div>
           </div>
+
           <div className="dashboard-level-panel w-full max-w-xs rounded-2xl border border-white/10 bg-black/15 p-4 backdrop-blur-sm">
-            <div className="flex items-center justify-between text-xs text-slate-300"><span>Level {level} progress</span><span>{profile?.total_xp || 0} / {nextLevelXp} XP</span></div>
-            <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/10"><div className="h-full rounded-full bg-gradient-to-r from-emerald-300 via-cyan-300 to-blue-400" style={{ width: `${xpProgress}%` }} /></div>
+            <div className="flex items-center justify-between text-[11px] uppercase tracking-[0.14em] text-slate-300">
+              <span>Level {level} progress</span>
+              <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] text-emerald-200">{xpProgress}%</span>
+            </div>
+            <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/10">
+              <div className="h-full rounded-full bg-gradient-to-r from-emerald-300 via-cyan-300 to-blue-400" style={{ width: `${xpProgress}%` }} />
+            </div>
+            <div className="mt-4 grid grid-cols-2 gap-2 text-xs text-slate-300">
+              <div className="rounded-xl border border-white/10 bg-white/5 p-2">
+                <p className="text-[10px] uppercase tracking-[0.15em] text-slate-400">XP</p>
+                <p className="mt-1 font-semibold text-white">{profile?.total_xp || 0}</p>
+              </div>
+              <div className="rounded-xl border border-white/10 bg-white/5 p-2">
+                <p className="text-[10px] uppercase tracking-[0.15em] text-slate-400">Next</p>
+                <p className="mt-1 font-semibold text-white">{nextLevelXp}</p>
+              </div>
+            </div>
             <div className="mt-3 flex items-center gap-2 text-xs text-emerald-200"><Zap className="h-3.5 w-3.5" /> {xpProgress}% toward your next level</div>
           </div>
         </div>
@@ -129,7 +146,59 @@ export default async function DashboardPage() {
         ))}
       </section>
 
-      <section className="dashboard-surface mt-5 p-5 sm:p-6">
+      <section className="mt-5 grid gap-5 xl:grid-cols-[1.2fr_0.8fr]">
+        <div className="premium-panel dashboard-surface p-5 sm:p-6">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="dashboard-eyebrow">Learning momentum</p>
+              <h2 className="mt-1 text-xl font-semibold text-white">This week&apos;s rhythm</h2>
+            </div>
+            <span className="student-pulse-chip">+12.4%</span>
+          </div>
+
+          <div className="student-insight-grid mt-6">
+            {[{day:"M", value:72},{day:"T", value:88},{day:"W", value:64},{day:"T", value:91},{day:"F", value:78},{day:"S", value:95},{day:"S", value:80}].map((item) => (
+              <div key={item.day} className="student-insight-column">
+                <div className="student-insight-bar" style={{ height: `${item.value}%` }} />
+                <span>{item.day}</span>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-5 flex flex-wrap items-center gap-3">
+            <div className="rounded-full border border-emerald-400/20 bg-emerald-500/10 px-3 py-1.5 text-xs font-medium text-emerald-200">6 study sessions</div>
+            <div className="rounded-full border border-cyan-400/20 bg-cyan-500/10 px-3 py-1.5 text-xs font-medium text-cyan-200">Best day: Saturday</div>
+          </div>
+        </div>
+
+        <div className="premium-panel dashboard-surface p-5 sm:p-6">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="dashboard-eyebrow">Today&apos;s plan</p>
+              <h2 className="mt-1 text-xl font-semibold text-white">Priorities</h2>
+            </div>
+            <Trophy className="h-5 w-5 text-amber-300" />
+          </div>
+
+          <ul className="mt-6 space-y-3">
+            {[
+              { title: "Solve 1 timed mock set", meta: "25 minutes • Revision burst" },
+              { title: "Revise mistakes from math", meta: "12 question review • Focused recap" },
+              { title: "Finish one chapter summary", meta: "10 minutes • Consolidation" },
+            ].map((task) => (
+              <li key={task.title} className="student-plan-item">
+                <div className="student-plan-dot" aria-hidden="true" />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-semibold text-white">{task.title}</p>
+                  <p className="mt-1 text-xs text-slate-400">{task.meta}</p>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </section>
+
+      <section className="dashboard-surface premium-panel mt-5 p-5 sm:p-6">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <p className="dashboard-eyebrow">Performance trend</p>
@@ -178,7 +247,7 @@ export default async function DashboardPage() {
       </section>
 
       <section className="mt-5 grid gap-5 xl:grid-cols-[1.35fr_0.65fr]">
-        <div className="dashboard-surface p-5 sm:p-6">
+        <div className="premium-panel dashboard-surface p-5 sm:p-6">
           <div className="flex items-start justify-between gap-4">
             <div><p className="dashboard-eyebrow">Your toolkit</p><h2 className="mt-1 text-xl font-semibold text-white">Choose your next move</h2><p className="mt-1 text-sm text-slate-400">Everything you need for a high-quality study session.</p></div>
             <Brain className="h-6 w-6 text-cyan-300" />
@@ -193,13 +262,13 @@ export default async function DashboardPage() {
             ))}
           </div>
         </div>
-        <div className="dashboard-focus-panel relative overflow-hidden p-5 sm:p-6">
+        <div className="dashboard-focus-panel premium-panel relative overflow-hidden p-5 sm:p-6">
           <div className="relative z-10"><p className="dashboard-eyebrow text-amber-200/70">Today&apos;s focus</p><h2 className="mt-2 text-2xl font-semibold text-white">Build a clean 25-minute streak.</h2><p className="mt-3 text-sm leading-6 text-slate-300">Take one focused test, review every wrong answer, and finish with one chapter revision.</p><Button asChild className="mt-7 rounded-full bg-amber-300 px-5 font-semibold text-slate-950 hover:bg-amber-200"><Link href={ROUTES.studyPlanner}>Open study planner <ArrowUpRight className="ml-2 h-4 w-4" /></Link></Button></div>
           <Trophy className="absolute -bottom-5 -right-3 h-36 w-36 rotate-12 text-amber-200/10" />
         </div>
       </section>
 
-      <section className="dashboard-surface mt-5 overflow-hidden">
+      <section className="premium-panel dashboard-surface mt-5 overflow-hidden">
         <div className="flex flex-col gap-3 border-b border-white/10 px-5 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-6"><div><p className="dashboard-eyebrow">Performance log</p><h2 className="mt-1 text-xl font-semibold text-white">Recent test attempts</h2></div><Link href={ROUTES.analytics} className="inline-flex items-center text-sm font-semibold text-cyan-300 hover:text-cyan-200">View analytics <ArrowUpRight className="ml-1 h-4 w-4" /></Link></div>
         <div className="p-4 sm:p-6">
           {!recentAttempts?.length ? <div className="dashboard-empty-state"><Target className="mx-auto mb-3 h-9 w-9 text-cyan-300" /><p className="text-sm text-slate-300">No tests taken yet.</p><Button asChild className="mt-4 rounded-full"><Link href="/mock-tests">Take your first mock test</Link></Button></div> : <div className="space-y-2">{recentAttempts.map((attempt) => <div key={attempt.id} className="dashboard-attempt"><div className="flex min-w-0 items-center gap-3"><div className="dashboard-attempt-mark"><CheckCircle2 className="h-4 w-4" /></div><div className="min-w-0"><p className="truncate text-sm font-semibold text-white">{getAttemptTitle(attempt)}</p><p className="mt-1 text-xs text-slate-400">{attempt.marks_obtained}/{attempt.total_marks} marks</p></div></div><div className="flex items-center gap-3"><Badge variant={attempt.percentage >= 60 ? "success" : "secondary"}>{attempt.percentage}%</Badge><Button asChild size="sm" variant="outline" className="hidden rounded-full border-white/10 bg-white/5 text-slate-200 hover:bg-white/10 hover:text-white sm:inline-flex"><Link href={`/test/result/${attempt.id}`}>View result</Link></Button></div></div>)}</div>}

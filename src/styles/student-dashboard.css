@@ -65,9 +65,350 @@ html:not(.dark) .student-dashboard .dashboard-social:hover {
   color: hsl(var(--primary));
 }
 
+.premium-dashboard-shell,
+.admin-dashboard-shell {
+  position: relative;
+}
+
+.premium-hero {
+  background:
+    radial-gradient(circle at top left, rgba(34, 211, 238, 0.18), transparent 32%),
+    radial-gradient(circle at bottom right, rgba(168, 85, 247, 0.18), transparent 30%),
+    linear-gradient(135deg, rgba(15, 23, 42, 0.98), rgba(17, 24, 39, 0.86) 42%, rgba(12, 18, 32, 0.96));
+  box-shadow: 0 24px 80px rgba(15, 23, 42, 0.28);
+  border-color: rgba(148, 163, 184, 0.18);
+}
+
+.premium-hero-glow {
+  position: absolute;
+  inset: auto auto -25% -10%;
+  width: 22rem;
+  height: 22rem;
+  border-radius: 999px;
+  background: radial-gradient(circle, rgba(45, 212, 191, 0.25), transparent 60%);
+  filter: blur(12px);
+  opacity: 0.8;
+}
+
+.premium-hero-glow--admin {
+  right: -8%;
+  left: auto;
+  background: radial-gradient(circle, rgba(96, 165, 250, 0.2), transparent 60%);
+}
+
+.premium-hero::before,
+.premium-panel::before,
+.premium-stat-card::before,
+.dashboard-metric::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: linear-gradient(rgba(148, 163, 184, 0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(148, 163, 184, 0.04) 1px, transparent 1px);
+  background-size: 22px 22px;
+  mask-image: radial-gradient(circle at center, black 20%, transparent 80%);
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.premium-dashboard-shell,
+.admin-dashboard-shell {
+  animation: premiumDashboardIn 500ms ease-out both;
+}
+
+@keyframes premiumDashboardIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.premium-panel,
+.dashboard-metric,
+.dashboard-surface,
+.premium-stat-card,
+.premium-module-card {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(148, 163, 184, 0.15);
+  background: rgba(15, 23, 42, 0.7);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow: 0 18px 42px rgba(15, 23, 42, 0.18);
+}
+
+.premium-panel::before,
+.dashboard-metric::before,
+.premium-stat-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto auto 0;
+  width: 100%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(125, 211, 252, 0.7), transparent);
+  opacity: 0.65;
+}
+
+.dashboard-metric {
+  border-radius: 1.25rem;
+  padding: 1.1rem 1.1rem 1rem;
+}
+
+.dashboard-metric-orange { background: linear-gradient(135deg, rgba(249, 115, 22, 0.14), rgba(15, 23, 42, 0.7) 42%); }
+.dashboard-metric-green { background: linear-gradient(135deg, rgba(16, 185, 129, 0.14), rgba(15, 23, 42, 0.7) 42%); }
+.dashboard-metric-blue { background: linear-gradient(135deg, rgba(14, 165, 233, 0.14), rgba(15, 23, 42, 0.7) 42%); }
+.dashboard-metric-violet { background: linear-gradient(135deg, rgba(168, 85, 247, 0.14), rgba(15, 23, 42, 0.7) 42%); }
+
+.premium-stat-card {
+  border-radius: 1.25rem;
+  padding: 1.15rem 1.1rem;
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.8), rgba(30, 41, 59, 0.82));
+}
+
+.premium-stat-card--emerald { box-shadow: inset 0 1px 0 rgba(52, 211, 153, 0.12), 0 18px 42px rgba(16, 185, 129, 0.08); }
+.premium-stat-card--cyan { box-shadow: inset 0 1px 0 rgba(34, 211, 238, 0.12), 0 18px 42px rgba(14, 165, 233, 0.08); }
+.premium-stat-card--violet { box-shadow: inset 0 1px 0 rgba(168, 85, 247, 0.12), 0 18px 42px rgba(168, 85, 247, 0.08); }
+.premium-stat-card--amber { box-shadow: inset 0 1px 0 rgba(251, 191, 36, 0.12), 0 18px 42px rgba(245, 158, 11, 0.07); }
+
+.premium-module-card {
+  background: rgba(15, 23, 42, 0.62);
+  border-radius: 1rem;
+}
+
+.dashboard-tool {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  border-radius: 1rem;
+  background: rgba(15, 23, 42, 0.45);
+  padding: 0.9rem 1rem;
+  transition: transform 180ms ease, border-color 180ms ease, background 180ms ease;
+}
+
+.dashboard-tool:hover {
+  border-color: rgba(34, 211, 238, 0.35);
+  background: rgba(34, 211, 238, 0.06);
+  transform: translateY(-2px);
+}
+
+.dashboard-tool-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.7rem;
+  height: 2.7rem;
+  flex-shrink: 0;
+  border-radius: 0.9rem;
+  background: linear-gradient(135deg, rgba(52, 211, 153, 0.18), rgba(56, 189, 248, 0.12));
+  color: #67e8f9;
+}
+
+.dashboard-focus-panel {
+  background: linear-gradient(135deg, rgba(252, 211, 77, 0.08), rgba(15, 23, 42, 0.9));
+  border: 1px solid rgba(252, 211, 77, 0.12);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 18px 42px rgba(15, 23, 42, 0.22);
+}
+
+.dashboard-attempt {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.85rem;
+  border: 1px solid rgba(148, 163, 184, 0.12);
+  border-radius: 1rem;
+  background: rgba(15, 23, 42, 0.52);
+  padding: 0.9rem 1rem;
+}
+
+.dashboard-attempt-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.2rem;
+  height: 2.2rem;
+  border-radius: 0.8rem;
+  background: rgba(52, 211, 153, 0.12);
+  color: #6ee7b7;
+}
+
+.dashboard-empty-state {
+  border: 1px dashed rgba(148, 163, 184, 0.18);
+  border-radius: 1.1rem;
+  background: rgba(15, 23, 42, 0.4);
+}
+
+.dashboard-social {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  border-radius: 0.75rem;
+  background: rgba(15, 23, 42, 0.4);
+  color: #94a3b8;
+  transition: all 160ms ease;
+}
+
+.dashboard-social:hover {
+  border-color: rgba(103, 232, 249, 0.35);
+  color: #67e8f9;
+}
+
+.student-pulse-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  border: 1px solid rgba(110, 231, 183, 0.34);
+  background: rgba(16, 185, 129, 0.1);
+  padding: 0.45rem 0.7rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #a7f3d0;
+}
+
+.student-insight-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  align-items: end;
+  gap: 0.8rem;
+  min-height: 180px;
+  padding-top: 0.6rem;
+}
+
+.student-insight-column {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+  color: #94a3b8;
+}
+
+.student-insight-bar {
+  width: 100%;
+  min-height: 20px;
+  border-radius: 999px 999px 0.7rem 0.7rem;
+  background: linear-gradient(180deg, rgba(45, 212, 191, 0.92), rgba(59, 130, 246, 0.78));
+  box-shadow: 0 12px 24px rgba(14, 165, 233, 0.18);
+}
+
+.student-insight-column span {
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.student-plan-item {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  border: 1px solid rgba(148, 163, 184, 0.12);
+  border-radius: 0.95rem;
+  background: rgba(15, 23, 42, 0.5);
+  padding: 0.8rem 0.9rem;
+}
+
+.student-plan-dot {
+  width: 0.7rem;
+  height: 0.7rem;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #67e8f9, #34d399);
+  box-shadow: 0 0 0 6px rgba(34, 211, 238, 0.08);
+}
+
+html:not(.dark) .student-dashboard {
+  color: hsl(var(--foreground));
+  min-height: 0;
+  background: transparent;
+}
+
+html:not(.dark) .student-dashboard .dashboard-surface,
+html:not(.dark) .student-dashboard .dashboard-metric,
+html:not(.dark) .student-dashboard .premium-panel,
+html:not(.dark) .student-dashboard .premium-stat-card,
+html:not(.dark) .student-dashboard .premium-module-card {
+  border-color: hsl(var(--border));
+  background: hsl(var(--card));
+  box-shadow: 0 8px 24px hsl(155 24% 16% / 0.06);
+  backdrop-filter: none;
+}
+
+html:not(.dark) .student-dashboard .dashboard-metric .text-white,
+html:not(.dark) .student-dashboard .dashboard-surface .text-white,
+html:not(.dark) .student-dashboard .premium-panel .text-white,
+html:not(.dark) .student-dashboard .premium-stat-card .text-white {
+  color: hsl(var(--foreground));
+}
+
+html:not(.dark) .student-dashboard .dashboard-metric .text-slate-200,
+html:not(.dark) .student-dashboard .dashboard-metric .text-slate-300,
+html:not(.dark) .student-dashboard .dashboard-surface .text-slate-200,
+html:not(.dark) .student-dashboard .dashboard-surface .text-slate-300,
+html:not(.dark) .student-dashboard .premium-panel .text-slate-200,
+html:not(.dark) .student-dashboard .premium-panel .text-slate-300,
+html:not(.dark) .student-dashboard .premium-stat-card .text-slate-200,
+html:not(.dark) .student-dashboard .premium-stat-card .text-slate-300 {
+  color: hsl(var(--foreground) / 0.86);
+}
+
+html:not(.dark) .student-dashboard .dashboard-metric .text-slate-400,
+html:not(.dark) .student-dashboard .dashboard-metric .text-slate-500,
+html:not(.dark) .student-dashboard .dashboard-surface .text-slate-400,
+html:not(.dark) .student-dashboard .dashboard-surface .text-slate-500,
+html:not(.dark) .student-dashboard .premium-panel .text-slate-400,
+html:not(.dark) .student-dashboard .premium-panel .text-slate-500,
+html:not(.dark) .student-dashboard .premium-stat-card .text-slate-400,
+html:not(.dark) .student-dashboard .premium-stat-card .text-slate-500 {
+  color: hsl(var(--muted-foreground));
+}
+
+html:not(.dark) .student-dashboard .dashboard-eyebrow,
+html:not(.dark) .student-dashboard .dashboard-surface .text-cyan-300,
+html:not(.dark) .student-dashboard .premium-panel .text-cyan-300 {
+  color: hsl(var(--primary));
+}
+
+html:not(.dark) .student-dashboard .dashboard-tool,
+html:not(.dark) .student-dashboard .dashboard-attempt,
+html:not(.dark) .student-dashboard .premium-module-card {
+  border-color: hsl(var(--border));
+  background: hsl(var(--background));
+}
+
+html:not(.dark) .student-dashboard .dashboard-tool:hover,
+html:not(.dark) .student-dashboard .premium-module-card:hover {
+  border-color: hsl(var(--primary) / 0.42);
+  background: hsl(var(--primary) / 0.05);
+}
+
+html:not(.dark) .student-dashboard .dashboard-empty-state {
+  border-color: hsl(var(--border));
+}
+
+html:not(.dark) .student-dashboard .dashboard-social {
+  border-color: hsl(var(--border));
+  color: hsl(var(--muted-foreground));
+}
+
+html:not(.dark) .student-dashboard .dashboard-social:hover {
+  border-color: hsl(var(--primary) / 0.45);
+  color: hsl(var(--primary));
+}
+
 @media (prefers-reduced-motion: reduce) {
   .student-dashboard .dashboard-tool,
-  .student-dashboard .dashboard-social {
+  .student-dashboard .dashboard-social,
+  .premium-module-card,
+  .dashboard-attempt {
     transition: none;
   }
 }
