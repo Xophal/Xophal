@@ -31,6 +31,12 @@ Quick checklist to prepare `Xophol` for staging/production deployment.
    - Add these exact redirect URLs to the Supabase allowlist:
      - `${NEXT_PUBLIC_APP_URL}/auth/callback`
      - `${NEXT_PUBLIC_APP_URL}/reset-password`
+   - Keep these allowlist entries free of query strings. Supabase matches the
+     full `redirectTo` URL, so `/auth/callback?next=/dashboard` no longer matches
+     `/auth/callback` and Supabase silently falls back to the Site URL (the
+     homepage). The Google button therefore stores the destination in the
+     `xophol_oauth_next` cookie and sends a bare callback URL.
+
    - For local testing, use `http://localhost:3000/auth/callback` and `http://localhost:3000/reset-password`.
    - For production, replace `NEXT_PUBLIC_APP_URL` with the canonical HTTPS deployment URL and add the same URLs in the deployment platform environment.
    - Test student OTP signup, existing-user OTP login, invalid/expired codes, password fallback, and admin OTP role enforcement.

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { OAUTH_CALLBACK_PATH, OAUTH_NEXT_COOKIE } from "@/lib/oauth-constants";
 
 /** "or continue with" rule used to separate OAuth from password/email-code auth. */
 export function AuthDivider({ className }: { className?: string }) {
@@ -24,12 +25,17 @@ export function GoogleAuthButton({ next = "/dashboard" }: { next?: string }) {
   async function signInWithGoogle() {
     setLoading(true);
     const safeNext = next.startsWith("/") && !next.startsWith("//") && !next.includes("\\") && !next.includes("://") ? next : "/dashboard";
+    // The destination travels in a cookie, not the query string. Appending
+    // `?next=` to redirectTo makes the URL stop matching Supabase's redirect
+    // allowlist, which silently falls back to the Site URL (the homepage).
+    document.cookie = `${OAUTH_NEXT_COOKIE}=${encodeURIComponent(safeNext)}; path=/; max-age=600; samesite=lax`;
     const { error } = await createClient().auth.signInWithOAuth({
       provider: "google",
-      options: { redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(safeNext)}` },
+      options: { redirectTo: `${window.location.origin}${OAUTH_CALLBACK_PATH}` },
     });
     if (error) {
       setLoading(false);
+      document.cookie = `${OAUTH_NEXT_COOKIE}=; path=/; max-age=0`;
       toast({ title: "Google sign-in unavailable", description: error.message, variant: "destructive" });
     }
   }

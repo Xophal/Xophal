@@ -5,6 +5,7 @@ import { cookies } from "next/headers";
 import { isAdminRole } from "@/lib/roles";
 import { ensureProfile, promoteMainAdminProfile } from "@/lib/auth";
 import type { Profile } from "@/types";
+import { OAUTH_NEXT_COOKIE } from "@/lib/oauth-constants";
 
 function getSafeNext(value: string | null) {
   if (!value || value === "/" || !value.startsWith("/") || value.startsWith("//") || value.includes("\\") || value.includes("://")) {
@@ -14,18 +15,41 @@ function getSafeNext(value: string | null) {
   return value;
 }
 
+/** Clear the one-shot OAuth destination cookie on whichever response we send. */
+function clearNextCookie(response: NextResponse) {
+  response.cookies.set(OAUTH_NEXT_COOKIE, "", { path: "/", maxAge: 0 });
+  return response;
+}
+
+/** Decode the stored OAuth destination, tolerating malformed values. */
+function readNextCookie(raw: string | undefined) {
+  if (!raw) return null;
+  try {
+    return decodeURIComponent(raw);
+  } catch {
+    return null;
+  }
+}
+
 function redirectWithError(origin: string, code: string, message: string, next: string | null) {
   const url = new URL("/login", origin);
   url.searchParams.set("error", code);
   if (message) url.searchParams.set("message", message.slice(0, 300));
   if (next) url.searchParams.set("redirect", next);
-  return NextResponse.redirect(url);
+  return clearNextCookie(NextResponse.redirect(url));
 }
 
 export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url);
   const code = requestUrl.searchParams.get("code");
-  const next = getSafeNext(requestUrl.searchParams.get("next"));
+  // The OAuth destination is carried in a short-lived cookie rather than the
+  // query string: appending `?next=` to redirectTo breaks the Supabase
+  // redirect allowlist match and silently lands users on the Site URL. The
+  // query param is still honoured for flows that legitimately set it (e.g.
+  // password reset), with the cookie as the fallback.
+  const next =
+    getSafeNext(requestUrl.searchParams.get("next")) ??
+    getSafeNext(readNextCookie(request.cookies.get(OAUTH_NEXT_COOKIE)?.value));
   const oauthError = requestUrl.searchParams.get("error");
   const oauthDescription = requestUrl.searchParams.get("error_description");
 
@@ -98,7 +122,7 @@ export async function GET(request: NextRequest) {
   const destination = next === "/admin" && !isAdminRole(profile)
     ? "/dashboard"
     : next || (isAdminRole(profile) ? "/admin" : "/dashboard");
-  const response = NextResponse.redirect(new URL(destination, requestUrl.origin));
+  const response = clearNextCookie(NextResponse.redirect(new URL(destination, requestUrl.origin)));
   refreshedCookies.forEach(({ name, value, options }) => response.cookies.set(name, value, options));
   return response;
 }
