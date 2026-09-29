@@ -95,6 +95,45 @@ function collectRedisPairWarning(value: {
   ];
 }
 
+/**
+ * A production deployment whose NEXT_PUBLIC_APP_URL still points at a Vercel
+ * preview/alias host is almost always a misconfiguration: that value becomes
+ * `metadataBase` (canonical + og:url) and the base for every password-reset and
+ * OTP email link, so the site advertises the wrong domain to search engines and
+ * sends users to the wrong origin. Attached as a custom domain does not change
+ * it — the environment variable does.
+ *
+ * Reported as a warning, never thrown, for the same reason as the Redis check:
+ * `validateEnv()` runs during `next build` and must not be able to fail a build.
+ */
+function collectAppUrlWarning(value: { NEXT_PUBLIC_APP_URL?: string }): string[] {
+  const raw = value.NEXT_PUBLIC_APP_URL?.trim();
+  if (!raw || process.env.NODE_ENV !== "production") {
+    return [];
+  }
+
+  let hostname: string;
+  try {
+    hostname = new URL(raw).hostname.toLowerCase();
+  } catch {
+    // Malformed values are already reported by the zod schema.
+    return [];
+  }
+
+  if (hostname.endsWith(".vercel.app")) {
+    return [
+      `NEXT_PUBLIC_APP_URL is "${raw}", which is a Vercel-provided host. ` +
+        "If a custom domain is connected, set NEXT_PUBLIC_APP_URL to that domain " +
+        "(Vercel > Settings > Environment Variables, for every environment) and " +
+        "redeploy. Until then canonical/og:url tags and all password-reset and OTP " +
+        "emails will point at the Vercel domain. Also update the Supabase Site URL " +
+        "and redirect allowlist to match.",
+    ];
+  }
+
+  return [];
+}
+
 function formatIssues(error: z.ZodError): string[] {
   return error.issues.map((issue) => {
     const path = issue.path.join(".") || "(root)";
@@ -143,7 +182,9 @@ export function validateEnv() {
   };
 
   const result = startupEnvSchema.safeParse(raw);
-  const warnings = result.success ? collectRedisPairWarning(raw) : formatIssues(result.error);
+  const warnings = result.success
+    ? [...collectRedisPairWarning(raw), ...collectAppUrlWarning(raw)]
+    : formatIssues(result.error);
 
   for (const warning of warnings) {
     console.warn(`[config] ${warning}`);
