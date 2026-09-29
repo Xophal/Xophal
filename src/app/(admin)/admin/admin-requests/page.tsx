@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { UserCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "@/hooks/use-toast";
+import { AdminChip, AdminEmpty, AdminLoading, AdminPage, AdminPageHeader, AdminPanel } from "@/components/admin/ui";
 
 type AdminRequest = {
   id: string;
@@ -72,40 +73,48 @@ export default function AdminRequestsPage() {
   }
 
   return (
-    <div className="mx-auto max-w-5xl space-y-6 p-6">
-      <div>
-        <h1 className="text-3xl font-semibold">Admin requests</h1>
-        <p className="mt-2 text-sm text-muted-foreground">Only the two configured main administrators can approve privileged accounts.</p>
+    <AdminPage>
+      <AdminPageHeader
+        eyebrow="People"
+        title="Admin requests"
+        description="Only the two configured main administrators can approve privileged accounts."
+        actions={<AdminChip tone={requests.some((r) => r.status === "pending") ? "warning" : "info"}>{requests.filter((r) => r.status === "pending").length} pending</AdminChip>}
+      />
+      <div className="mt-6 mx-auto max-w-5xl">
+        <AdminPanel eyebrow="Approvals" title="Signup approvals" icon={UserCheck} flush>
+          <div className="admin-panel-body">
+            {loading ? (
+              <AdminLoading label="Loading requests…" />
+            ) : requests.length === 0 ? (
+              <AdminEmpty icon={UserCheck} title="No admin signup requests" hint="New privileged signups will appear here for review." />
+            ) : (
+              <div className="space-y-3">
+                {requests.map((request) => (
+                  <div key={request.id} className="admin-row flex-col items-stretch gap-4 md:flex-row md:items-center md:justify-between">
+                    <div className="min-w-0">
+                      <p className="admin-row-title">{request.full_name}</p>
+                      <p className="admin-row-meta">
+                        {request.email} · {request.requested_role.replaceAll("_", " ")}
+                      </p>
+                      <p className="mt-1 text-[11px] text-slate-500">Submitted {new Date(request.created_at).toLocaleString()}</p>
+                    </div>
+                    <div className="flex shrink-0 flex-wrap items-center gap-2">
+                      <AdminChip tone={request.status === "approved" ? "success" : request.status === "rejected" ? "danger" : "warning"}>{request.status}</AdminChip>
+                      {request.status === "pending" && (
+                        <>
+                          <Button size="sm" disabled={workingId === request.id} onClick={() => void decide(request.id, "approve")}>Approve</Button>
+                          <Button size="sm" variant="destructive" disabled={workingId === request.id} onClick={() => void decide(request.id, "reject")}>Reject</Button>
+                          <Button size="sm" variant="outline" disabled={workingId === request.id} onClick={() => void resendNotification(request.id)}>Resend email</Button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </AdminPanel>
       </div>
-      <Card>
-        <CardHeader>
-          <CardTitle>Signup approvals</CardTitle>
-          <CardDescription>Approved applicants receive their requested admin role. Rejected applicants remain regular users.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          {loading && <p className="text-sm text-muted-foreground">Loading requests...</p>}
-          {!loading && requests.length === 0 && <p className="text-sm text-muted-foreground">No admin signup requests.</p>}
-          {requests.map((request) => (
-            <div key={request.id} className="flex flex-col gap-4 rounded-lg border p-4 md:flex-row md:items-center md:justify-between">
-              <div>
-                <p className="font-medium">{request.full_name}</p>
-                <p className="text-sm text-muted-foreground">{request.email} · {request.requested_role.replaceAll("_", " ")}</p>
-                <p className="text-xs text-muted-foreground">Submitted {new Date(request.created_at).toLocaleString()}</p>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="rounded-full border px-2 py-1 text-xs capitalize">{request.status}</span>
-                {request.status === "pending" && (
-                  <>
-                    <Button disabled={workingId === request.id} onClick={() => void decide(request.id, "approve")}>Approve</Button>
-                    <Button variant="destructive" disabled={workingId === request.id} onClick={() => void decide(request.id, "reject")}>Reject</Button>
-                    <Button variant="outline" disabled={workingId === request.id} onClick={() => void resendNotification(request.id)}>Resend email</Button>
-                  </>
-                )}
-              </div>
-            </div>
-          ))}
-        </CardContent>
-      </Card>
-    </div>
+    </AdminPage>
   );
 }

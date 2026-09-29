@@ -1,10 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import { ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { AdminPage, AdminPageHeader, AdminPanel } from "@/components/admin/ui";
 
 export default function CreateAdminPage() {
   const [loading, setLoading] = useState(false);
@@ -47,13 +48,14 @@ export default function CreateAdminPage() {
   }
 
   return (
-    <div className="mx-auto max-w-lg p-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>Create admin account</CardTitle>
-          <CardDescription>Private admin-only account creation helper.</CardDescription>
-        </CardHeader>
-        <CardContent>
+    <AdminPage className="mx-auto max-w-lg">
+      <AdminPageHeader
+        eyebrow="People"
+        title="Create admin account"
+        description="Private admin-only account creation helper. Super administrators only."
+      />
+      <div className="mt-6">
+        <AdminPanel eyebrow="Provisioning" title="New privileged account" icon={ShieldCheck}>
           <form className="space-y-4" onSubmit={handleSubmit}>
             <div className="space-y-2">
               <Label htmlFor="fullName">Full name</Label>
@@ -78,11 +80,11 @@ export default function CreateAdminPage() {
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? "Creating..." : "Create admin"}
             </Button>
-            {message && <p className="text-sm text-green-600">{message}</p>}
-            {error && <p className="text-sm text-red-600">{error}</p>}
+            {message && <p className="text-sm text-emerald-400">{message}</p>}
+            {error && <p className="text-sm text-rose-400">{error}</p>}
           </form>
-        </CardContent>
-      </Card>
-    </div>
+        </AdminPanel>
+      </div>
+    </AdminPage>
   );
 }

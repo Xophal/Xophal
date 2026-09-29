@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { GraduationCap, Pencil, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
+import { AdminChip, AdminEmpty, AdminPage, AdminPageHeader, AdminPanel } from "@/components/admin/ui";
 
 type Board = { id: string; name: string; code: string };
 type ClassItem = { id: string; board_id: string; code: string; name: string; slug: string; grade_number?: number | null; is_active: boolean };
@@ -87,19 +88,16 @@ export default function AdminClassesPage() {
   }
 
   return (
-    <div className="space-y-6 p-6">
-      <div>
-        <h1 className="text-3xl font-semibold">Classes</h1>
-        <p className="mt-2 text-sm text-muted-foreground">Map grades to each board so students can unlock board-specific learning.</p>
-      </div>
+    <AdminPage>
+      <AdminPageHeader
+        eyebrow="Academics"
+        title="Classes"
+        description="Map grades to each board so students can unlock board-specific learning."
+        actions={<AdminChip tone="info">{classes.length} classes</AdminChip>}
+      />
 
-      <div className="grid gap-6 lg:grid-cols-[1fr_1.2fr]">
-        <Card>
-          <CardHeader>
-            <CardTitle>{editingId ? "Edit class" : "Add class"}</CardTitle>
-            <CardDescription>Associate a class with the relevant board.</CardDescription>
-          </CardHeader>
-          <CardContent>
+      <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_1.2fr]">
+        <AdminPanel eyebrow="Editor" title={editingId ? "Edit class" : "Add class"} icon={editingId ? Pencil : Plus}>
             <form onSubmit={onSubmit} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="class-board">Board</Label>
@@ -131,26 +129,36 @@ export default function AdminClassesPage() {
               </Button>
               {editingId && <Button type="button" variant="ghost" className="w-full" onClick={() => { setEditingId(null); setForm({ ...blankClass, board_id: form.board_id }); }}>Cancel edit</Button>}
             </form>
-          </CardContent>
-        </Card>
+        </AdminPanel>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Available classes</CardTitle>
-            <CardDescription>Classes already mapped under the selected board.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {!form.board_id ? <p className="text-sm text-muted-foreground">Select a board to view linked classes.</p> : classes.length === 0 ? <p className="text-sm text-muted-foreground">No classes for this board yet.</p> : classes.map((item) => (
-                <div key={item.id} className="flex items-center justify-between gap-3 rounded-lg border p-4">
-                  <div><p className="font-semibold">{item.name}</p><p className="text-sm text-muted-foreground">{item.code} • {item.slug}</p></div>
-                  <div className="flex gap-2"><Button type="button" size="sm" variant="outline" onClick={() => editClass(item)}>Edit</Button><Button type="button" size="sm" variant="outline" onClick={() => void toggleClass(item)}>{item.is_active ? "Archive" : "Reactivate"}</Button></div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+        <AdminPanel eyebrow="Catalogue" title="Available classes" icon={GraduationCap} flush>
+          <div className="admin-panel-body">
+            {!form.board_id ? (
+              <AdminEmpty icon={GraduationCap} title="Select a board" hint="Pick a board in the editor to list its linked classes." />
+            ) : classes.length === 0 ? (
+              <AdminEmpty icon={GraduationCap} title="No classes yet" hint="Create the first class for this board with the editor." />
+            ) : (
+              <div className="space-y-3">
+                {classes.map((item) => (
+                  <div key={item.id} className="admin-row">
+                    <div className="min-w-0">
+                      <p className="admin-row-title">{item.name}</p>
+                      <p className="admin-row-meta">{item.code} · {item.slug}</p>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-2">
+                      <AdminChip tone={item.is_active ? "success" : "neutral"}>{item.is_active ? "Active" : "Archived"}</AdminChip>
+                      <Button type="button" size="sm" variant="outline" onClick={() => editClass(item)}>Edit</Button>
+                      <Button type="button" size="sm" variant="outline" onClick={() => void toggleClass(item)}>
+                        {item.is_active ? "Archive" : "Reactivate"}
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </AdminPanel>
       </div>
-    </div>
+    </AdminPage>
   );
 }

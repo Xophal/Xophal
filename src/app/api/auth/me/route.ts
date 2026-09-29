@@ -16,7 +16,9 @@ export async function GET() {
     }
 
     const profile = await ensureProfile(user);
-    const isVerified = Boolean(user.email_confirmed_at || profile?.email_verified);
+    const provider = user.app_metadata?.provider ?? user.identities?.[0]?.provider ?? null;
+    const hasSocialLogin = provider === "google" || provider === "github" || provider === "apple" || provider === "azure";
+    const isVerified = Boolean(user.email_confirmed_at || profile?.email_verified || hasSocialLogin);
 
     if (!isVerified) {
       return apiSuccess({ user: null, profile: null, isAdmin: false });

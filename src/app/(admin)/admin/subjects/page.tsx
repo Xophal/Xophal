@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { BookOpen, Pencil, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
+import { AdminChip, AdminEmpty, AdminPage, AdminPageHeader, AdminPanel } from "@/components/admin/ui";
 
 type Board = { id: string; name: string; code: string };
 type ClassItem = { id: string; board_id: string; name: string; code: string; slug: string };
@@ -108,19 +109,16 @@ export default function AdminSubjectsPage() {
   }
 
   return (
-    <div className="space-y-6 p-6">
-      <div>
-        <h1 className="text-3xl font-semibold">Subjects</h1>
-        <p className="mt-2 text-sm text-muted-foreground">Add subjects under each class to organize lessons and notes.</p>
-      </div>
+    <AdminPage>
+      <AdminPageHeader
+        eyebrow="Academics"
+        title="Subjects"
+        description="Add subjects under each class to organize lessons and notes."
+        actions={<AdminChip tone="info">{subjects.length} subjects</AdminChip>}
+      />
 
-      <div className="grid gap-6 lg:grid-cols-[1fr_1.2fr]">
-        <Card>
-          <CardHeader>
-            <CardTitle>{editingId ? "Edit subject" : "Add subject"}</CardTitle>
-            <CardDescription>Select the board and class, then add the subject taxonomy.</CardDescription>
-          </CardHeader>
-          <CardContent>
+      <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_1.2fr]">
+        <AdminPanel eyebrow="Editor" title={editingId ? "Edit subject" : "Add subject"} icon={editingId ? Pencil : Plus}>
             <form onSubmit={onSubmit} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="subject-board">Board</Label>
@@ -161,32 +159,39 @@ export default function AdminSubjectsPage() {
               </Button>
               {editingId && <Button type="button" variant="ghost" className="w-full" onClick={() => { setEditingId(null); setForm({ ...blankSubject, board_id: form.board_id, class_id: form.class_id }); }}>Cancel edit</Button>}
             </form>
-          </CardContent>
-        </Card>
+        </AdminPanel>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Subjects in selected class</CardTitle>
-            <CardDescription>Existing subject set for the chosen class.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {!form.class_id ? <p className="text-sm text-muted-foreground">Select a class to view subjects.</p> : subjects.length === 0 ? <p className="text-sm text-muted-foreground">No subjects for this class yet.</p> : subjects.map((item) => (
-                <div key={item.id} className="flex items-center justify-between gap-3 rounded-lg border p-4">
-                  <div>
-                  <div className="flex items-center justify-between gap-3">
-                    <p className="font-semibold">{item.name}</p>
-                    <span className="h-3 w-3 rounded-full" style={{ backgroundColor: item.color || "#3b82f6" }} />
+        <AdminPanel eyebrow="Catalogue" title="Subjects in selected class" icon={BookOpen} flush>
+          <div className="admin-panel-body">
+            {!form.class_id ? (
+              <AdminEmpty icon={BookOpen} title="Select a class" hint="Pick a board and class in the editor to list its subjects." />
+            ) : subjects.length === 0 ? (
+              <AdminEmpty icon={BookOpen} title="No subjects yet" hint="Create the first subject for this class with the editor." />
+            ) : (
+              <div className="space-y-3">
+                {subjects.map((item) => (
+                  <div key={item.id} className="admin-row">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="h-3 w-3 shrink-0 rounded-full" style={{ backgroundColor: item.color || "#3b82f6" }} />
+                        <p className="admin-row-title">{item.name}</p>
+                      </div>
+                      <p className="admin-row-meta">{item.code} · {item.slug}</p>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-2">
+                      <AdminChip tone={item.is_active ? "success" : "neutral"}>{item.is_active ? "Active" : "Archived"}</AdminChip>
+                      <Button type="button" size="sm" variant="outline" onClick={() => editSubject(item)}>Edit</Button>
+                      <Button type="button" size="sm" variant="outline" onClick={() => void toggleSubject(item)}>
+                        {item.is_active ? "Archive" : "Reactivate"}
+                      </Button>
+                    </div>
                   </div>
-                  <p className="text-sm text-muted-foreground">{item.code} • {item.slug}</p>
-                  </div>
-                  <div className="flex gap-2"><Button type="button" size="sm" variant="outline" onClick={() => editSubject(item)}>Edit</Button><Button type="button" size="sm" variant="outline" onClick={() => void toggleSubject(item)}>{item.is_active ? "Archive" : "Reactivate"}</Button></div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+                ))}
+              </div>
+            )}
+          </div>
+        </AdminPanel>
       </div>
-    </div>
+    </AdminPage>
   );
 }

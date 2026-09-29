@@ -1,7 +1,11 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { ArrowLeft, ClipboardList, ListChecks, Target, Timer } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { AdminChip, AdminEmpty, AdminLoading, AdminPage, AdminPageHeader, AdminPanel, AdminStat } from "@/components/admin/ui";
 
 function formatTime(seconds: number | null) { if (!seconds && seconds !== 0) return "—"; return `${Math.floor((seconds||0)/60)}m ${(seconds||0)%60}s`; }
 

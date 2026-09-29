@@ -7,7 +7,7 @@ import { ensureProfile, promoteMainAdminProfile } from "@/lib/auth";
 import type { Profile } from "@/types";
 
 function getSafeNext(value: string | null) {
-  if (!value || !value.startsWith("/") || value.startsWith("//") || value.includes("\\") || value.includes("://")) {
+  if (!value || value === "/" || !value.startsWith("/") || value.startsWith("//") || value.includes("\\") || value.includes("://")) {
     return null;
   }
 

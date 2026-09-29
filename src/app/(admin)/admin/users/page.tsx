@@ -1,11 +1,12 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import Link from "next/link";
+import { Users } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "@/hooks/use-toast";
-import Link from "next/link";
+import { AdminChip, AdminEmpty, AdminLoading, AdminPage, AdminPageHeader, AdminPanel, AdminPagination, AdminToolbar, readList } from "@/components/admin/ui";
 
 export default function AdminUsersPage() {
   const [query, setQuery] = useState("");
@@ -27,8 +28,9 @@ export default function AdminUsersPage() {
       const res = await fetch(`/api/admin/users?${params.toString()}`, { cache: "no-store" });
       const json = await res.json();
       if (!res.ok || !json.success) throw new Error(json.error || "Failed");
-      setUsers(json.data || []);
-      setTotal(json.pagination?.total ?? (json.data?.length ?? 0));
+      const parsed = readList<(typeof users)[number]>(json);
+      setUsers(parsed.items);
+      setTotal(parsed.total);
     } catch (err) {
       toast({ title: "Load failed", description: err instanceof Error ? err.message : String(err), variant: "destructive" });
     } finally { setLoading(false); }
@@ -41,46 +43,83 @@ export default function AdminUsersPage() {
   }
 
   return (
-    <div className="p-6 space-y-6">
-      <div>
-        <h1 className="text-3xl font-semibold">Users</h1>
-        <p className="mt-2 text-sm text-muted-foreground">Manage application users. Sensitive data is protected.</p>
-      </div>
+    <AdminPage>
+      <AdminPageHeader
+        eyebrow="People"
+        title="Users"
+        description="Manage application users. Sensitive data is protected."
+        actions={<AdminChip tone="info">{total} accounts</AdminChip>}
+      />
 
-      <form onSubmit={onSearch} className="flex gap-2">
-        <Input placeholder="Search name or email" value={query} onChange={(e) => setQuery(e.target.value)} />
-        <Button type="submit">Search</Button>
-        <Button type="button" onClick={() => { setQuery(""); setPage(1); load(); }}>Reset</Button>
-      </form>
+      <div className="mt-6">
+        <AdminPanel eyebrow="Directory" title="All users" icon={Users} flush>
+          <div className="px-5 pt-5">
+            <AdminToolbar>
+              <form onSubmit={onSearch} className="admin-toolbar-grow flex gap-2">
+                <Input placeholder="Search name or email" value={query} onChange={(e) => setQuery(e.target.value)} />
+                <Button type="submit" variant="outline" size="sm">Search</Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setQuery("");
+                    setPage(1);
+                    load();
+                  }}
+                >
+                  Reset
+                </Button>
+              </form>
+            </AdminToolbar>
+          </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Users</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {loading && <div>Loading...</div>}
-          {!loading && users.length === 0 && <div className="text-sm text-muted-foreground">No users found</div>}
-          <div className="space-y-2">
-            {users.map((u) => (
-              <div key={u.id} className="flex items-center justify-between rounded border p-3">
-                <div>
-                  <div className="font-medium">{u.full_name || "—"}</div>
-                  <div className="text-xs text-muted-foreground">{u.email || "(no email)"} • {u.roles?.code || 'user'}</div>
+          <div className="admin-panel-body mt-4">
+            {loading ? (
+              <AdminLoading label="Loading users…" />
+            ) : users.length === 0 ? (
+              <AdminEmpty icon={Users} title="No users found" hint="Try a different search or clear the query." />
+            ) : (
+              <>
+                <div className="admin-table-wrap">
+                  <table className="admin-table">
+                    <thead>
+                      <tr>
+                        <th>User</th>
+                        <th>Role</th>
+                        <th>Joined</th>
+                        <th className="text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {users.map((u) => (
+                        <tr key={u.id}>
+                          <td>
+                            <p className="font-semibold text-white">{u.full_name || "—"}</p>
+                            <p className="text-xs text-slate-500">{u.email || "(no email)"}</p>
+                          </td>
+                          <td>
+                            <AdminChip tone={u.roles?.code && u.roles.code !== "student" ? "violet" : "neutral"}>{u.roles?.code || "user"}</AdminChip>
+                          </td>
+                          <td className="text-slate-400">{u.created_at ? new Date(u.created_at).toLocaleDateString() : "—"}</td>
+                          <td>
+                            <div className="flex justify-end">
+                              <Button asChild size="sm" variant="outline">
+                                <Link href={`/admin/users/${u.id}`}>Manage</Link>
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
-                <div className="flex items-center gap-3"><div className="text-sm text-muted-foreground">{new Date(u.created_at).toLocaleDateString()}</div><Button asChild size="sm" variant="outline"><Link href={`/admin/users/${u.id}`}>Manage</Link></Button></div>
-              </div>
-            ))}
+                <AdminPagination page={page} total={total} limit={limit} onPage={setPage} busy={loading} />
+              </>
+            )}
           </div>
-
-          <div className="mt-4 flex items-center justify-between">
-            <div>Showing {(page-1)*limit + 1}–{Math.min(page*limit, total)} of {total}</div>
-            <div className="flex gap-2">
-              <Button onClick={() => { if (page>1) setPage(page-1); }}>Prev</Button>
-              <Button onClick={() => { if (page*limit < total) setPage(page+1); }}>Next</Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
+        </AdminPanel>
+      </div>
+    </AdminPage>
   );
 }

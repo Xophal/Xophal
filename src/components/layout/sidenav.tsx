@@ -7,7 +7,7 @@ import { useState, useEffect } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import * as Icons from "lucide-react";
 
-type NavItem = { href: string; icon: string; label: string };
+type NavItem = { href: string; icon: string; label: string; group?: string };
 type SideNavProfile = {
   full_name?: string | null;
   email?: string | null;
@@ -72,29 +72,39 @@ export function Sidenav({ items, profile, variant = "student" }: { items: NavIte
           </button>
         </div>
 
-        <nav className="flex-1 space-y-1 p-3">
-          {items.map((it) => {
-            const active = pathname === it.href || pathname.startsWith(`${it.href}/`);
+        <nav className="flex-1 space-y-1 overflow-y-auto p-3">
+          {items.map((it, index) => {
+            const active =
+              it.href === "/admin"
+                ? pathname === it.href
+                : pathname === it.href || pathname.startsWith(`${it.href}/`);
             const Icon = (Icons as unknown as Record<string, typeof Icons.BookOpen>)[it.icon] || Icons.BookOpen;
+            const showGroup = Boolean(it.group) && (index === 0 || items[index - 1].group !== it.group);
 
             return (
-              <Link
-                key={it.href}
-                href={it.href}
-                className={`group relative flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-medium transition-all ${
-                  active
-                    ? "bg-[linear-gradient(90deg,rgba(16,185,129,0.18),rgba(59,130,246,0.18))] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_12px_30px_rgba(34,211,238,0.12)]"
-                    : "text-slate-300 hover:bg-white/5 hover:text-white"
-                }`}
-              >
-                <motion.span whileHover={{ scale: 1.04 }} className={`flex h-8 w-8 items-center justify-center rounded-xl text-xs ${active ? "bg-[linear-gradient(135deg,rgba(52,211,153,0.28),rgba(59,130,246,0.2))] text-emerald-100" : "bg-white/5"}`}>
-                  <Icon className="h-4 w-4" />
-                </motion.span>
-                {!collapsed && <span className="truncate">{it.label}</span>}
-                {active && !collapsed && (
-                  <motion.span layoutId="sidenav-active" className="ml-auto h-2.5 w-2.5 rounded-full bg-emerald-400 shadow-[0_0_18px_rgba(52,211,153,0.9)]" />
+              <div key={it.href}>
+                {showGroup && !collapsed && (
+                  <p className="mt-4 mb-1.5 px-3 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500 first:mt-0">
+                    {it.group}
+                  </p>
                 )}
-              </Link>
+                <Link
+                  href={it.href}
+                  className={`group relative flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-medium transition-all ${
+                    active
+                      ? "bg-[linear-gradient(90deg,rgba(16,185,129,0.18),rgba(59,130,246,0.18))] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_12px_30px_rgba(34,211,238,0.12)]"
+                      : "text-slate-300 hover:bg-white/5 hover:text-white"
+                  }`}
+                >
+                  <motion.span whileHover={{ scale: 1.04 }} className={`flex h-8 w-8 items-center justify-center rounded-xl text-xs ${active ? "bg-[linear-gradient(135deg,rgba(52,211,153,0.28),rgba(59,130,246,0.2))] text-emerald-100" : "bg-white/5"}`}>
+                    <Icon className="h-4 w-4" />
+                  </motion.span>
+                  {!collapsed && <span className="truncate">{it.label}</span>}
+                  {active && !collapsed && (
+                    <motion.span layoutId="sidenav-active" className="ml-auto h-2.5 w-2.5 rounded-full bg-emerald-400 shadow-[0_0_18px_rgba(52,211,153,0.9)]" />
+                  )}
+                </Link>
+              </div>
             );
           })}
         </nav>

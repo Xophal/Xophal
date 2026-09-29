@@ -39,6 +39,20 @@ export async function updateSession(request: NextRequest) {
 
   const pathname = request.nextUrl.pathname;
 
+  if (userId && pathname === "/") {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role_id, roles(code)")
+      .eq("id", userId)
+      .maybeSingle();
+
+    const url = request.nextUrl.clone();
+    url.pathname = isAdminRole(profile) ? "/admin" : "/dashboard";
+    const redirectResponse = NextResponse.redirect(url);
+    copySupabaseCookies(redirectResponse, supabaseResponse);
+    return redirectResponse;
+  }
+
   const publicPaths = [
     "/",
     "/login",

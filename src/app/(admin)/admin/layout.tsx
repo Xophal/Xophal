@@ -7,18 +7,45 @@ import { requireAdminAuth } from "@/lib/auth";
 import { assertAccess } from "@/lib/auth-policy";
 
 const adminNavItems = [
-  { href: "/admin", icon: "LayoutDashboard", label: "Overview" },
-  { href: "/admin/boards", icon: "School", label: "Boards" },
-  { href: "/admin/classes", icon: "GraduationCap", label: "Classes" },
-  { href: "/admin/subjects", icon: "BookOpen", label: "Subjects" },
-  { href: "/admin/chapters", icon: "ListTree", label: "Chapters & topics" },
-  { href: "/admin/notes", icon: "FileText", label: "Notes" },
-  { href: "/admin/mock-tests", icon: "ClipboardList", label: "Mock tests" },
-  { href: "/admin/content", icon: "Newspaper", label: "Content" },
-  { href: "/admin/users", icon: "Users", label: "Users" },
-  { href: "/admin/admin-requests", icon: "UserCheck", label: "Admin requests" },
-  { href: "/admin/analytics", icon: "BarChart3", label: "Analytics" },
-  { href: "/admin/settings", icon: "Settings", label: "Settings" },
+  // Command center
+  { href: "/admin", icon: "LayoutDashboard", label: "Overview", group: "Command center" },
+  { href: "/admin/analytics", icon: "BarChart3", label: "Analytics", group: "Command center" },
+  { href: "/admin/reports", icon: "PieChart", label: "Reports", group: "Command center" },
+
+  // Academics
+  { href: "/admin/boards", icon: "School", label: "Boards", group: "Academics" },
+  { href: "/admin/classes", icon: "GraduationCap", label: "Classes", group: "Academics" },
+  { href: "/admin/subjects", icon: "BookOpen", label: "Subjects", group: "Academics" },
+  { href: "/admin/chapters", icon: "ListTree", label: "Chapters", group: "Academics" },
+  { href: "/admin/topics", icon: "Boxes", label: "Topics", group: "Academics" },
+
+  // Assessments
+  { href: "/admin/questions", icon: "ShieldQuestion", label: "Questions", group: "Assessments" },
+  { href: "/admin/mock-tests", icon: "ClipboardList", label: "Mock tests", group: "Assessments" },
+  { href: "/admin/results", icon: "Trophy", label: "Results", group: "Assessments" },
+
+  // Content
+  { href: "/admin/content", icon: "Newspaper", label: "Content hub", group: "Content" },
+  { href: "/admin/blogs", icon: "PenLine", label: "Blogs", group: "Content" },
+  { href: "/admin/notes", icon: "FileText", label: "Notes", group: "Content" },
+  { href: "/admin/content/imports", icon: "UploadCloud", label: "Imports", group: "Content" },
+
+  // People
+  { href: "/admin/users", icon: "Users", label: "Users", group: "People" },
+  { href: "/admin/admin-requests", icon: "UserCheck", label: "Admin requests", group: "People" },
+  { href: "/admin/roles", icon: "ShieldCheck", label: "Roles", group: "People" },
+  { href: "/admin/create-admin", icon: "UserCog", label: "Create admin", group: "People" },
+
+  // Commerce
+  { href: "/admin/payments", icon: "Wallet", label: "Payments", group: "Commerce" },
+  { href: "/admin/subscriptions", icon: "CreditCard", label: "Subscriptions", group: "Commerce" },
+  { href: "/admin/coupons", icon: "Ticket", label: "Coupons", group: "Commerce" },
+
+  // Engagement
+  { href: "/admin/notifications", icon: "BellRing", label: "Notifications", group: "Engagement" },
+
+  // System
+  { href: "/admin/settings", icon: "Settings", label: "Settings", group: "System" },
 ];
 
 export default async function AdminLayout({ children }: { children: ReactNode }) {

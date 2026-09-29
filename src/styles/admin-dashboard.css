@@ -1,0 +1,507 @@
+/* ==========================================================================
+   Admin dashboard design system (scope: .admin-page)
+   Dark-first premium glass aesthetic that matches the admin sidenav, header
+   and overview hero regardless of the active theme, so every admin screen
+   reads as one cohesive control room.
+   ========================================================================== */
+
+.admin-page {
+  position: relative;
+  color: #e2e8f0;
+}
+
+/* Keep muted/heading text legible on the dark admin surfaces in both themes. */
+.admin-page .text-muted-foreground,
+.admin-page .text-slate-400 {
+  color: #94a3b8;
+}
+
+.admin-page .text-slate-500 {
+  color: #64748b;
+}
+
+.admin-page .text-slate-300 {
+  color: #cbd5e1;
+}
+
+.admin-page .text-slate-200 {
+  color: #e2e8f0;
+}
+
+/* ---------- Page header ---------- */
+
+.admin-page-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.admin-eyebrow {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #67e8f9;
+}
+
+.admin-page-title {
+  margin-top: 0.35rem;
+  font-size: clamp(1.6rem, 2.4vw, 2.15rem);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: #f8fafc;
+}
+
+.admin-page-desc {
+  margin-top: 0.45rem;
+  max-width: 68ch;
+  font-size: 0.9rem;
+  line-height: 1.6;
+  color: #94a3b8;
+}
+
+.admin-page-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+/* ---------- Panels ---------- */
+
+.admin-panel {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(148, 163, 184, 0.15);
+  border-radius: 1.5rem;
+  background: rgba(15, 23, 42, 0.72);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow: 0 18px 42px rgba(15, 23, 42, 0.18);
+  padding: 1.35rem;
+}
+
+.admin-panel::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto auto 0;
+  width: 100%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(125, 211, 252, 0.7), transparent);
+  opacity: 0.6;
+}
+
+.admin-panel--flush {
+  padding: 0;
+}
+
+.admin-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.85rem;
+  margin-bottom: 1.1rem;
+}
+
+.admin-panel-title {
+  margin-top: 0.3rem;
+  font-size: 1.05rem;
+  font-weight: 650;
+  color: #f8fafc;
+}
+
+.admin-panel--flush .admin-panel-head {
+  margin: 0;
+  padding: 1.2rem 1.35rem;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.12);
+}
+
+.admin-panel--flush .admin-panel-body {
+  padding: 1.1rem 1.35rem 1.35rem;
+}
+
+/* Cards that still use the shared shadcn <Card> keep the admin look. */
+.admin-page .glass-panel {
+  border-color: rgba(148, 163, 184, 0.15);
+  background: rgba(15, 23, 42, 0.72);
+  color: #e2e8f0;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow: 0 18px 42px rgba(15, 23, 42, 0.18);
+}
+
+.admin-page .glass-panel:hover {
+  border-color: rgba(34, 211, 238, 0.25);
+}
+
+/* ---------- Stat cards ---------- */
+
+.admin-stat {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.admin-stat-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #94a3b8;
+}
+
+.admin-stat-value {
+  margin-top: 0.45rem;
+  font-size: clamp(1.5rem, 2vw, 1.9rem);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: #f8fafc;
+}
+
+.admin-stat-hint {
+  margin-top: 0.3rem;
+  font-size: 0.75rem;
+  color: #64748b;
+}
+
+.admin-stat-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.6rem;
+  height: 2.6rem;
+  flex-shrink: 0;
+  border-radius: 0.9rem;
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  background: rgba(2, 6, 23, 0.45);
+  color: #67e8f9;
+}
+
+.admin-stat-icon--emerald { color: #6ee7b7; border-color: rgba(52, 211, 153, 0.28); background: rgba(16, 185, 129, 0.1); }
+.admin-stat-icon--cyan { color: #67e8f9; border-color: rgba(34, 211, 238, 0.28); background: rgba(34, 211, 238, 0.1); }
+.admin-stat-icon--violet { color: #c4b5fd; border-color: rgba(168, 85, 247, 0.28); background: rgba(168, 85, 247, 0.1); }
+.admin-stat-icon--amber { color: #fcd34d; border-color: rgba(245, 158, 11, 0.28); background: rgba(245, 158, 11, 0.1); }
+.admin-stat-icon--rose { color: #fda4af; border-color: rgba(244, 63, 94, 0.28); background: rgba(244, 63, 94, 0.1); }
+
+/* ---------- Toolbars & form controls ---------- */
+
+.admin-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.admin-toolbar-grow {
+  flex: 1 1 14rem;
+  min-width: 12rem;
+}
+
+.admin-page input[type="text"],
+.admin-page input[type="email"],
+.admin-page input[type="password"],
+.admin-page input[type="search"],
+.admin-page input[type="url"],
+.admin-page input[type="number"],
+.admin-page input[type="date"],
+.admin-page input[type="datetime-local"],
+.admin-page select,
+.admin-page textarea {
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  border-radius: 0.75rem;
+  background: rgba(2, 6, 23, 0.55);
+  color: #f1f5f9;
+  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.admin-page input::placeholder,
+.admin-page textarea::placeholder {
+  color: #64748b;
+}
+
+.admin-page input:focus,
+.admin-page select:focus,
+.admin-page textarea:focus {
+  border-color: rgba(34, 211, 238, 0.55);
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.16);
+}
+
+.admin-page select option {
+  background: #0f172a;
+  color: #f1f5f9;
+}
+
+.admin-page label {
+  color: #cbd5e1;
+}
+
+/* Outline/secondary buttons rendered inside admin pages. */
+.admin-page button.border {
+  border-color: rgba(148, 163, 184, 0.24);
+  background: rgba(255, 255, 255, 0.05);
+  color: #e2e8f0;
+}
+
+.admin-page button.border:hover {
+  border-color: rgba(34, 211, 238, 0.4);
+  background: rgba(34, 211, 238, 0.08);
+  color: #f8fafc;
+}
+
+/* ---------- Tables ---------- */
+
+.admin-table-wrap {
+  overflow-x: auto;
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  border-radius: 1.1rem;
+  background: rgba(2, 6, 23, 0.42);
+}
+
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.86rem;
+}
+
+.admin-table thead th {
+  padding: 0.85rem 1rem;
+  background: rgba(2, 6, 23, 0.62);
+  border-bottom: 1px solid rgba(148, 163, 184, 0.16);
+  color: #94a3b8;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.admin-table tbody td {
+  padding: 0.85rem 1rem;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.08);
+  color: #cbd5e1;
+  vertical-align: middle;
+}
+
+.admin-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.admin-table tbody tr {
+  transition: background-color 150ms ease;
+}
+
+.admin-table tbody tr:hover {
+  background: rgba(34, 211, 238, 0.05);
+}
+
+.admin-table a {
+  color: #67e8f9;
+}
+
+.admin-table a:hover {
+  text-decoration: underline;
+}
+
+.admin-table .is-num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- Chips ---------- */
+
+.admin-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  background: rgba(148, 163, 184, 0.1);
+  padding: 0.24rem 0.65rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: #cbd5e1;
+  white-space: nowrap;
+}
+
+.admin-chip--success {
+  border-color: rgba(52, 211, 153, 0.34);
+  background: rgba(16, 185, 129, 0.12);
+  color: #6ee7b7;
+}
+
+.admin-chip--warning {
+  border-color: rgba(245, 158, 11, 0.34);
+  background: rgba(245, 158, 11, 0.12);
+  color: #fcd34d;
+}
+
+.admin-chip--danger {
+  border-color: rgba(244, 63, 94, 0.34);
+  background: rgba(244, 63, 94, 0.12);
+  color: #fda4af;
+}
+
+.admin-chip--info {
+  border-color: rgba(34, 211, 238, 0.34);
+  background: rgba(34, 211, 238, 0.12);
+  color: #67e8f9;
+}
+
+.admin-chip--violet {
+  border-color: rgba(168, 85, 247, 0.34);
+  background: rgba(168, 85, 247, 0.12);
+  color: #c4b5fd;
+}
+
+/* ---------- Empty & loading states ---------- */
+
+.admin-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  border: 1px dashed rgba(148, 163, 184, 0.2);
+  border-radius: 1.1rem;
+  background: rgba(15, 23, 42, 0.4);
+  padding: 2.4rem 1.2rem;
+  text-align: center;
+}
+
+.admin-empty-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 3rem;
+  height: 3rem;
+  border-radius: 1rem;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  background: rgba(2, 6, 23, 0.45);
+  color: #67e8f9;
+}
+
+.admin-empty-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #e2e8f0;
+}
+
+.admin-empty-hint {
+  max-width: 46ch;
+  font-size: 0.8rem;
+  line-height: 1.55;
+  color: #94a3b8;
+}
+
+.admin-loading {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 1.5rem 0.25rem;
+  font-size: 0.85rem;
+  color: #94a3b8;
+}
+
+/* ---------- Progress bars ---------- */
+
+.admin-progress {
+  height: 8px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.16);
+}
+
+.admin-progress > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #22d3ee, #34d399);
+}
+
+/* ---------- List rows (activity feeds, quick links) ---------- */
+
+.admin-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.9rem;
+  border: 1px solid rgba(148, 163, 184, 0.12);
+  border-radius: 1rem;
+  background: rgba(15, 23, 42, 0.5);
+  padding: 0.8rem 0.95rem;
+  transition: border-color 160ms ease, background-color 160ms ease, transform 160ms ease;
+}
+
+.admin-row:hover {
+  border-color: rgba(34, 211, 238, 0.32);
+  background: rgba(34, 211, 238, 0.06);
+}
+
+a.admin-row {
+  color: inherit;
+  text-decoration: none;
+}
+
+.admin-row-title {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #f1f5f9;
+}
+
+.admin-row-meta {
+  margin-top: 0.15rem;
+  font-size: 0.75rem;
+  color: #94a3b8;
+}
+
+/* ---------- Misc ---------- */
+
+.admin-page .badge {
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  background: rgba(148, 163, 184, 0.1);
+  color: #cbd5e1;
+}
+
+.admin-divider {
+  height: 1px;
+  border: none;
+  background: rgba(148, 163, 184, 0.12);
+  margin: 1rem 0;
+}
+
+.admin-page ::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.admin-page ::-webkit-scrollbar-track {
+  background: rgba(2, 6, 23, 0.4);
+}
+
+.admin-page ::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+  background-color: rgba(100, 116, 139, 0.55);
+}
+
+.admin-page ::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(148, 163, 184, 0.75);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .admin-panel,
+  .admin-row,
+  .admin-table tbody tr {
+    transition: none;
+  }
+}
+

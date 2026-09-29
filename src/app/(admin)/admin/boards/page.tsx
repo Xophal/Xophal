@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Pencil, Plus, School } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
+import { AdminChip, AdminEmpty, AdminPage, AdminPageHeader, AdminPanel } from "@/components/admin/ui";
 
 type Board = {
   id: string;
@@ -86,77 +87,93 @@ export default function AdminBoardsPage() {
   }
 
   return (
-    <div className="space-y-6 p-6">
-      <div>
-        <h1 className="text-3xl font-semibold">Boards</h1>
-        <p className="mt-2 text-sm text-muted-foreground">Create and manage the board taxonomy for your student catalog.</p>
-      </div>
+    <AdminPage>
+      <AdminPageHeader
+        eyebrow="Academics"
+        title="Boards"
+        description="Create and manage the board taxonomy for your student catalog."
+        actions={<AdminChip tone="info">{boards.length} boards</AdminChip>}
+      />
 
-      <div className="grid gap-6 lg:grid-cols-[1fr_1.2fr]">
-        <Card>
-          <CardHeader>
-            <CardTitle>{editingId ? "Edit board" : "Add board"}</CardTitle>
-            <CardDescription>Register a new board such as CBSE, SEBA, or another state board.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={onSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="board-code">Code</Label>
-                <Input id="board-code" value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value })} placeholder="CBSE" required />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="board-name">Name</Label>
-                <Input id="board-name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Central Board of Secondary Education" required />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="board-slug">Slug</Label>
-                <Input id="board-slug" value={form.slug} onChange={(e) => setForm({ ...form, slug: e.target.value })} placeholder="cbse" required />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="board-description">Description</Label>
-                <Input id="board-description" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Board description" />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="board-url">Website</Label>
-                <Input id="board-url" type="url" value={form.website_url} onChange={(e) => setForm({ ...form, website_url: e.target.value })} placeholder="https://example.com" />
-              </div>
-              <Button type="submit" className="w-full" disabled={saving}>
+      <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_1.2fr]">
+        <AdminPanel eyebrow="Editor" title={editingId ? "Edit board" : "Add board"} icon={editingId ? Pencil : Plus}>
+          <form onSubmit={onSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="board-code">Code</Label>
+              <Input id="board-code" value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value })} placeholder="CBSE" required />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="board-name">Name</Label>
+              <Input id="board-name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Central Board of Secondary Education" required />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="board-slug">Slug</Label>
+              <Input id="board-slug" value={form.slug} onChange={(e) => setForm({ ...form, slug: e.target.value })} placeholder="cbse" required />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="board-description">Description</Label>
+              <Input id="board-description" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Board description" />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="board-url">Website</Label>
+              <Input id="board-url" type="url" value={form.website_url} onChange={(e) => setForm({ ...form, website_url: e.target.value })} placeholder="https://example.com" />
+            </div>
+            <div className="flex gap-2">
+              <Button type="submit" className="flex-1" disabled={saving}>
                 {saving ? "Saving..." : editingId ? "Save board" : "Create board"}
               </Button>
-              {editingId && <Button type="button" variant="ghost" className="w-full" onClick={() => { setEditingId(null); setForm(blankBoard); }}>Cancel edit</Button>}
-            </form>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Existing boards</CardTitle>
-            <CardDescription>Board catalog currently available for student access.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {boards.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No boards added yet.</p>
-              ) : (
-                boards.map((board) => (
-                  <div key={board.id} className="rounded-lg border p-4">
-                    <div className="flex items-center justify-between gap-3">
-                      <div>
-                        <p className="font-semibold">{board.name}</p>
-                        <p className="text-sm text-muted-foreground">{board.code} • /{board.slug}</p>
-                      </div>
-                      <span className="rounded-full bg-primary/10 px-2 py-1 text-xs font-medium text-primary">
-                        {board.is_active ? "Active" : "Inactive"}
-                      </span>
-                      <div className="flex gap-2"><Button type="button" size="sm" variant="outline" onClick={() => editBoard(board)}>Edit</Button><Button type="button" size="sm" variant="outline" onClick={() => void toggleBoard(board)}>{board.is_active ? "Archive" : "Reactivate"}</Button></div>
-                    </div>
-                  </div>
-                ))
+              {editingId && (
+                <Button type="button" variant="outline" onClick={() => { setEditingId(null); setForm(blankBoard); }}>
+                  Cancel
+                </Button>
               )}
             </div>
-          </CardContent>
-        </Card>
+          </form>
+        </AdminPanel>
+
+        <AdminPanel eyebrow="Catalogue" title="Existing boards" icon={School} flush>
+          <div className="admin-panel-body">
+            {boards.length === 0 ? (
+              <AdminEmpty icon={School} title="No boards yet" hint="Register CBSE, SEBA or any state board to start building your catalog." />
+            ) : (
+              <div className="admin-table-wrap">
+                <table className="admin-table">
+                  <thead>
+                    <tr>
+                      <th>Board</th>
+                      <th>Slug</th>
+                      <th>Status</th>
+                      <th className="text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {boards.map((board) => (
+                      <tr key={board.id}>
+                        <td>
+                          <p className="font-semibold text-white">{board.name}</p>
+                          <p className="text-xs text-slate-500">{board.code}</p>
+                        </td>
+                        <td className="font-mono text-xs text-slate-400">/{board.slug}</td>
+                        <td>
+                          <AdminChip tone={board.is_active ? "success" : "neutral"}>{board.is_active ? "Active" : "Inactive"}</AdminChip>
+                        </td>
+                        <td>
+                          <div className="flex justify-end gap-2">
+                            <Button type="button" size="sm" variant="outline" onClick={() => editBoard(board)}>Edit</Button>
+                            <Button type="button" size="sm" variant="outline" onClick={() => void toggleBoard(board)}>
+                              {board.is_active ? "Archive" : "Reactivate"}
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </AdminPanel>
       </div>
-    </div>
+    </AdminPage>
   );
 }

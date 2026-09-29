@@ -1,7 +1,30 @@
 import { NextRequest } from "next/server";
-import { apiSuccess, handleApiError } from "@/lib/api-utils";
-import { requireAdminRole } from "@/lib/auth";
+import { apiSuccess, handleApiError, getPaginationParams, paginatedResponse } from "@/lib/api-utils";
+import { requireAdminAuth, requireAdminRole } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
+
+export async function GET(request: NextRequest) {
+  try {
+    await requireAdminAuth();
+    const { searchParams } = request.nextUrl;
+    const { page, limit, offset } = getPaginationParams(searchParams);
+    const scope = searchParams.get("scope");
+
+    let query = createAdminClient()
+      .from("notifications")
+      .select("id, title, message, type, link_url, is_global, is_read, created_at, profiles(full_name, email)", { count: "exact" })
+      .order("created_at", { ascending: false });
+
+    if (scope === "global") query = query.eq("is_global", true);
+    if (scope === "targeted") query = query.eq("is_global", false);
+
+    const { data, error, count } = await query.range(offset, offset + limit - 1);
+    if (error) throw error;
+    return apiSuccess(paginatedResponse(data ?? [], count ?? 0, page, limit));
+  } catch (err) {
+    return handleApiError(err);
+  }
+}
 
 export async function POST(request: NextRequest) {
   try {

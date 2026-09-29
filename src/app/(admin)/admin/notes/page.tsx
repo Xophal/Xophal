@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { FileText, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
+import { AdminChip, AdminEmpty, AdminPage, AdminPageHeader, AdminPanel } from "@/components/admin/ui";
 
 type Note = {
   id: string;
@@ -70,65 +71,75 @@ export default function AdminNotesPage() {
   }
 
   return (
-    <div className="space-y-6 p-6">
-      <div>
-        <h1 className="text-3xl font-semibold">Notes</h1>
-        <p className="mt-2 text-sm text-muted-foreground">Publish revision notes for subjects and chapters to support student learning.</p>
-      </div>
+    <AdminPage>
+      <AdminPageHeader
+        eyebrow="Content"
+        title="Notes"
+        description="Publish revision notes for subjects and chapters to support student learning."
+        actions={<AdminChip tone="info">{notes.length} notes</AdminChip>}
+      />
 
-      <div className="grid gap-6 lg:grid-cols-[1fr_1.2fr]">
-        <Card>
-          <CardHeader>
-            <CardTitle>Add note</CardTitle>
-            <CardDescription>Create a study note that can be surfaced in the student notes section.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={onSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="note-title">Title</Label>
-                <Input id="note-title" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="Algebra formula sheet" required />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="note-slug">Slug</Label>
-                <Input id="note-slug" value={form.slug} onChange={(e) => setForm({ ...form, slug: e.target.value })} placeholder="algebra-formula-sheet" required />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="note-content">Content</Label>
-                <textarea id="note-content" rows={8} value={form.content} onChange={(e) => setForm({ ...form, content: e.target.value })} className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm" placeholder="Write the revision content here" required />
-              </div>
-              <label className="flex items-center gap-2 text-sm">
-                <input type="checkbox" checked={form.is_premium} onChange={(e) => setForm({ ...form, is_premium: e.target.checked })} />
-                Premium note
-              </label>
-              <Button type="submit" className="w-full" disabled={saving}>
-                {saving ? "Saving..." : "Create note"}
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Published notes</CardTitle>
-            <CardDescription>Resource list currently available in the backend catalog.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {notes.length === 0 ? <p className="text-sm text-muted-foreground">No notes created yet.</p> : notes.map((note) => (
-                <div key={note.id} className="rounded-lg border p-4">
-                  <div className="flex items-center justify-between gap-3">
-                    <p className="font-semibold">{note.title}</p>
-                    <span className="rounded-full bg-primary/10 px-2 py-1 text-xs font-medium text-primary">
-                      {note.is_premium ? "Premium" : "Free"}
-                    </span>
-                  </div>
-                  <p className="mt-1 text-sm text-muted-foreground">/{note.slug}</p>
-                </div>
-              ))}
+      <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_1.2fr]">
+        <AdminPanel eyebrow="Editor" title="Add note" icon={Plus}>
+          <form onSubmit={onSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="note-title">Title</Label>
+              <Input id="note-title" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="Algebra formula sheet" required />
             </div>
-          </CardContent>
-        </Card>
+            <div className="space-y-2">
+              <Label htmlFor="note-slug">Slug</Label>
+              <Input id="note-slug" value={form.slug} onChange={(e) => setForm({ ...form, slug: e.target.value })} placeholder="algebra-formula-sheet" required />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="note-content">Content</Label>
+              <textarea id="note-content" rows={8} value={form.content} onChange={(e) => setForm({ ...form, content: e.target.value })} className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm" placeholder="Write the revision content here" required />
+            </div>
+            <label className="flex items-center gap-2 text-sm">
+              <input type="checkbox" checked={form.is_premium} onChange={(e) => setForm({ ...form, is_premium: e.target.checked })} />
+              Premium note
+            </label>
+            <Button type="submit" className="w-full" disabled={saving}>
+              {saving ? "Saving..." : "Create note"}
+            </Button>
+          </form>
+        </AdminPanel>
+
+        <AdminPanel eyebrow="Catalogue" title="Published notes" icon={FileText} flush>
+          <div className="admin-panel-body">
+            {notes.length === 0 ? (
+              <AdminEmpty icon={FileText} title="No notes yet" hint="Create your first revision note with the editor." />
+            ) : (
+              <div className="admin-table-wrap">
+                <table className="admin-table">
+                  <thead>
+                    <tr>
+                      <th>Note</th>
+                      <th>Tier</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {notes.map((note) => (
+                      <tr key={note.id}>
+                        <td>
+                          <p className="font-semibold text-white">{note.title}</p>
+                          <p className="text-xs text-slate-500">/{note.slug}</p>
+                        </td>
+                        <td>
+                          <AdminChip tone={note.is_premium ? "violet" : "info"}>{note.is_premium ? "Premium" : "Free"}</AdminChip>
+                        </td>
+                        <td>
+                          <AdminChip tone={note.is_active ? "success" : "neutral"}>{note.is_active ? "Active" : "Hidden"}</AdminChip>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </AdminPanel>
       </div>
-    </div>
+    </AdminPage>
   );
 }

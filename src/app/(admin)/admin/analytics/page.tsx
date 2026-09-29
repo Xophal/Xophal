@@ -1,79 +1,126 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import { BarChart3, Target, TrendingUp, Users, type LucideIcon } from "lucide-react";
+import { AdminChip, AdminEmpty, AdminLoading, AdminPage, AdminPageHeader, AdminPanel, AdminStat } from "@/components/admin/ui";
 
-function Card({ title, value }: { title: string; value: React.ReactNode }) {
-  return (
-    <div className="rounded-lg border p-4">
-      <div className="text-sm text-muted-foreground">{title}</div>
-      <div className="mt-1 text-2xl font-black">{value}</div>
-    </div>
-  );
-}
+
+type RangeKey = "today" | "7d" | "30d" | "90d" | "all";
+
+const RANGES: Array<{ key: RangeKey; label: string }> = [
+  { key: "today", label: "Today" },
+  { key: "7d", label: "7 days" },
+  { key: "30d", label: "30 days" },
+  { key: "90d", label: "90 days" },
+  { key: "all", label: "All time" },
+];
 
 export default function AdminAnalyticsPage() {
   const [data, setData] = useState<any>(null);
-  const [range, setRange] = useState("30d");
-  const [loading, setLoading] = useState(false);
+  const [range, setRange] = useState<RangeKey>("30d");
+  const [loading, setLoading] = useState(true);
 
-  useEffect(() => { load(); }, [range]);
+  useEffect(() => { load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [range]);
 
   async function load() {
     setLoading(true);
     try {
       const res = await fetch(`/api/admin/analytics?range=${range}`);
       const json = await res.json();
-      if (!res.ok || !json.success) throw new Error(json.error || 'Failed');
+      if (!res.ok || !json.success) throw new Error(json.error || "Failed");
       setData(json.data);
     } catch (e) { console.error(e); } finally { setLoading(false); }
   }
 
+  const stats: Array<{ label: string; value: React.ReactNode; icon: LucideIcon; tone: "cyan" | "emerald" | "violet" | "amber" }> = [
+    { label: "Total users", value: data?.users?.total, icon: Users, tone: "cyan" },
+    { label: "Active users", value: data?.users?.active, icon: Users, tone: "emerald" },
+    { label: "Total tests", value: data?.tests?.total, icon: Target, tone: "violet" },
+    { label: "Published tests", value: data?.tests?.published, icon: Target, tone: "emerald" },
+    { label: "Total attempts", value: data?.attempts?.total, icon: TrendingUp, tone: "cyan" },
+    { label: "Completed attempts", value: data?.attempts?.completed, icon: TrendingUp, tone: "amber" },
+    { label: "Average score", value: data?.averages?.averageScore != null ? Number(data.averages.averageScore).toFixed(1) : "—", icon: BarChart3, tone: "violet" },
+    { label: "Average percentage", value: data?.averages?.averagePercentage != null ? `${Number(data.averages.averagePercentage).toFixed(1)}%` : "—", icon: BarChart3, tone: "cyan" },
+    { label: "Average accuracy", value: data?.averages?.averageAccuracy != null ? `${Number(data.averages.averageAccuracy).toFixed(1)}%` : "—", icon: Target, tone: "amber" },
+  ];
+
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-semibold">Platform Analytics</h1>
-      <div className="mt-4 flex gap-2">
-        <select value={range} onChange={(e) => setRange(e.target.value)} className="px-2 py-1 glass-input">
-          <option value="today">Today</option>
-          <option value="7d">Last 7 days</option>
-          <option value="30d">Last 30 days</option>
-          <option value="90d">Last 90 days</option>
-          <option value="all">All time</option>
-        </select>
-      </div>
-
-      {loading && <div className="mt-6">Loading…</div>}
-
-      {data && (
-        <section className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
-          <Card title="Total users" value={data.users?.total ?? '—'} />
-          <Card title="Active users" value={data.users?.active ?? '—'} />
-          <Card title="Total tests" value={data.tests?.total ?? '—'} />
-          <Card title="Published tests" value={data.tests?.published ?? '—'} />
-          <Card title="Total attempts" value={data.attempts?.total ?? '—'} />
-          <Card title="Completed attempts" value={data.attempts?.completed ?? '—'} />
-          <Card title="Average score" value={data.averages?.averageScore ?? '—'} />
-          <Card title="Average percentage" value={data.averages?.averagePercentage ?? '—'} />
-          <Card title="Average accuracy" value={data.averages?.averageAccuracy ?? '—'} />
-        </section>
-      )}
-
-      <section className="mt-8">
-        <h2 className="text-lg font-semibold">Top tests (by attempts)</h2>
-        {!data?.topTests || data.topTests.length === 0 ? <div className="mt-3 text-sm text-muted-foreground">No data</div> : (
-          <ol className="mt-3 space-y-2">
-            {data.topTests.map((t:any) => <li key={t.id} className="rounded border p-3"><div className="font-medium">{t.title}</div><div className="text-sm text-muted-foreground">Attempts: {t.attempts}</div></li>)}
-          </ol>
-        )}
-      </section>
-
-      <section className="mt-8">
-        <h2 className="text-lg font-semibold">Trends</h2>
-        {!data?.trends ? <div className="mt-3 text-sm text-muted-foreground">No trend data available.</div> : (
-          <div className="mt-3 text-sm">
-            {Array.isArray(data.trends) ? data.trends.map((d:any) => <div key={d.date}>{d.date}: {d.completed_count} completed</div>) : <div>No data</div>}
+    <AdminPage>
+      <AdminPageHeader
+        eyebrow="Command center"
+        title="Platform analytics"
+        description="Live usage, engagement and assessment performance across the platform."
+        actions={
+          <div className="flex flex-wrap gap-2">
+            {RANGES.map((it) => (
+              <button
+                key={it.key}
+                type="button"
+                onClick={() => setRange(it.key)}
+                className={
+                  range === it.key
+                    ? "rounded-full border border-cyan-400/40 bg-cyan-400/10 px-3 py-1 text-xs font-semibold text-cyan-200"
+                    : "rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-semibold text-slate-300 transition hover:border-cyan-400/30 hover:text-white"
+                }
+              >
+                {it.label}
+              </button>
+            ))}
+            <AdminChip tone="info">Range: {RANGES.find((r) => r.key === range)?.label}</AdminChip>
           </div>
-        )}
-      </section>
-    </div>
+        }
+      />
+
+      {loading ? (
+        <div className="mt-6">
+          <AdminLoading label="Loading analytics…" />
+        </div>
+      ) : !data ? (
+        <div className="mt-6">
+          <AdminEmpty icon={BarChart3} title="Analytics unavailable" hint="We could not load analytics for this range. Please try again." />
+        </div>
+      ) : (
+        <>
+          <div className="mt-6 grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-3">
+            {stats.map((stat) => (
+              <AdminStat key={stat.label} label={stat.label} value={stat.value ?? "—"} icon={stat.icon} tone={stat.tone} />
+            ))}
+          </div>
+
+          <div className="mt-6 grid gap-6 xl:grid-cols-2">
+            <AdminPanel eyebrow="Deep dive" title="Top tests by attempts" icon={Target}>
+              {!data?.topTests || data.topTests.length === 0 ? (
+                <AdminEmpty icon={Target} title="No ranked tests yet" hint="Once students attempt tests, popularity rankings appear here." />
+              ) : (
+                <ol className="space-y-3">
+                  {data.topTests.map((t: any) => (
+                    <li key={t.id} className="admin-row">
+                      <span className="admin-row-title">{t.title}</span>
+                      <AdminChip tone="info">{t.attempts} attempts</AdminChip>
+                    </li>
+                  ))}
+                </ol>
+              )}
+            </AdminPanel>
+
+            <AdminPanel eyebrow="Deep dive" title="Completion trend" icon={TrendingUp}>
+              {!data?.trends || !Array.isArray(data.trends) || data.trends.length === 0 ? (
+                <AdminEmpty icon={TrendingUp} title="No trend data" hint="Daily completion trends appear once attempts exist in this range." />
+              ) : (
+                <ul className="space-y-2 text-sm">
+                  {data.trends.slice(-10).map((point: any) => (
+                    <li key={point.date} className="admin-row">
+                      <span className="text-slate-400">{new Date(point.date).toLocaleDateString()}</span>
+                      <span className="font-semibold text-white">{point.completed_count} completed</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </AdminPanel>
+          </div>
+        </>
+      )}
+    </AdminPage>
   );
 }
+
