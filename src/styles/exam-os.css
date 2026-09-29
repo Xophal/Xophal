@@ -454,7 +454,8 @@
   /* --- Mobile bottom navigation (student shell) --------------------------- */
 
   .exam-bottom-nav {
-    position: sticky;
+    position: fixed;
+    inset-inline: 0;
     bottom: 0;
     z-index: 40;
     display: flex;

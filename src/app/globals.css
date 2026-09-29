@@ -3,6 +3,7 @@
 @import "../styles/homepage-premium.css";
 @import "../styles/exam-os.css";
 @import "../styles/student-dashboard.css";
+@import "../styles/admin-dashboard.css";
 
 @tailwind base;
 @tailwind components;
@@ -893,7 +894,9 @@
 
   .student-dashboard {
     background: radial-gradient(1200px 500px at 10% 10%, rgba(15,76,62,0.12), transparent), linear-gradient(180deg, rgba(5,8,20,0.95), rgba(6,8,20,0.9));
-    min-height: 100vh;
+    /* The shell already owns the viewport height. A second 100vh here added
+       a full screen of dead scroll under the mobile bottom nav. */
+    min-height: 0;
   }
 
   .student-dashboard h1 {
@@ -1036,6 +1039,15 @@
       radial-gradient(60% 50% at 100% 8%, hsl(18 60% 48% / 0.08), transparent),
       linear-gradient(180deg, hsl(36 39% 96%) 0%, hsl(150 20% 97%) 100%);
     background-attachment: fixed;
+  }
+
+  /* `background-attachment: fixed` forces a full-viewport repaint on every
+     scroll frame on mobile browsers, which visibly stutters the student
+     dashboard. Pin it to the viewport on desktop only. */
+  @media (max-width: 767px), (pointer: coarse) {
+    body {
+      background-attachment: scroll;
+    }
   }
 
   .btn {

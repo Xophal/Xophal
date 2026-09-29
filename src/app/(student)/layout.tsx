@@ -46,7 +46,7 @@ export default async function StudentLayout({ children }: { children: React.Reac
   const firstName = session.profile?.full_name?.split(" ")[0] || "Student";
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(34,211,238,0.12),transparent_24%),radial-gradient(circle_at_bottom_right,_rgba(168,85,247,0.12),transparent_22%),hsl(var(--background))] text-foreground">
+    <div className="min-h-screen overflow-x-clip bg-[radial-gradient(circle_at_top_left,_rgba(34,211,238,0.12),transparent_24%),radial-gradient(circle_at_bottom_right,_rgba(168,85,247,0.12),transparent_22%),hsl(var(--background))] text-foreground">
       <div className="mx-auto flex max-w-[1600px] gap-4 p-0 lg:p-5">
         {/* Desktop rail. Hidden below lg, where the bottom nav takes over. */}
         <div className="hidden lg:block">
@@ -72,8 +72,8 @@ export default async function StudentLayout({ children }: { children: React.Reac
             </div>
           </header>
 
-          <main className="flex-1 pb-24 lg:pb-0">
-            <div className="mx-auto w-full max-w-[1500px] p-4 md:p-6 lg:p-8">{children}</div>
+          <main className="flex-1 pb-20 lg:pb-0">
+            <div className="mx-auto w-full max-w-[1500px] p-3 sm:p-4 md:p-6 lg:p-8">{children}</div>
           </main>
 
           <StudentBottomNav />

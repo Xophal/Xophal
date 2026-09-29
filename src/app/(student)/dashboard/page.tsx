@@ -131,7 +131,7 @@ export default async function DashboardPage() {
         </div>
       </section>
 
-      <section className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <section className="mt-5 grid grid-cols-2 gap-3 xl:grid-cols-4">
         {[
           { label: "Current streak", value: `${streak} days`, icon: Flame, tone: "orange", note: streak > 0 ? "Keep it alive today" : "Start your first streak" },
           { label: "Tests completed", value: `${completedAttempts}`, icon: CheckCircle2, tone: "green", note: `${testsTaken || 0} total attempts` },
@@ -214,7 +214,8 @@ export default async function DashboardPage() {
 
         {scoreTrend.length ? (
           <div className="mt-6">
-            <ul className="flex h-40 items-end gap-2 sm:gap-3">
+            <div className="-mx-1 overflow-x-auto px-1 pb-1">
+              <ul className="flex h-40 min-w-[22rem] items-end gap-2 sm:gap-3">
               {scoreTrend.map((point, index) => (
                 <li key={point.id} className="flex min-w-0 flex-1 flex-col items-center gap-2">
                   <span className="text-[0.6875rem] font-semibold tabular-nums text-slate-300">{point.percentage.toFixed(0)}%</span>
@@ -227,7 +228,8 @@ export default async function DashboardPage() {
                   {index === scoreTrend.length - 1 && <span className="sr-only">Latest score</span>}
                 </li>
               ))}
-            </ul>
+              </ul>
+            </div>
             <p className="mt-4 text-xs text-slate-400">
               Average across these attempts: {(scoreTrend.reduce((sum, p) => sum + p.percentage, 0) / scoreTrend.length).toFixed(1)}%
             </p>
@@ -271,7 +273,12 @@ export default async function DashboardPage() {
       <section className="premium-panel dashboard-surface mt-5 overflow-hidden">
         <div className="flex flex-col gap-3 border-b border-white/10 px-5 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-6"><div><p className="dashboard-eyebrow">Performance log</p><h2 className="mt-1 text-xl font-semibold text-white">Recent test attempts</h2></div><Link href={ROUTES.analytics} className="inline-flex items-center text-sm font-semibold text-cyan-300 hover:text-cyan-200">View analytics <ArrowUpRight className="ml-1 h-4 w-4" /></Link></div>
         <div className="p-4 sm:p-6">
-          {!recentAttempts?.length ? <div className="dashboard-empty-state"><Target className="mx-auto mb-3 h-9 w-9 text-cyan-300" /><p className="text-sm text-slate-300">No tests taken yet.</p><Button asChild className="mt-4 rounded-full"><Link href="/mock-tests">Take your first mock test</Link></Button></div> : <div className="space-y-2">{recentAttempts.map((attempt) => <div key={attempt.id} className="dashboard-attempt"><div className="flex min-w-0 items-center gap-3"><div className="dashboard-attempt-mark"><CheckCircle2 className="h-4 w-4" /></div><div className="min-w-0"><p className="truncate text-sm font-semibold text-white">{getAttemptTitle(attempt)}</p><p className="mt-1 text-xs text-slate-400">{attempt.marks_obtained}/{attempt.total_marks} marks</p></div></div><div className="flex items-center gap-3"><Badge variant={attempt.percentage >= 60 ? "success" : "secondary"}>{attempt.percentage}%</Badge><Button asChild size="sm" variant="outline" className="hidden rounded-full border-white/10 bg-white/5 text-slate-200 hover:bg-white/10 hover:text-white sm:inline-flex"><Link href={`/test/result/${attempt.id}`}>View result</Link></Button></div></div>)}</div>}
+          {!recentAttempts?.length ? <div className="dashboard-empty-state"><Target className="mx-auto mb-3 h-9 w-9 text-cyan-300" /><p className="text-sm text-slate-300">No tests taken yet.</p><Button asChild className="mt-4 rounded-full"><Link href="/mock-tests">Take your first mock test</Link></Button></div> : <div className="space-y-2">{recentAttempts.map((attempt) => (
+              <Link key={attempt.id} href={`/test/result/${attempt.id}`} className="dashboard-attempt group">
+                <div className="flex min-w-0 items-center gap-3"><div className="dashboard-attempt-mark"><CheckCircle2 className="h-4 w-4" /></div><div className="min-w-0"><p className="truncate text-sm font-semibold text-white">{getAttemptTitle(attempt)}</p><p className="mt-1 text-xs text-slate-400">{attempt.marks_obtained}/{attempt.total_marks} marks</p></div></div>
+                <div className="flex shrink-0 items-center gap-2"><Badge variant={attempt.percentage >= 60 ? "success" : "secondary"}>{attempt.percentage}%</Badge><ArrowUpRight className="h-4 w-4 text-slate-500 transition group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-cyan-300" /></div>
+              </Link>
+            ))}</div>}
         </div>
       </section>
 

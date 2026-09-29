@@ -404,6 +404,67 @@ html:not(.dark) .student-dashboard .dashboard-social:hover {
   color: hsl(var(--primary));
 }
 
+/* --- Phone tuning ---------------------------------------------------------
+   Mobile GPUs choke on the stacked backdrop-filter + mask-image decoration
+   that every panel carries on desktop, and the fixed 7-column week strip
+   collapses into unreadable 1fr slivers under ~360px. Drop the expensive
+   effects and tighten the chart rhythm instead of letting the page jank. */
+@media (max-width: 640px) {
+  .premium-panel,
+  .dashboard-metric,
+  .dashboard-surface,
+  .premium-stat-card,
+  .premium-module-card {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+
+  .premium-hero::before,
+  .premium-panel::before,
+  .premium-stat-card::before,
+  .dashboard-metric::before,
+  .dashboard-hero-grid {
+    display: none;
+  }
+
+  .premium-hero-glow {
+    width: 14rem;
+    height: 14rem;
+    bottom: -30%;
+  }
+
+  .dashboard-metric {
+    min-height: 118px;
+    padding: 14px;
+    border-radius: 16px;
+  }
+
+  .student-insight-grid {
+    gap: 0.3rem;
+    min-height: 140px;
+  }
+
+  .student-insight-column {
+    gap: 0.4rem;
+  }
+
+  .student-insight-column span {
+    font-size: 0.6rem;
+    letter-spacing: 0.02em;
+  }
+
+  .student-plan-item,
+  .dashboard-tool,
+  .dashboard-attempt {
+    padding: 0.75rem 0.85rem;
+  }
+
+  /* The whole attempt row is a link now, so it needs a press state. */
+  .dashboard-attempt:active {
+    background: rgba(34, 211, 238, 0.08);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .student-dashboard .dashboard-tool,
   .student-dashboard .dashboard-social,
