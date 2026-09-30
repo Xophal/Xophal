@@ -18,6 +18,7 @@ type SideNavProfile = {
 export function Sidenav({ items, profile, variant = "student" }: { items: NavItem[]; profile?: SideNavProfile | null; variant?: "student" | "admin" }) {
   const pathname = usePathname() || "/";
   const [collapsed, setCollapsed] = useState(false);
+  const [currentHash, setCurrentHash] = useState("");
   const reduceMotion = useReducedMotion();
   const profileRole = Array.isArray(profile?.roles) ? profile.roles[0] : profile?.roles;
 
@@ -31,6 +32,13 @@ export function Sidenav({ items, profile, variant = "student" }: { items: NavIte
     } catch {
       // no-op
     }
+  }, []);
+
+  useEffect(() => {
+    const updateHash = () => setCurrentHash(window.location.hash);
+    updateHash();
+    window.addEventListener("hashchange", updateHash);
+    return () => window.removeEventListener("hashchange", updateHash);
   }, []);
 
   const toggle = () => {
@@ -74,10 +82,16 @@ export function Sidenav({ items, profile, variant = "student" }: { items: NavIte
 
         <nav className="flex-1 space-y-1 overflow-y-auto p-3">
           {items.map((it, index) => {
-            const active =
-              it.href === "/admin"
+            const [itemPath, itemHash] = it.href.split("#");
+            const hasActiveSection = items.some((item) => {
+              const [path, hash] = item.href.split("#");
+              return Boolean(hash && path === pathname && currentHash === `#${hash}`);
+            });
+            const active = itemHash
+              ? pathname === itemPath && currentHash === `#${itemHash}`
+              : it.href === "/admin"
                 ? pathname === it.href
-                : pathname === it.href || pathname.startsWith(`${it.href}/`);
+                : (pathname === it.href || pathname.startsWith(`${it.href}/`)) && !(it.href === "/dashboard" && hasActiveSection);
             const Icon = (Icons as unknown as Record<string, typeof Icons.BookOpen>)[it.icon] || Icons.BookOpen;
             const showGroup = Boolean(it.group) && (index === 0 || items[index - 1].group !== it.group);
 

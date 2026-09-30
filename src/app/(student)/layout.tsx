@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import { Sparkles } from "lucide-react";
 import Sidenav from "@/components/layout/sidenav";
 import StudentBottomNav from "@/components/layout/StudentBottomNav";
@@ -7,16 +8,33 @@ import { assertAccess } from "@/lib/auth-policy";
 import { ROUTES } from "@/constants";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
 import StudentHeaderActions from "@/components/layout/StudentHeaderActions";
+import { createTranslator } from "@/lib/i18n";
+
+const t = createTranslator("en");
 
 const navItems = [
-  { href: ROUTES.dashboard, icon: "LayoutDashboard", label: "Dashboard" },
-  { href: ROUTES.learn, icon: "BookOpen", label: "Learn" },
-  { href: "/mock-tests", icon: "Target", label: "Mock Tests" },
-  { href: ROUTES.analytics, icon: "BarChart3", label: "Analytics" },
-  { href: ROUTES.bookmarks, icon: "Bookmark", label: "Bookmarks" },
-  { href: ROUTES.studyPlanner, icon: "Brain", label: "Study Planner" },
-  { href: ROUTES.achievements, icon: "Trophy", label: "Achievements" },
-  { href: ROUTES.settings, icon: "Settings", label: "Settings" },
+  { href: ROUTES.dashboard, icon: "LayoutDashboard", label: t("nav.dashboard"), group: t("nav.group.home") },
+  { href: "/subjects", icon: "GraduationCap", label: t("nav.exams"), group: t("nav.group.prepare") },
+  { href: "/mock-tests", icon: "Target", label: t("nav.mockTests"), group: t("nav.group.prepare") },
+  { href: ROUTES.learn, icon: "BookOpen", label: t("nav.practice"), group: t("nav.group.prepare") },
+  { href: "/previous-year-papers", icon: "FileText", label: t("nav.pyqs"), group: t("nav.group.prepare") },
+  { href: ROUTES.analytics, icon: "BarChart3", label: t("nav.performance"), group: t("nav.group.progress") },
+  { href: "/dashboard#mastery-title", icon: "ChartNoAxesCombined", label: t("nav.topicMastery"), group: t("nav.group.progress") },
+  { href: "/dashboard#wrong-answers", icon: "RotateCcw", label: t("nav.wrongAnswers"), group: t("nav.group.progress") },
+  { href: ROUTES.leaderboard, icon: "Medal", label: t("nav.leaderboard"), group: t("nav.group.compete") },
+  { href: ROUTES.achievements, icon: "Trophy", label: t("nav.achievements"), group: t("nav.group.compete") },
+  { href: ROUTES.profile, icon: "UserRound", label: t("nav.profile"), group: t("nav.group.account") },
+  { href: ROUTES.notifications, icon: "Bell", label: t("menu.notifications"), group: t("nav.group.account") },
+  { href: ROUTES.settings, icon: "Settings", label: t("nav.settings"), group: t("nav.group.account") },
+];
+
+const topNavItems = [
+  { href: ROUTES.dashboard, label: t("nav.dashboard") },
+  { href: "/subjects", label: t("nav.exams") },
+  { href: "/mock-tests", label: t("nav.mockTests") },
+  { href: ROUTES.learn, label: t("nav.practice") },
+  { href: "/previous-year-papers", label: t("nav.pyqs") },
+  { href: ROUTES.leaderboard, label: t("nav.leaderboard") },
 ];
 
 export default async function StudentLayout({ children }: { children: React.ReactNode }) {
@@ -65,6 +83,14 @@ export default async function StudentLayout({ children }: { children: React.Reac
                 {firstName}&apos;s learning hub
               </span>
             </div>
+
+            <nav className="hidden min-w-0 flex-1 items-center justify-center gap-3 overflow-x-auto px-2 xl:flex 2xl:gap-5" aria-label={t("nav.primary")}>
+              {topNavItems.map((item) => (
+                <Link key={item.href} href={item.href} className="shrink-0 rounded-md px-1 py-2 text-xs font-medium text-slate-300 transition hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300 2xl:text-sm">
+                  {item.label}
+                </Link>
+              ))}
+            </nav>
 
             <div className="flex shrink-0 items-center gap-2">
               <StudentHeaderActions />
