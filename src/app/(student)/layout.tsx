@@ -1,10 +1,11 @@
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { Sparkles } from "lucide-react";
 import Sidenav from "@/components/layout/sidenav";
 import StudentBottomNav from "@/components/layout/StudentBottomNav";
 import { requireAuth } from "@/lib/auth";
 import { assertAccess } from "@/lib/auth-policy";
+import { isAdminRole } from "@/lib/roles";
 import { ROUTES } from "@/constants";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
 import StudentHeaderActions from "@/components/layout/StudentHeaderActions";
@@ -40,6 +41,7 @@ const topNavItems = [
 export default async function StudentLayout({ children }: { children: React.ReactNode }) {
   const session = await requireAuth();
   if (!session) redirect(ROUTES.login);
+  if (isAdminRole(session.profile)) redirect("/admin");
 
   try {
     assertAccess(session.profile, session.user, {
@@ -49,16 +51,7 @@ export default async function StudentLayout({ children }: { children: React.Reac
       allowRoles: ["student"],
     });
   } catch {
-    redirect(ROUTES.dashboard);
-  }
-
-  if (
-    session.profile &&
-    session.profile.roles &&
-    Array.isArray(session.profile.roles) &&
-    session.profile.roles.some((role) => role?.code === "admin" || role?.code === "super_admin" || role?.code === "content_manager")
-  ) {
-    redirect("/admin");
+    notFound();
   }
 
   const firstName = session.profile?.full_name?.split(" ")[0] || "Student";
