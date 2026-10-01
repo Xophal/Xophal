@@ -5,7 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { authRateLimit } from "@/lib/redis";
 import { isAdminRole } from "@/lib/roles";
 import { isMainAdminEmail } from "@/lib/admin-approval";
-import { promoteMainAdminProfile } from "@/lib/auth";
+import { ensureProfile, promoteMainAdminProfile } from "@/lib/auth";
 import { otpVerifySchema } from "@/lib/validations";
 
 function getRequestIp(request: NextRequest) {
@@ -37,11 +37,11 @@ export async function POST(request: NextRequest) {
       throw new ApiError(401, "That code is invalid or expired. Request a new code and try again.", "OTP_INVALID");
     }
 
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("*, roles(code, name)")
-      .eq("id", authData.user.id)
-      .maybeSingle();
+    const profile = await ensureProfile(authData.user);
+    if (!profile) {
+      await supabase.auth.signOut();
+      throw new ApiError(500, "Your account could not be set up. Please try again or contact support.", "PROFILE_SETUP_FAILED");
+    }
 
     // If the verified identity is a configured main administrator, raise its
     // profile to super_admin so /admin access is not blocked by a student role
