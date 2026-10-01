@@ -22,6 +22,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { ATTEMPT_HISTORY_LIMIT, CALENDAR_WEEKS, RESPONSE_ANALYSIS_ATTEMPTS } from "./thresholds";
+import { mergeLeaderboardRows, resolveLeaderboardScope } from "./leaderboard";
 import { addDaysIso, buildDashboardData, todayIso } from "./metrics";
 import type {
   DashboardData,
@@ -275,26 +276,68 @@ async function loadAchievements(supabase: SupabaseClient, userId: string) {
 async function loadLeaderboard(
   supabase: SupabaseClient,
   userId: string,
-  period: LeaderboardPeriod
+  period: LeaderboardPeriod,
+  profile: Pick<DashboardProfile, "board_id" | "class_id">
 ): Promise<{ entries: LeaderboardEntry[]; currentUser: LeaderboardEntry | null }> {
-  const { data, error } = await supabase
+  const scope = resolveLeaderboardScope(period, profile);
+  const snapshotQuery = supabase
     .from("leaderboard_entries")
-    .select("rank, total_xp, tests_completed, user_id, profiles(full_name)")
+    .select("period_start")
+    .eq("period", period);
+
+  if (scope.boardId) snapshotQuery.eq("board_id", scope.boardId);
+  else snapshotQuery.is("board_id", null);
+  if (scope.classId) snapshotQuery.eq("class_id", scope.classId);
+  else snapshotQuery.is("class_id", null);
+
+  const { data: snapshot, error: snapshotError } = await snapshotQuery
+    .order("period_start", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (snapshotError) throw snapshotError;
+  if (!snapshot?.period_start) return { entries: [], currentUser: null };
+
+  const columns = "rank, total_xp, tests_completed, user_id, profiles(full_name)";
+  const entriesQuery = supabase
+    .from("leaderboard_entries")
+    .select(columns)
     .eq("period", period)
+    .eq("period_start", snapshot.period_start)
+    .not("rank", "is", null)
+    .gt("rank", 0)
     .order("rank", { ascending: true })
     .limit(5);
+  const currentUserQuery = supabase
+    .from("leaderboard_entries")
+    .select(columns)
+    .eq("period", period)
+    .eq("period_start", snapshot.period_start)
+    .eq("user_id", userId)
+    .not("rank", "is", null)
+    .gt("rank", 0);
 
+  if (scope.boardId) entriesQuery.eq("board_id", scope.boardId);
+  else entriesQuery.is("board_id", null);
+  if (scope.classId) entriesQuery.eq("class_id", scope.classId);
+  else entriesQuery.is("class_id", null);
+  if (scope.boardId) currentUserQuery.eq("board_id", scope.boardId);
+  else currentUserQuery.is("board_id", null);
+  if (scope.classId) currentUserQuery.eq("class_id", scope.classId);
+  else currentUserQuery.is("class_id", null);
+
+  const [{ data, error }, { data: currentUserRow, error: currentUserError }] = await Promise.all([
+    entriesQuery,
+    currentUserQuery.maybeSingle(),
+  ]);
   if (error) throw error;
+  if (currentUserError) throw currentUserError;
 
-  const rows = (data ?? []) as unknown as {
-    rank: number | null;
-    total_xp: number | null;
-    tests_completed: number | null;
-    user_id: string;
-    profiles: { full_name?: string | null } | { full_name?: string | null }[] | null;
-  }[];
-
-  const entries: LeaderboardEntry[] = rows
+  const uniqueRows = mergeLeaderboardRows(
+    (data ?? []) as unknown as LeaderboardQueryRow[],
+    currentUserRow as unknown as LeaderboardQueryRow | null
+  );
+  const entries: LeaderboardEntry[] = uniqueRows
     .filter((row) => typeof row.rank === "number" && row.rank > 0)
     .map((row) => ({
       rank: row.rank as number,
@@ -307,6 +350,14 @@ async function loadLeaderboard(
 
   return { entries, currentUser: entries.find((entry) => entry.isCurrentUser) ?? null };
 }
+
+type LeaderboardQueryRow = {
+    rank: number | null;
+    total_xp: number | null;
+    tests_completed: number | null;
+    user_id: string;
+    profiles: { full_name?: string | null } | { full_name?: string | null }[] | null;
+  };
 
 type PlanDay = { day?: string; theme?: string; focus?: string; durationMinutes?: number };
 
@@ -329,7 +380,7 @@ async function loadStudyPlan(supabase: SupabaseClient, userId: string, today: st
     title: string;
     start_date: string | null;
     end_date: string | null;
-    plan_data: { days?: PlanDay[] } | null;
+    plan_data: { days?: PlanDay[]; source?: "openai" | "template" } | null;
   };
 
   const days = Array.isArray(plan.plan_data?.days) ? plan.plan_data?.days ?? [] : [];
@@ -343,9 +394,12 @@ async function loadStudyPlan(supabase: SupabaseClient, userId: string, today: st
     title: plan.title,
     startDate,
     endDate: plan.end_date ? plan.end_date.slice(0, 10) : null,
-    // The planner route persists a deterministic plan (no model call today), so
-    // the UI must not call it AI-generated.
-    sourceKey: "plan.sourceStored",
+    sourceKey:
+      plan.plan_data?.source === "openai"
+        ? "plan.sourceAi"
+        : plan.plan_data?.source === "template"
+          ? "plan.sourceTemplate"
+          : "plan.sourceStored",
     tasks: days.slice(0, 7).map((day, index) => ({
       id: `${plan.id}-${index}`,
       label: [day.theme, day.focus].filter(Boolean).join(" · ") || `Day ${index + 1}`,
@@ -373,13 +427,36 @@ export async function loadDashboardData(
   const now = options.now ?? new Date();
   const today = todayIso(now);
   const period = options.leaderboardPeriod ?? "weekly";
+
+  if (process.env.NODE_ENV !== "production" && profile.id.startsWith("local-dev-")) {
+    return buildDashboardData({
+      now,
+      attempts: [],
+      responses: [],
+      questionMeta: new Map(),
+      topics: [],
+      subjects: [],
+      activity: [],
+      achievementsCatalog: [],
+      earnedAchievements: [],
+      leaderboard: { entries: [], currentUser: null },
+      studyPlan: null,
+      profile: {
+        total_xp: profile.total_xp,
+        daily_goal_minutes: profile.daily_goal_minutes,
+        board_id: profile.board_id,
+        class_id: profile.class_id,
+      },
+    });
+  }
+
   const supabase = await createClient();
 
   const [attempts, activity, achievements, leaderboard, studyPlan, difficultyNames] = await Promise.all([
     loadAttempts(supabase, profile.id),
     loadActivity(supabase, profile.id, today),
     loadAchievements(supabase, profile.id),
-    loadLeaderboard(supabase, profile.id, period),
+    loadLeaderboard(supabase, profile.id, period, profile),
     loadStudyPlan(supabase, profile.id, today),
     loadDifficultyNamesSafely(),
   ]);

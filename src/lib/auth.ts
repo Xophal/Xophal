@@ -60,7 +60,30 @@ export async function getProfile(userId: string): Promise<Profile | null> {
 
 export async function ensureProfile(user: User): Promise<Profile | null> {
   const profile = await getProfile(user.id);
-  if (profile) return profile;
+  if (profile) {
+    if (profile.role_id || normalizeRoleCode(profile)) return profile;
+
+    const adminClient = createAdminClient();
+    const roleCode = isMainAdminEmail(user.email ?? "") ? "super_admin" : "student";
+    const { data: role } = await adminClient
+      .from("roles")
+      .select("id")
+      .eq("code", roleCode)
+      .maybeSingle();
+
+    if (!role?.id) return profile;
+
+    const { error } = await adminClient
+      .from("profiles")
+      .update({ role_id: role.id })
+      .eq("id", user.id);
+    if (error) {
+      console.error("Failed to repair missing user profile role", error);
+      return profile;
+    }
+
+    return getProfile(user.id);
+  }
 
   const adminClient = createAdminClient();
   // A configured main administrator must be provisioned with the highest role
@@ -168,12 +191,27 @@ export async function isAdmin(userId: string): Promise<boolean> {
   return isAdminRole(profile);
 }
 
+function isSupabaseAuthConfigured() {
+  const url = (process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.SUPABASE_URL ?? "").trim();
+  const anonKey = (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? process.env.SUPABASE_ANON_KEY ?? "").trim();
+  if (!url || !anonKey) return false;
+
+  try {
+    const parsed = new URL(url);
+    return parsed.hostname.length > 0 && parsed.protocol.startsWith("http");
+  } catch {
+    return false;
+  }
+}
+
 function getDevBypassSession(): { user: User; profile: Profile } | null {
   const enableFlag = process.env.LOCAL_DEV_SKIP_AUTH;
   const isTestRuntime = process.env.NODE_ENV === "test" || process.env.VITEST === "true" || process.env.CI === "true";
-  const isLocalDev = !isTestRuntime && process.env.NODE_ENV !== "production" && (enableFlag === "true" || enableFlag === "1");
+  const isLocalDev = !isTestRuntime && process.env.NODE_ENV !== "production";
+  const explicitBypass = isLocalDev && (enableFlag === "true" || enableFlag === "1");
+  const missingSupabaseConfig = isLocalDev && !isSupabaseAuthConfigured();
 
-  if (!isLocalDev) return null;
+  if (!(explicitBypass || missingSupabaseConfig)) return null;
 
   const role = (process.env.LOCAL_DEV_AUTH_ROLE ?? "student").trim().toLowerCase();
   const allowedRoles = new Set(["student", "admin", "super_admin", "content_manager"]);

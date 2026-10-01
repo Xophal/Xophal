@@ -29,6 +29,7 @@ const learningLinks = [
   { label: "Subjects", href: "/subjects" },
   { label: "Notes", href: "/notes" },
   { label: "Mock Tests", href: "/mock-tests" },
+  { label: "eBooks", href: "/ebooks" },
   { label: "PYQ Papers", href: "/previous-year-papers" },
 ];
 

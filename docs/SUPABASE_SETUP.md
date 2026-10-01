@@ -14,6 +14,10 @@ Supabase setup and local migration guide
   - `SUPABASE_SERVICE_ROLE_KEY` — service role key (sensitive)
   - `NEXT_PUBLIC_APP_URL` — optional app URL (defaults to http://localhost:3000)
   - `SUPABASE_PROJECT_REF` — optional CLI project ref used by `supabase link`
+  - `OPENAI_API_KEY` — optional server-side key for generated study plans; without it, the planner uses a template
+  - `OPENAI_MODEL` — optional model name (defaults to `gpt-4o-mini`)
+  - `RAZORPAY_KEY_ID` / `RAZORPAY_KEY_SECRET` — Razorpay REST credentials for creating and verifying payment orders (e.g. eBook checkout)
+  - `RAZORPAY_WEBHOOK_SECRET` — Razorpay webhook signing secret; the signed webhook at `/api/ebooks/webhook/razorpay` only marks orders `VERIFIED` when this is set
 
 3. Install Supabase CLI (optional, recommended for migrations and local dev)
 
@@ -34,10 +38,13 @@ supabase link --project-ref <YOUR_PROJECT_REF>
 5. Apply database migrations
 
 - The repository contains SQL migrations in the `supabase/migrations/` directory.
+- The eBook marketplace ships as migrations `026_ebook_marketplace.sql` through `029_ebook_razorpay_route.sql` (listings/categories/authors, transactions and payouts, fulfillment/privacy, and Razorpay route hardening). Apply all of them so admin commission rules and the purchase RPCs exist.
 - To apply migrations to your remote project, run:
 
 ```bash
 supabase db push
+# or, from npm (loads .env.local to pick up SUPABASE_PROJECT_REF):
+npm run db:migrate
 ```
 
 - To run a local Supabase instance (for full emulation), run:

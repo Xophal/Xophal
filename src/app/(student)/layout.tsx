@@ -17,8 +17,10 @@ const navItems = [
   { href: ROUTES.dashboard, icon: "LayoutDashboard", label: t("nav.dashboard"), group: t("nav.group.home") },
   { href: "/subjects", icon: "GraduationCap", label: t("nav.exams"), group: t("nav.group.prepare") },
   { href: "/mock-tests", icon: "Target", label: t("nav.mockTests"), group: t("nav.group.prepare") },
+  { href: "/dashboard/ebooks", icon: "BookOpen", label: "My eBooks", group: t("nav.group.account") },
   { href: ROUTES.learn, icon: "BookOpen", label: t("nav.practice"), group: t("nav.group.prepare") },
   { href: "/previous-year-papers", icon: "FileText", label: t("nav.pyqs"), group: t("nav.group.prepare") },
+  { href: "/dashboard#challenge-title", icon: "Flame", label: t("nav.dailyChallenge"), group: t("nav.group.prepare") },
   { href: ROUTES.analytics, icon: "BarChart3", label: t("nav.performance"), group: t("nav.group.progress") },
   { href: "/dashboard#mastery-title", icon: "ChartNoAxesCombined", label: t("nav.topicMastery"), group: t("nav.group.progress") },
   { href: "/dashboard#wrong-answers", icon: "RotateCcw", label: t("nav.wrongAnswers"), group: t("nav.group.progress") },
@@ -35,13 +37,19 @@ const topNavItems = [
   { href: "/mock-tests", label: t("nav.mockTests") },
   { href: ROUTES.learn, label: t("nav.practice") },
   { href: "/previous-year-papers", label: t("nav.pyqs") },
+  { href: "/dashboard#challenge-title", label: t("nav.dailyChallenge") },
   { href: ROUTES.leaderboard, label: t("nav.leaderboard") },
 ];
 
 export default async function StudentLayout({ children }: { children: React.ReactNode }) {
   const session = await requireAuth();
   if (!session) redirect(ROUTES.login);
+  if (!session.profile) redirect("/verify-email");
   if (isAdminRole(session.profile)) redirect("/admin");
+
+  if (!session.profile.email_verified && !session.user.email_confirmed_at) {
+    redirect("/verify-email");
+  }
 
   try {
     assertAccess(session.profile, session.user, {
@@ -86,7 +94,7 @@ export default async function StudentLayout({ children }: { children: React.Reac
             </nav>
 
             <div className="flex shrink-0 items-center gap-2">
-              <StudentHeaderActions />
+              <StudentHeaderActions fullName={session.profile?.full_name ?? null} email={session.profile?.email ?? null} />
               <ThemeToggle />
             </div>
           </header>

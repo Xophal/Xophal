@@ -4,6 +4,7 @@ import BoardShowcase from "@/components/marketing/home/BoardShowcase";
 import HowItWorks from "@/components/marketing/home/HowItWorks";
 import ModernCta from "@/components/marketing/home/ModernCta";
 import StatsBand from "@/components/marketing/home/StatsBand";
+import EbookResources from "@/components/marketing/home/EbookResources";
 import { createClient } from "@/lib/supabase/server";
 
 export default async function HomePage() {
@@ -20,6 +21,7 @@ export default async function HomePage() {
       <StatsBand />
       <BoardShowcase boards={boards ?? []} />
       <BentoFeatures />
+      <EbookResources />
       <HowItWorks />
       <ModernCta />
     </main>

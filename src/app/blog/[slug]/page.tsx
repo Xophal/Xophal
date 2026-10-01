@@ -1,13 +1,14 @@
 import { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { motion } from "framer-motion";
 import Link from "next/link";
 import { ArrowRight, Clock3, Sparkles } from "lucide-react";
 import { APP_NAME } from "@/constants";
 import { blogDemoPosts, getDemoPostBySlug } from "@/data/blog-demo";
+import BlogArticle from "@/components/blog/blog-article";
 
-export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
-  const post = getDemoPostBySlug(params.slug);
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  const { slug } = await params;
+  const post = getDemoPostBySlug(slug);
 
   if (!post) {
     return { title: `Post | ${APP_NAME}` };
@@ -19,8 +20,9 @@ export async function generateMetadata({ params }: { params: { slug: string } })
   };
 }
 
-export default async function PostPage({ params }: { params: { slug: string } }) {
-  const post = getDemoPostBySlug(params.slug);
+export default async function PostPage({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params;
+  const post = getDemoPostBySlug(slug);
 
   if (!post) {
     return notFound();
@@ -30,7 +32,7 @@ export default async function PostPage({ params }: { params: { slug: string } })
 
   return (
     <main className="mx-auto max-w-6xl px-4 py-10 md:px-6 lg:px-8 lg:py-14">
-      <motion.article initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, ease: "easeOut" }} className="space-y-8">
+      <BlogArticle className="space-y-8">
         <header className="overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-[0_28px_80px_rgba(15,23,42,0.08)]">
           <div className={`h-56 bg-gradient-to-br ${post.coverTone} md:h-80`} />
 
@@ -98,7 +100,7 @@ export default async function PostPage({ params }: { params: { slug: string } })
             <ArrowRight className="h-4 w-4" />
           </Link>
         </div>
-      </motion.article>
+      </BlogArticle>
     </main>
   );
 }

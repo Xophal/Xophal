@@ -56,9 +56,13 @@ const publicEnvSchema = z.object({
 
 const serverEnvShape = {
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(1, "SUPABASE_SERVICE_ROLE_KEY is required").optional(),
+  OPENAI_API_KEY: z.string().min(1).optional(),
+  OPENAI_MODEL: z.string().trim().min(1).default("gpt-4o-mini"),
   RAZORPAY_WEBHOOK_SECRET: z.string().min(1).optional(),
+  RAZORPAY_ROUTE_WEBHOOK_SECRET: z.string().min(1).optional(),
   RAZORPAY_KEY_ID: z.string().min(1).optional(),
   RAZORPAY_KEY_SECRET: z.string().min(1).optional(),
+  RAZORPAY_ROUTE_ENABLED: z.enum(["true", "false"]).default("false"),
   UPSTASH_REDIS_REST_URL: z.string().url().optional(),
   UPSTASH_REDIS_REST_TOKEN: z.string().min(1).optional(),
 };
@@ -144,9 +148,13 @@ function formatIssues(error: z.ZodError): string[] {
 /** Server-only configuration. This module must never be imported by client code. */
 export const serverEnv = serverEnvSchema.parse({
   SUPABASE_SERVICE_ROLE_KEY: normalizeOptionalString(process.env.SUPABASE_SERVICE_ROLE_KEY),
+  OPENAI_API_KEY: normalizeOptionalString(process.env.OPENAI_API_KEY),
+  OPENAI_MODEL: normalizeOptionalString(process.env.OPENAI_MODEL) ?? "gpt-4o-mini",
   RAZORPAY_WEBHOOK_SECRET: normalizeOptionalString(process.env.RAZORPAY_WEBHOOK_SECRET),
+  RAZORPAY_ROUTE_WEBHOOK_SECRET: normalizeOptionalString(process.env.RAZORPAY_ROUTE_WEBHOOK_SECRET),
   RAZORPAY_KEY_ID: normalizeOptionalString(process.env.RAZORPAY_KEY_ID),
   RAZORPAY_KEY_SECRET: normalizeOptionalString(process.env.RAZORPAY_KEY_SECRET),
+  RAZORPAY_ROUTE_ENABLED: process.env.RAZORPAY_ROUTE_ENABLED?.trim().toLowerCase() === "true" ? "true" : "false",
   UPSTASH_REDIS_REST_URL: normalizeOptionalString(process.env.UPSTASH_REDIS_REST_URL),
   UPSTASH_REDIS_REST_TOKEN: normalizeOptionalString(process.env.UPSTASH_REDIS_REST_TOKEN),
 });
@@ -174,9 +182,13 @@ export function validateEnv() {
     ),
     NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
     SUPABASE_SERVICE_ROLE_KEY: normalizeOptionalString(process.env.SUPABASE_SERVICE_ROLE_KEY),
+    OPENAI_API_KEY: normalizeOptionalString(process.env.OPENAI_API_KEY),
+    OPENAI_MODEL: normalizeOptionalString(process.env.OPENAI_MODEL) ?? "gpt-4o-mini",
     RAZORPAY_WEBHOOK_SECRET: normalizeOptionalString(process.env.RAZORPAY_WEBHOOK_SECRET),
+    RAZORPAY_ROUTE_WEBHOOK_SECRET: normalizeOptionalString(process.env.RAZORPAY_ROUTE_WEBHOOK_SECRET),
     RAZORPAY_KEY_ID: normalizeOptionalString(process.env.RAZORPAY_KEY_ID),
     RAZORPAY_KEY_SECRET: normalizeOptionalString(process.env.RAZORPAY_KEY_SECRET),
+    RAZORPAY_ROUTE_ENABLED: process.env.RAZORPAY_ROUTE_ENABLED?.trim().toLowerCase() === "true" ? "true" : "false",
     UPSTASH_REDIS_REST_URL: normalizeOptionalString(process.env.UPSTASH_REDIS_REST_URL),
     UPSTASH_REDIS_REST_TOKEN: normalizeOptionalString(process.env.UPSTASH_REDIS_REST_TOKEN),
   };

@@ -1,0 +1,31 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Validate ebook migration",
+			"type": "shell",
+			"command": "npx",
+			"args": [
+				"supabase",
+				"db",
+				"lint",
+				"--local",
+				"--schema",
+				"public"
+			],
+			"isBackground": false,
+			"problemMatcher": []
+		},
+		{
+			"label": "Typecheck marketplace implementation",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"run",
+				"typecheck"
+			],
+			"isBackground": false,
+			"problemMatcher": []
+		}
+	]
+}

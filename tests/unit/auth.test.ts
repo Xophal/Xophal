@@ -4,6 +4,7 @@ import { ApiError } from "@/lib/api-utils";
 // Module under test
 import * as authModule from "@/lib/auth";
 import * as supabaseServer from "@/lib/supabase/server";
+import * as supabaseAdmin from "@/lib/supabase/admin";
 
 describe("requireAdminAuth", () => {
   beforeEach(() => {
@@ -87,6 +88,33 @@ describe("requireAdminAuth", () => {
     } finally {
       vi.unstubAllEnvs();
     }
+  });
+});
+
+describe("ensureProfile", () => {
+  it("repairs an existing profile with no role as a student", async () => {
+    const user = { id: "u5", email: "student@example.com" } as any;
+    const profileWithoutRole = { id: user.id, role_id: null, roles: null };
+    const profileWithRole = { ...profileWithoutRole, role_id: "student-role", roles: { code: "student" } };
+    const profileResult = vi.fn()
+      .mockResolvedValueOnce({ data: profileWithoutRole })
+      .mockResolvedValueOnce({ data: profileWithRole });
+    const supabaseClient: any = {
+      from: vi.fn(() => ({ select: () => ({ eq: () => ({ single: profileResult }) }) })),
+    };
+    const roleLookup = vi.fn().mockResolvedValue({ data: { id: "student-role" } });
+    const updateProfile = vi.fn().mockReturnValue({ eq: vi.fn().mockResolvedValue({ error: null }) });
+    const adminClient: any = {
+      from: vi.fn((table: string) => table === "roles"
+        ? { select: () => ({ eq: () => ({ maybeSingle: roleLookup }) }) }
+        : { update: updateProfile }),
+    };
+    vi.spyOn(supabaseServer, "createClient").mockResolvedValue(supabaseClient);
+    vi.spyOn(supabaseAdmin, "createAdminClient").mockReturnValue(adminClient);
+
+    await expect(authModule.ensureProfile(user)).resolves.toEqual(profileWithRole);
+    expect(updateProfile).toHaveBeenCalledWith({ role_id: "student-role" });
+    expect(profileResult).toHaveBeenCalledTimes(2);
   });
 });
 

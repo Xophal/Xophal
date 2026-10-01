@@ -141,10 +141,12 @@ export default function StudentDashboard({
   data,
   fullName,
   period,
+  isLocalPreview = false,
 }: {
   data: DashboardData;
   fullName: string | null;
   period: LeaderboardPeriod;
+  isLocalPreview?: boolean;
 }) {
   const firstName = fullName?.trim().split(/\s+/)[0] ?? "";
   const goal = data.todayGoal;
@@ -155,6 +157,7 @@ export default function StudentDashboard({
 
   return (
     <div className="student-dashboard premium-dashboard-shell mx-auto max-w-[1500px] space-y-4 sm:space-y-5">
+      {isLocalPreview ? <p role="status" className="rounded-lg border border-amber-300/20 bg-amber-300/10 px-4 py-3 text-sm text-amber-100">Local preview. Supabase is not connected, so saved activity and progress are not loaded.</p> : null}
       <section className="premium-hero relative overflow-hidden rounded-2xl border border-white/10 px-5 py-6 sm:px-7 sm:py-8">
         <div className="dashboard-hero-grid" aria-hidden="true" />
         <div className="relative z-10 flex flex-col justify-between gap-6 md:flex-row md:items-end">

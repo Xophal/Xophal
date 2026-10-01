@@ -2,14 +2,16 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BarChart3, BookOpen, LayoutDashboard, Settings, Target } from "lucide-react";
+import { BarChart3, BookOpen, LayoutDashboard, Target, UserRound } from "lucide-react";
+import { createTranslator } from "@/lib/i18n";
 
+const t = createTranslator("en");
 const ITEMS = [
-  { href: "/dashboard", label: "Home", icon: LayoutDashboard },
-  { href: "/learn", label: "Learn", icon: BookOpen },
-  { href: "/mock-tests", label: "Tests", icon: Target },
-  { href: "/analytics", label: "Insights", icon: BarChart3 },
-  { href: "/settings", label: "Settings", icon: Settings },
+  { href: "/dashboard", label: t("nav.dashboard"), icon: LayoutDashboard },
+  { href: "/learn", label: t("nav.practice"), icon: BookOpen },
+  { href: "/mock-tests", label: t("nav.mockTests"), icon: Target },
+  { href: "/analytics", label: t("nav.performance"), icon: BarChart3 },
+  { href: "/profile", label: t("nav.profile"), icon: UserRound },
 ];
 
 /**
@@ -19,7 +21,7 @@ export default function StudentBottomNav() {
   const pathname = usePathname() || "";
 
   return (
-    <nav className="exam-bottom-nav lg:hidden" aria-label="Primary">
+    <nav className="exam-bottom-nav lg:hidden" aria-label={t("nav.primary")}>
       {ITEMS.map((item) => {
         const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
         const Icon = item.icon;

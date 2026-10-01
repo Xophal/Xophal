@@ -291,6 +291,7 @@ export const en = {
   "plan.emptyDesc": "Create a plan from your board, class and goals. Nothing is labelled AI-generated unless it really was.",
   "plan.emptyCta": "Open Study Planner",
   "plan.sourceAi": "Created by your study planner assistant from the goal you submitted.",
+  "plan.sourceTemplate": "A built-in template was used because AI generation was unavailable.",
   "plan.sourceStored": "Read from the plan saved in your account.",
   "plan.done": "Done",
   "plan.pending": "To do",

@@ -14,5 +14,11 @@
             "database": "mysql",
             "username": "jayanat borah"
         }
-    ]
+    ],
+    "chat.tools.terminal.autoApprove": {
+        "/^npx vitest run tests/unit/auth\\.test\\.ts$/": {
+            "approve": true,
+            "matchCommandLine": true
+        }
+    }
 }

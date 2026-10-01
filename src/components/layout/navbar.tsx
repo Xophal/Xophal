@@ -15,6 +15,7 @@ type AuthResponse = { success: boolean; data?: AuthState };
 const publicLinks = [
   { label: "Home", href: "/" },
   { label: "Tests", href: "/mock-tests" },
+  { label: "eBooks", href: "/ebooks" },
   { label: "Features", href: "/#features" },
   { label: "About", href: "/about" },
   { label: "FAQ", href: "/faq" },

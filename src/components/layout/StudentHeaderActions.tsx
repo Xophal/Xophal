@@ -4,8 +4,9 @@ import { FormEvent, useEffect, useState } from "react";
 import { Search, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import NotificationBell from "@/components/layout/NotificationBell";
+import StudentProfileMenu from "@/components/layout/StudentProfileMenu";
 
-export default function StudentHeaderActions() {
+export default function StudentHeaderActions({ fullName, email }: { fullName: string | null; email: string | null }) {
   const router = useRouter();
   const [searchOpen, setSearchOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -38,6 +39,7 @@ export default function StudentHeaderActions() {
         <button type="button" aria-label="Search mock tests" onClick={() => setSearchOpen(true)} className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white/70 text-slate-600 transition hover:border-emerald-300 hover:text-emerald-700 dark:border-white/10 dark:bg-slate-900/60 dark:text-slate-300"><Search className="h-4 w-4" /></button>
       )}
       <NotificationBell />
+      <StudentProfileMenu fullName={fullName} email={email} />
     </div>
   );
 }

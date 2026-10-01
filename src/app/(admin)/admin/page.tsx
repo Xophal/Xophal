@@ -35,6 +35,7 @@ const adminModules = [
   { title: "Questions", description: "Author, review and publish the question bank", href: "/admin/questions", icon: ShieldCheck },
   { title: "Mock tests", description: "Create and manage timed practice exams", href: "/admin/mock-tests", icon: ClipboardList },
   { title: "Notes", description: "Publish revision notes and study guides", href: "/admin/notes", icon: FileText },
+  { title: "eBooks", description: "Review marketplace listings, reports, and settings", href: "/admin/ebooks", icon: BookOpen },
   { title: "Content hub", description: "Manage posts, lessons, and content drafts", href: "/admin/content", icon: Newspaper },
   { title: "Blogs", description: "Write, schedule and publish SEO articles", href: "/admin/blogs", icon: Newspaper },
   { title: "Imports", description: "Validate bulk CSV imports before publishing", href: "/admin/content/imports", icon: Zap },

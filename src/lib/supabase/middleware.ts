@@ -9,8 +9,19 @@ function copySupabaseCookies(target: NextResponse, source: NextResponse) {
   }
 }
 
+function shouldUseLocalDevBypass() {
+  const isLocalEnv = process.env.NODE_ENV !== "production";
+  const bypassEnabled = process.env.LOCAL_DEV_SKIP_AUTH === "true" || process.env.LOCAL_DEV_SKIP_AUTH === "1";
+  const missingSupabaseConfig = !process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  return isLocalEnv && (bypassEnabled || missingSupabaseConfig);
+}
+
 export async function updateSession(request: NextRequest) {
   const supabaseResponse = NextResponse.next({ request });
+
+  if (shouldUseLocalDevBypass()) {
+    return supabaseResponse;
+  }
 
   const supabase = createServerClient(
     publicEnv.NEXT_PUBLIC_SUPABASE_URL,
@@ -39,20 +50,6 @@ export async function updateSession(request: NextRequest) {
 
   const pathname = request.nextUrl.pathname;
 
-  if (userId && pathname === "/") {
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("role_id, roles(code)")
-      .eq("id", userId)
-      .maybeSingle();
-
-    const url = request.nextUrl.clone();
-    url.pathname = isAdminRole(profile) ? "/admin" : "/dashboard";
-    const redirectResponse = NextResponse.redirect(url);
-    copySupabaseCookies(redirectResponse, supabaseResponse);
-    return redirectResponse;
-  }
-
   const publicPaths = [
     "/",
     "/login",
@@ -64,6 +61,8 @@ export async function updateSession(request: NextRequest) {
     "/verify-email",
     "/auth/callback",
     "/mock-tests",
+    "/ebooks",
+    "/authors",
     "/about",
     "/pricing",
     "/blog",
@@ -78,7 +77,10 @@ export async function updateSession(request: NextRequest) {
     "/sitemap.xml",
   ];
   const isPublicPath =
-    pathname === "/blog" || pathname.startsWith("/blog/") || publicPaths.includes(pathname);
+    pathname === "/blog" || pathname.startsWith("/blog/") ||
+    pathname === "/ebooks" || pathname.startsWith("/ebooks/") ||
+    pathname === "/authors" || pathname.startsWith("/authors/") ||
+    publicPaths.includes(pathname);
   const isAuthPath = ["/login", "/register", "/admin/login", "/admin/register"].some(
     (p) => pathname === p || pathname.startsWith(`${p}/`)
   );
@@ -132,11 +134,20 @@ export async function updateSession(request: NextRequest) {
   if (userId && isAuthPath) {
     const { data: profile } = await supabase
       .from("profiles")
-      .select("role_id, roles(code)")
+      .select("email, email_verified, role_id, roles(code)")
       .eq("id", userId)
       .maybeSingle();
 
     const url = request.nextUrl.clone();
+    if (profile && !profile.email_verified) {
+      url.pathname = "/verify-email";
+      url.search = "";
+      if (profile.email) url.searchParams.set("email", profile.email);
+      const redirectResponse = NextResponse.redirect(url);
+      copySupabaseCookies(redirectResponse, supabaseResponse);
+      return redirectResponse;
+    }
+
     url.pathname = isAdminRole(profile) ? "/admin" : "/dashboard";
     const redirectResponse = NextResponse.redirect(url);
     copySupabaseCookies(redirectResponse, supabaseResponse);

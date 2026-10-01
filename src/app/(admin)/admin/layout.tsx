@@ -28,6 +28,7 @@ const adminNavItems = [
   { href: "/admin/content", icon: "Newspaper", label: "Content hub", group: "Content" },
   { href: "/admin/blogs", icon: "PenLine", label: "Blogs", group: "Content" },
   { href: "/admin/notes", icon: "FileText", label: "Notes", group: "Content" },
+  { href: "/admin/ebooks", icon: "BookOpen", label: "eBooks", group: "Content" },
   { href: "/admin/content/imports", icon: "UploadCloud", label: "Imports", group: "Content" },
 
   // People
