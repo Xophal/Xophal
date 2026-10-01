@@ -5,6 +5,7 @@ import { apiError, apiSuccess, handleApiError, validateBody } from "@/lib/api-ut
 import { requireAuth } from "@/lib/auth";
 import { requireVerifiedSession } from "@/lib/auth-policy";
 import { serverEnv } from "@/lib/env.server";
+import { isCapturedRazorpayPayment } from "@/lib/ebooks/payments";
 import { unlockTestForUser } from "@/lib/test-access";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -62,6 +63,16 @@ export async function POST(request: NextRequest) {
 
     if (!isValidSignature(payload.razorpay_order_id, payload.razorpay_payment_id, payload.razorpay_signature, serverEnv.RAZORPAY_KEY_SECRET)) {
       return apiSuccess({ success: false, message: "Payment verification failed." });
+    }
+
+    const providerPayment = await razorpay.payments.fetch(payload.razorpay_payment_id);
+    if (!isCapturedRazorpayPayment(providerPayment, {
+      paymentId: payload.razorpay_payment_id,
+      orderId: payload.razorpay_order_id,
+      amountMinor: Math.round(Number(payment.amount) * 100),
+      currency: payment.currency,
+    })) {
+      return apiError("Payment has not been captured for the expected amount and currency", 400, "PAYMENT_NOT_CAPTURED");
     }
 
     const unlock = await unlockTestForUser(session.user.id, payload.testId);
