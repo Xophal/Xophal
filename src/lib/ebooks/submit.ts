@@ -225,5 +225,3 @@ export async function updateEbookListing(input: {
 
   return data as CreatedEbookListing;
 }
-
-\n

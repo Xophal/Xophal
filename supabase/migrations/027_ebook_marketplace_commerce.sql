@@ -216,6 +216,3 @@ $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, auth;
 
 REVOKE ALL ON FUNCTION get_ebook_admin_revenue(TIMESTAMPTZ, TIMESTAMPTZ) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION get_ebook_admin_revenue(TIMESTAMPTZ, TIMESTAMPTZ) TO service_role;
-
-
-\n

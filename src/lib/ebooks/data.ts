@@ -158,5 +158,3 @@ export async function getPurchasedEbookIds(userId: string): Promise<string[]> {
     .eq("status", "VERIFIED");
   return [...new Set((data ?? []).map((row) => row.ebook_id))];
 }
-
-\n

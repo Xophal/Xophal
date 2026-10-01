@@ -251,7 +251,3 @@ export async function findOrderById(orderId: string) {
   if (error) throw error;
   return (data as EbookOrderRow) ?? null;
 }
-
-
-
-\n

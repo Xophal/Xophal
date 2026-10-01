@@ -129,5 +129,3 @@ export const ebookMarketplaceConfigSchema = z.object({
 }).refine((value) => value.maxPrice >= value.minPrice, {
   message: "Maximum price must be greater than or equal to the minimum price.",
 });
-
-\n

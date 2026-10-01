@@ -285,8 +285,3 @@ $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, auth;
 
 REVOKE ALL ON FUNCTION get_ebook_sales_summary(UUID) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION get_ebook_sales_summary(UUID) TO service_role;
-
-
-
-
-\n
