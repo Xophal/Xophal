@@ -12,19 +12,23 @@ export default async function LeaderboardPage() {
   }
 
   const supabase = await createClient();
-  const { data: entries } = await supabase.from("leaderboard_entries").select("rank, total_xp, tests_completed, profiles(full_name)").order("rank", { ascending: true }).limit(20);
+  const { data: entries } = await supabase
+    .from("leaderboard_entries")
+    .select("rank, total_xp, tests_completed, profiles(full_name)")
+    .eq("user_id", session.user.id)
+    .limit(1);
 
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="mb-8">
-        <h1 className="text-3xl font-semibold">Leaderboard</h1>
-        <p className="mt-2 text-sm text-muted-foreground">See top performers and track your position.</p>
+        <h1 className="text-3xl font-semibold">Your standing</h1>
+        <p className="mt-2 text-sm text-muted-foreground">Track your rank and test progress.</p>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Top learners</CardTitle>
-          <CardDescription>Rankings update as students complete more tests and lessons.</CardDescription>
+          <CardTitle>Your leaderboard position</CardTitle>
+          <CardDescription>Your rank updates as you complete tests and lessons.</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
@@ -39,7 +43,7 @@ export default async function LeaderboardPage() {
                 <span className="text-sm text-muted-foreground">{item.total_xp} XP</span>
               </div>
               );
-            }) : <p className="text-sm text-muted-foreground">Leaderboard results will appear after students complete tests.</p>}
+            }) : <p className="text-sm text-muted-foreground">Your position will appear after you complete a test.</p>}
           </div>
         </CardContent>
       </Card>
