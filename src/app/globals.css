@@ -4,6 +4,7 @@
 @import "../styles/exam-os.css";
 @import "../styles/student-dashboard.css";
 @import "../styles/admin-dashboard.css";
+@import "../styles/xophol-brand.css";
 
 @tailwind base;
 @tailwind components;
@@ -33,39 +34,39 @@
 
 @layer base {
   :root {
-    --xophol-blue: #00B4FF;
-    --xophol-purple: #8B5CF6;
-    --xophol-navy: #0B183B;
-    --xophol-white: #F8FAFF;
-    --xophol-gold: #D4AF37;
-    --background: 32 42% 97%;
-    --foreground: 155 24% 16%;
+    --xophol-blue: #0B4CC2;
+    --xophol-orange: #FF8A00;
+    --xophol-light-blue: #D9ECFF;
+    --xophol-ice: #F3F7FF;
+    --xophol-navy: #10264D;
+    --background: 220 100% 97.6%;
+    --foreground: 220 65% 17%;
     --card: 0 0% 100%;
-    --card-foreground: 155 24% 16%;
+    --card-foreground: 220 65% 17%;
     --popover: 0 0% 100%;
-    --popover-foreground: 155 24% 16%;
-    --primary: 155 55% 28%;
+    --popover-foreground: 220 65% 17%;
+    --primary: 219 89% 40%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 36 58% 93%;
-    --secondary-foreground: 155 24% 16%;
-    --muted: 33 28% 96%;
-    --muted-foreground: 155 16% 35%;
-    --accent: 12 64% 48%;
-    --accent-foreground: 0 0% 100%;
+    --secondary: 210 100% 92.5%;
+    --secondary-foreground: 220 65% 17%;
+    --muted: 212 65% 95%;
+    --muted-foreground: 218 28% 42%;
+    --accent: 32 100% 50%;
+    --accent-foreground: 220 65% 17%;
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
-    --success: 147 54% 36%;
+    --success: 145 56% 34%;
     --success-foreground: 0 0% 100%;
-    --warning: 38 92% 50%;
-    --warning-foreground: 155 24% 16%;
-    --border: 146 23% 88%;
-    --input: 146 23% 88%;
-    --ring: 155 55% 28%;
-    --radius: 0.75rem;
-    --sidebar: 155 35% 13%;
-    --sidebar-foreground: 155 20% 92%;
-    --sidebar-accent: 155 55% 18%;
-    --sidebar-border: 155 20% 18%;
+    --warning: 32 100% 50%;
+    --warning-foreground: 220 65% 17%;
+    --border: 213 42% 87%;
+    --input: 213 42% 87%;
+    --ring: 219 89% 40%;
+    --radius: 0.625rem;
+    --sidebar: 220 70% 17%;
+    --sidebar-foreground: 220 100% 97%;
+    --sidebar-accent: 218 73% 25%;
+    --sidebar-border: 218 58% 27%;
     --assam-cream: 36 39% 96%;
     --assam-green: 150 60% 26%;
     --assam-gold: 38 80% 58%;
@@ -74,33 +75,33 @@
   }
 
   .dark {
-    --background: 155 30% 9%;
-    --foreground: 150 20% 96%;
-    --card: 150 27% 11%;
-    --card-foreground: 150 20% 96%;
-    --popover: 150 27% 11%;
-    --popover-foreground: 150 20% 96%;
-    --primary: 152 44% 42%;
-    --primary-foreground: 150 30% 9%;
-    --secondary: 156 25% 15%;
-    --secondary-foreground: 150 20% 96%;
-    --muted: 156 20% 12%;
-    --muted-foreground: 150 15% 70%;
-    --accent: 15 52% 46%;
-    --accent-foreground: 150 20% 96%;
+    --background: 220 48% 9%;
+    --foreground: 214 35% 96%;
+    --card: 220 40% 12%;
+    --card-foreground: 214 35% 96%;
+    --popover: 220 40% 12%;
+    --popover-foreground: 214 35% 96%;
+    --primary: 216 91% 61%;
+    --primary-foreground: 220 48% 9%;
+    --secondary: 218 40% 20%;
+    --secondary-foreground: 214 35% 96%;
+    --muted: 219 35% 15%;
+    --muted-foreground: 216 18% 70%;
+    --accent: 32 100% 55%;
+    --accent-foreground: 220 48% 9%;
     --destructive: 0 68% 46%;
     --destructive-foreground: 150 20% 96%;
     --success: 147 54% 36%;
-    --success-foreground: 150 30% 9%;
+    --success-foreground: 220 48% 9%;
     --warning: 38 92% 50%;
-    --warning-foreground: 150 30% 9%;
-    --border: 154 18% 18%;
-    --input: 154 18% 18%;
-    --ring: 152 44% 42%;
-    --sidebar: 155 35% 8%;
-    --sidebar-foreground: 155 20% 92%;
-    --sidebar-accent: 155 55% 18%;
-    --sidebar-border: 155 20% 16%;
+    --warning-foreground: 220 48% 9%;
+    --border: 218 28% 23%;
+    --input: 218 28% 23%;
+    --ring: 216 91% 61%;
+    --sidebar: 220 55% 7%;
+    --sidebar-foreground: 214 35% 96%;
+    --sidebar-accent: 218 55% 16%;
+    --sidebar-border: 218 38% 20%;
   }
 }
 

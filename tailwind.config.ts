@@ -7,6 +7,13 @@ const config = {
   theme: {
     extend: {
       colors: {
+        xophol: {
+          blue: "var(--brand-blue)",
+          orange: "var(--brand-orange)",
+          lightBlue: "var(--brand-light-blue)",
+          ice: "var(--brand-ice)",
+          ink: "var(--brand-ink)",
+        },
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",
@@ -61,9 +68,9 @@ const config = {
         sm: "calc(var(--radius) - 4px)",
       },
       fontFamily: {
-        sans: ["var(--font-geist-sans, system-ui)", "system-ui", "sans-serif"],
+        sans: ["var(--font-poppins, Poppins)", "Poppins", "sans-serif"],
         mono: ["var(--font-geist-mono, ui-monospace)", "monospace"],
-        display: ["var(--font-cabinet, var(--font-geist-sans, system-ui))", "system-ui", "sans-serif"],
+        display: ["var(--font-poppins, Poppins)", "Poppins", "sans-serif"],
       },
       keyframes: {
         "fade-in": {

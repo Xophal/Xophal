@@ -8,12 +8,12 @@ import {
   Instagram,
   Mail,
   MessageCircle,
-  NotebookTabs,
   Phone,
   ShieldCheck,
   Sparkles,
   Trophy,
 } from "lucide-react";
+import BrandWordmark from "@/components/brand/BrandWordmark";
 import { APP_NAME } from "@/constants";
 import { SUPPORT_EMAIL, SUPPORT_PHONE, SUPER_ADMIN_EMAIL, ADMIN_EMAIL, ADMIN_PHONE, phoneHref } from "@/lib/legal";
 
@@ -50,11 +50,10 @@ const legalLinks = [
 
 export function Footer() {
   return (
-    <footer className="relative overflow-hidden border-t border-slate-200/70 bg-slate-950 text-slate-50">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(59,130,246,0.25),transparent_32%),radial-gradient(circle_at_bottom_right,_rgba(168,85,247,0.22),transparent_28%)]" />
+    <footer className="relative overflow-hidden border-t border-white/15 bg-xophol-ink text-slate-50">
 
       <div className="container relative mx-auto px-4 py-12 md:py-16">
-        <div className="rounded-[28px] border border-white/10 bg-white/5 p-5 shadow-[0_25px_80px_rgba(15,23,42,0.5)] backdrop-blur-xl md:p-8">
+          <div className="border-b border-white/15 pb-8 md:pb-10">
           <div className="flex flex-col gap-6 border-b border-white/10 pb-8 md:flex-row md:items-center md:justify-between">
             <div className="max-w-xl">
               <div className="inline-flex items-center gap-2 rounded-full border border-cyan-400/30 bg-cyan-500/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.25em] text-cyan-200">
@@ -85,15 +84,7 @@ export function Footer() {
 
           <div className="mt-8 grid gap-8 md:grid-cols-2 xl:grid-cols-[1.4fr_1fr_1fr_1fr_1.2fr]">
             <div className="space-y-5">
-              <div className="flex items-center gap-3">
-                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-cyan-400 via-blue-500 to-violet-500 shadow-lg shadow-cyan-500/20">
-                  <NotebookTabs className="h-5 w-5 text-white" />
-                </div>
-                <div>
-                  <div className="text-lg font-bold tracking-tight text-white">{APP_NAME}</div>
-                  <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Learn • Practice • Excel</div>
-                </div>
-              </div>
+              <BrandWordmark inverse />
 
               <p className="max-w-sm text-sm leading-6 text-slate-300">
                 Empowering students with focused boards, revision notes, mock test practice,
@@ -110,7 +101,7 @@ export function Footer() {
                       target="_blank"
                       rel="noreferrer"
                       aria-label={s.name}
-                      className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-slate-200 transition duration-200 hover:border-cyan-400/50 hover:bg-cyan-500/10 hover:text-white"
+                      className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-white/15 bg-white/5 text-slate-200 transition duration-200 hover:border-xophol-orange/60 hover:bg-xophol-blue hover:text-white"
                     >
                       <Icon className="h-4 w-4" />
                     </a>
@@ -120,7 +111,7 @@ export function Footer() {
 
               <Link
                 href="/mock-tests"
-                className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-cyan-500 to-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-cyan-500/25 transition hover:brightness-110"
+                className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-xophol-orange px-4 py-2 text-sm font-semibold text-xophol-ink transition hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
               >
                 Start practice
                 <ArrowRight className="h-4 w-4" />
@@ -133,7 +124,7 @@ export function Footer() {
                 {learningLinks.map((link) => (
                   <li key={link.label}>
                     <Link href={link.href} className="inline-flex items-center gap-2 transition hover:text-white">
-                      <BookOpen className="h-3.5 w-3.5 text-cyan-300" />
+                      <BookOpen className="h-3.5 w-3.5 text-xophol-orange" />
                       {link.label}
                     </Link>
                   </li>
@@ -162,7 +153,7 @@ export function Footer() {
                   return (
                     <li key={link.label}>
                       <Link href={link.href} className="inline-flex items-center gap-2 transition hover:text-white">
-                        <Icon className="h-3.5 w-3.5 text-violet-300" />
+                        <Icon className="h-3.5 w-3.5 text-xophol-orange" />
                         {link.label}
                       </Link>
                     </li>
@@ -175,23 +166,23 @@ export function Footer() {
               <h4 className="mb-4 text-sm font-semibold uppercase tracking-[0.24em] text-slate-300">Support</h4>
               <div className="space-y-3 text-sm text-slate-300">
                 <a href={`mailto:${SUPPORT_EMAIL}`} className="inline-flex items-center gap-2 transition hover:text-white">
-                  <Mail className="h-4 w-4 text-cyan-300" />
+                  <Mail className="h-4 w-4 text-xophol-orange" />
                   {SUPPORT_EMAIL}
                 </a>
                 <a href={phoneHref(SUPPORT_PHONE)} className="inline-flex items-center gap-2 transition hover:text-white">
-                  <Phone className="h-4 w-4 text-cyan-300" />
+                  <Phone className="h-4 w-4 text-xophol-orange" />
                   {SUPPORT_PHONE}
                 </a>
                 <a href={phoneHref(ADMIN_PHONE)} className="inline-flex items-center gap-2 transition hover:text-white">
-                  <Phone className="h-4 w-4 text-cyan-300" />
+                  <Phone className="h-4 w-4 text-xophol-orange" />
                   Admin: {ADMIN_PHONE}
                 </a>
                 <a href={`mailto:${SUPER_ADMIN_EMAIL}`} className="inline-flex items-center gap-2 transition hover:text-white">
-                  <Mail className="h-4 w-4 text-cyan-300" />
+                  <Mail className="h-4 w-4 text-xophol-orange" />
                   Super Admin: {SUPER_ADMIN_EMAIL}
                 </a>
                 <a href={`mailto:${ADMIN_EMAIL}`} className="inline-flex items-center gap-2 transition hover:text-white">
-                  <Mail className="h-4 w-4 text-cyan-300" />
+                  <Mail className="h-4 w-4 text-xophol-orange" />
                   Admin: {ADMIN_EMAIL}
                 </a>
                 <div className="pt-1 text-xs text-slate-400">Jorhat, Assam, India</div>

@@ -6,6 +6,7 @@ import { LogOut, Menu, ShieldCheck, User, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { APP_NAME } from "@/constants";
 import NotificationBell from "@/components/layout/NotificationBell";
+import BrandWordmark from "@/components/brand/BrandWordmark";
 import { createClient } from "@/lib/supabase/client";
 
 type SessionUser = { id: string; email?: string; full_name?: string | null };
@@ -59,7 +60,7 @@ export function Navbar() {
   async function logout() {
     try {
       await fetch('/api/auth/logout', { method: 'POST' });
-    } catch (e) {
+    } catch {
       // fallback to client sign out if server route fails
       try {
         await createClient().auth.signOut();
@@ -81,8 +82,9 @@ export function Navbar() {
   return (
     <header className="site-header fixed inset-x-0 top-0 z-50 px-3 py-3 sm:px-4" data-testid="site-header" data-home={pathname === "/" ? "true" : undefined}>
       <nav aria-label="Primary navigation" className="site-navbar mx-auto flex max-w-7xl items-center justify-between gap-3 rounded-2xl px-3 py-2 shadow-lg shadow-primary/5 glass-panel sm:px-4">
-          <Link href="/" className="flex min-h-10 shrink-0 items-center rounded-md px-2 text-base font-bold tracking-tight text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2" aria-label={`${APP_NAME} home`}>
-            {APP_NAME}
+          <Link href="/" className="flex min-h-10 shrink-0 items-center rounded-md px-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2" aria-label={`${APP_NAME} home`}>
+            <BrandWordmark className="hidden sm:inline-flex" />
+            <BrandWordmark variant="compact" className="sm:hidden" />
           </Link>
 
         <div className="hidden items-center gap-1 md:flex">{publicLinks.map((link) => <Link key={link.href} href={link.href} aria-current={isActive(pathname, link.href) ? "page" : undefined} className={navLinkClass(link.href)}>{link.label}</Link>)}{auth?.user && <Link href="/dashboard" aria-current={isActive(pathname, "/dashboard") ? "page" : undefined} className={navLinkClass("/dashboard")}>Dashboard</Link>}{auth?.user && auth.isAdmin && <Link href="/admin" aria-current={isActive(pathname, "/admin") ? "page" : undefined} className={navLinkClass("/admin")}>Admin Dashboard</Link>}</div>
@@ -91,7 +93,7 @@ export function Navbar() {
           <NotificationBell />
           {auth === null ? <div aria-label="Checking account status" className="h-10 w-24 animate-pulse rounded-md bg-muted" /> : auth.user ? (
             <div ref={profileMenuRef} className="relative"><button type="button" aria-expanded={profileOpen} aria-haspopup="menu" onClick={() => setProfileOpen((open) => !open)} className="inline-flex min-h-10 items-center gap-2 rounded-md border bg-background px-3 text-sm font-semibold hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"><span className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/10 text-primary"><User className="h-4 w-4" /></span><span className="max-w-32 truncate">{userName}</span></button>{profileOpen && <div role="menu" className="absolute right-0 mt-2 w-52 rounded-xl border bg-card p-1 shadow-lg"><Link role="menuitem" href="/profile" className="flex min-h-10 items-center gap-2 rounded-lg px-3 text-sm hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"><User className="h-4 w-4" />Profile</Link>{auth.isAdmin && <Link role="menuitem" href="/admin" className="flex min-h-10 items-center gap-2 rounded-lg px-3 text-sm hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"><ShieldCheck className="h-4 w-4" />Admin Dashboard</Link>}<button role="menuitem" type="button" onClick={logout} className="flex min-h-10 w-full items-center gap-2 rounded-lg px-3 text-left text-sm hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"><LogOut className="h-4 w-4" />Log out</button></div>}</div>
-          ) : <><Link href="/login" className="inline-flex min-h-10 items-center rounded-md px-3 text-sm font-semibold hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">Login</Link><Link href="/register" className="inline-flex min-h-10 items-center rounded-md bg-primary px-4 text-sm font-semibold text-primary-foreground hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">Sign Up</Link></>}
+          ) : <><Link href="/login" className="inline-flex min-h-10 items-center rounded-md px-3 text-sm font-semibold hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">Login</Link><Link href="/register" className="inline-flex min-h-10 items-center rounded-lg bg-xophol-orange px-4 text-sm font-semibold text-xophol-ink hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">Sign Up</Link></>}
         </div>
 
         <button type="button" aria-label={menuOpen ? "Close navigation menu" : "Open navigation menu"} aria-expanded={menuOpen} aria-controls="mobile-navigation" onClick={() => setMenuOpen((open) => !open)} className="site-menu-button inline-flex h-11 w-11 items-center justify-center rounded-md hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 md:hidden">{menuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}</button>
@@ -127,7 +129,7 @@ export function Navbar() {
             {auth && !auth.user && (
               <div className="mt-2 grid grid-cols-2 gap-2 border-t pt-3">
                 <Link href="/login" className="inline-flex min-h-11 items-center justify-center rounded-md border font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">Login</Link>
-                <Link href="/register" className="inline-flex min-h-11 items-center justify-center rounded-md bg-primary font-semibold text-primary-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">Sign Up</Link>
+                <Link href="/register" className="inline-flex min-h-11 items-center justify-center rounded-lg bg-xophol-orange font-semibold text-xophol-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">Sign Up</Link>
               </div>
             )}
           </div>

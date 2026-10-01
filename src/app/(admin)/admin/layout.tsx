@@ -72,11 +72,11 @@ export default async function AdminLayout({ children }: { children: ReactNode })
   }
 
   return (
-    <div className="flex min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(14,165,233,0.12),transparent_24%),radial-gradient(circle_at_bottom_right,_rgba(168,85,247,0.12),transparent_20%),hsl(var(--background))]">
+    <div className="flex min-h-screen bg-background">
       <Sidenav items={adminNavItems} profile={session.profile} variant="admin" />
 
       <div className="flex flex-1 flex-col">
-        <header className="flex h-16 items-center justify-between border-b border-border/80 bg-[linear-gradient(135deg,rgba(15,23,42,0.82),rgba(15,23,42,0.68))] px-4 shadow-[0_18px_50px_rgba(15,23,42,0.08)] backdrop-blur-xl md:px-6">
+        <header className="flex h-16 items-center justify-between border-b border-white/15 bg-xophol-ink px-4 text-white shadow-md md:px-6">
           <Link href="/admin" className="font-semibold text-white md:hidden">
             Xophol Admin
           </Link>

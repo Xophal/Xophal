@@ -64,7 +64,7 @@ export default function AdminDashboardPage() {
 
   return (
     <AdminPage>
-      <section className="premium-hero admin-hero relative overflow-hidden rounded-[30px] border border-white/10 px-5 py-7 sm:px-8 sm:py-9">
+      <section className="premium-hero admin-hero relative overflow-hidden rounded-lg border border-white/10 px-5 py-7 sm:px-8 sm:py-9">
         <div className="dashboard-hero-grid" />
         <div className="premium-hero-glow premium-hero-glow--admin" />
 
@@ -82,7 +82,7 @@ export default function AdminDashboardPage() {
             <div className="mt-7 flex flex-wrap gap-3">
               <Link
                 href="/admin/content/imports"
-                className="inline-flex items-center gap-2 rounded-full bg-cyan-400 px-5 py-2.5 text-sm font-semibold text-slate-950 transition hover:bg-cyan-300"
+                className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-xophol-orange px-5 py-2.5 text-sm font-semibold text-xophol-ink transition hover:brightness-95"
               >
                 Import content <ArrowRight className="h-4 w-4" />
               </Link>

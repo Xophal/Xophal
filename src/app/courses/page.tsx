@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, GraduationCap } from "lucide-react";
+import { ArrowRight, BookOpen, Target } from "lucide-react";
 import { APP_NAME } from "@/constants";
 
 export const metadata = {
@@ -19,7 +19,7 @@ export default function CoursesPage() {
 
         <div className="grid gap-6 md:grid-cols-2">
           <div className="rounded-2xl border bg-card p-6 shadow-sm">
-            <GraduationCap className="mb-4 h-8 w-8 text-primary" />
+            <BookOpen className="mb-4 h-8 w-8 text-primary" aria-hidden="true" />
             <h2 className="mb-2 text-xl font-semibold">Class 9 & 10 Programs</h2>
             <p className="mb-4 text-sm text-muted-foreground">Aligned to SEBA and CBSE concepts with notes, practice questions, and revision tools.</p>
             <Link href="/notes" className="inline-flex items-center gap-2 text-sm font-semibold text-primary">
@@ -28,7 +28,7 @@ export default function CoursesPage() {
           </div>
 
           <div className="rounded-2xl border bg-card p-6 shadow-sm">
-            <GraduationCap className="mb-4 h-8 w-8 text-primary" />
+            <Target className="mb-4 h-8 w-8 text-xophol-orange" aria-hidden="true" />
             <h2 className="mb-2 text-xl font-semibold">Exam Preparation Paths</h2>
             <p className="mb-4 text-sm text-muted-foreground">Targeted mock tests and previous year paper practice for competitive success.</p>
             <Link href="/previous-year-papers" className="inline-flex items-center gap-2 text-sm font-semibold text-primary">

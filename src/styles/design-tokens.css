@@ -1,5 +1,11 @@
 /* Shared aliases and visual tokens for components that still use the legacy names. */
 :root {
+  --brand-blue: #0B4CC2;
+  --brand-orange: #FF8A00;
+  --brand-light-blue: #D9ECFF;
+  --brand-ice: #F3F7FF;
+  --brand-ink: #10264D;
+
   --color-background: var(--background);
   --color-surface: var(--card);
   --color-elevated: var(--popover);
@@ -40,6 +46,7 @@
   --space-3: 12px;
   --space-4: 16px;
   --space-5: 24px;
+  --space-6: 32px;
 
   /* SHADOWS */
   --shadow-1: 0 6px 18px rgba(2,6,23, calc(var(--glass-shadow-intensity)));

@@ -4,14 +4,14 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "inline-flex min-h-11 items-center justify-center gap-2 whitespace-nowrap rounded-xl text-sm font-semibold ring-offset-background transition-[background-color,border-color,color,box-shadow,transform] duration-200 ease-out transform-gpu focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-55 shadow-sm hover:shadow-md active:translate-y-0.5 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
+  "inline-flex min-h-11 items-center justify-center gap-2 whitespace-nowrap rounded-lg text-sm font-semibold ring-offset-background transition-[background-color,border-color,color,box-shadow,transform] duration-200 ease-out transform-gpu focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-55 shadow-sm hover:shadow-md active:translate-y-0.5 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
   {
     variants: {
       variant: {
-        default: "bg-gradient-to-r from-primary to-secondary text-white hover:brightness-110 hover:shadow-lg",
+        default: "bg-xophol-orange text-xophol-ink hover:brightness-95 hover:shadow-md",
         destructive: "bg-gradient-to-r from-red-600 to-rose-600 text-white hover:brightness-110 hover:shadow-lg",
-        outline: "border border-border bg-background/80 text-foreground hover:border-primary/50 hover:bg-muted hover:text-foreground backdrop-blur",
-        secondary: "border border-border/70 bg-secondary text-secondary-foreground hover:border-primary/30 hover:bg-secondary/80 hover:text-secondary-foreground",
+        outline: "border border-xophol-blue bg-transparent text-xophol-blue hover:bg-xophol-ice hover:text-xophol-blue",
+        secondary: "border border-xophol-lightBlue bg-xophol-lightBlue text-xophol-blue hover:bg-xophol-lightBlue/70 hover:text-xophol-blue",
         ghost: "bg-transparent text-foreground hover:bg-muted hover:text-foreground",
         link: "text-primary underline-offset-4 hover:text-primary hover:underline",
         success: "bg-gradient-to-r from-emerald-600 to-teal-600 text-white hover:brightness-110 hover:shadow-lg",

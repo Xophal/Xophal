@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import * as Icons from "lucide-react";
+import BrandWordmark from "@/components/brand/BrandWordmark";
 
 type NavItem = { href: string; icon: string; label: string; group?: string };
 type SideNavProfile = {
@@ -57,16 +58,17 @@ export function Sidenav({ items, profile, variant = "student" }: { items: NavIte
         initial={{ opacity: reduceMotion ? 1 : 0, x: reduceMotion ? 0 : -12 }}
         animate={{ opacity: 1, x: 0 }}
         transition={{ duration: reduceMotion ? 0 : 0.3 }}
-        className="flex h-full min-h-[calc(100vh-1.5rem)] flex-col overflow-hidden rounded-[28px] border border-white/10 bg-[radial-gradient(circle_at_top,_rgba(34,211,238,0.14),transparent_22%),linear-gradient(180deg,rgba(12,18,29,0.98),rgba(9,13,20,0.96))] text-slate-100 shadow-[0_30px_80px_rgba(15,23,42,0.28)] backdrop-blur-xl dark:border-white/10"
+        className="flex h-full min-h-[calc(100vh-1.5rem)] flex-col overflow-hidden rounded-lg border border-white/10 bg-[linear-gradient(180deg,rgba(11,76,194,0.16),transparent_28%),linear-gradient(180deg,rgba(16,38,77,0.99),rgba(7,22,48,0.98))] text-slate-100 shadow-[0_24px_60px_rgba(16,38,77,0.22)]"
       >
         <div className="flex items-center justify-between border-b border-white/10 px-4 py-4 md:px-5">
           <div className="flex items-center overflow-hidden">
             {!collapsed && (
               <div className="min-w-0">
-                <div className="text-sm font-black tracking-[0.2em] text-white/90">XOPHOL</div>
-                <div className="text-[10px] uppercase tracking-[0.2em] text-slate-400">{variant === "admin" ? "control room" : "student"}</div>
+                <BrandWordmark inverse />
+                <div className="mt-1 text-[10px] uppercase text-slate-300">{variant === "admin" ? "Control room" : "Student"}</div>
               </div>
             )}
+            {collapsed ? <BrandWordmark variant="compact" inverse /> : null}
           </div>
 
           <button
@@ -74,7 +76,7 @@ export function Sidenav({ items, profile, variant = "student" }: { items: NavIte
             aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
             aria-expanded={!collapsed}
             onClick={toggle}
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-slate-200 transition hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 motion-reduce:transition-none"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-white/15 bg-white/5 text-slate-200 transition hover:border-xophol-orange/60 hover:bg-xophol-blue/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-xophol-orange focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 motion-reduce:transition-none"
           >
             {collapsed ? <ChevronRight className="h-4 w-4" aria-hidden="true" /> : <ChevronLeft className="h-4 w-4" aria-hidden="true" />}
           </button>
@@ -106,16 +108,16 @@ export function Sidenav({ items, profile, variant = "student" }: { items: NavIte
                   href={it.href}
                   className={`group relative flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-medium transition-all ${
                     active
-                      ? "bg-[linear-gradient(90deg,rgba(16,185,129,0.18),rgba(59,130,246,0.18))] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_12px_30px_rgba(34,211,238,0.12)]"
+                      ? "bg-[linear-gradient(90deg,rgba(11,76,194,0.38),rgba(255,138,0,0.14))] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_10px_24px_rgba(11,76,194,0.2)]"
                       : "text-slate-300 hover:bg-white/5 hover:text-white"
                   }`}
                 >
-                  <motion.span whileHover={{ scale: 1.04 }} className={`flex h-8 w-8 items-center justify-center rounded-xl text-xs ${active ? "bg-[linear-gradient(135deg,rgba(52,211,153,0.28),rgba(59,130,246,0.2))] text-emerald-100" : "bg-white/5"}`}>
+                  <motion.span whileHover={{ scale: 1.04 }} className={`flex h-8 w-8 items-center justify-center rounded-md text-xs ${active ? "bg-[linear-gradient(135deg,rgba(11,76,194,0.62),rgba(255,138,0,0.26))] text-white" : "bg-white/5"}`}>
                     <Icon className="h-4 w-4" />
                   </motion.span>
                   {!collapsed && <span className="truncate">{it.label}</span>}
                   {active && !collapsed && (
-                    <motion.span layoutId="sidenav-active" className="ml-auto h-2.5 w-2.5 rounded-full bg-emerald-400 shadow-[0_0_18px_rgba(52,211,153,0.9)]" />
+                    <motion.span layoutId="sidenav-active" className="ml-auto h-2.5 w-2.5 rounded-full bg-xophol-orange" />
                   )}
                 </Link>
               </div>
@@ -127,7 +129,7 @@ export function Sidenav({ items, profile, variant = "student" }: { items: NavIte
           {!collapsed ? (
             <div className="rounded-2xl border border-white/10 bg-[linear-gradient(135deg,rgba(15,23,42,0.8),rgba(30,41,59,0.7))] p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
               <div className="flex items-center gap-3">
-                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[linear-gradient(135deg,#d1fae5,#bfdbfe)] text-sm font-bold text-slate-900 shadow-[0_12px_30px_rgba(125,211,252,0.25)]">
+                <div className="flex h-11 w-11 items-center justify-center rounded-md bg-xophol-lightBlue text-sm font-bold text-xophol-blue">
                   {profile?.full_name?.charAt(0)?.toUpperCase() || "S"}
                 </div>
                 <div className="min-w-0 flex-1">
@@ -135,14 +137,14 @@ export function Sidenav({ items, profile, variant = "student" }: { items: NavIte
                   <p className="truncate text-xs text-slate-400">{profile?.email || "student@xophol.com"}</p>
                 </div>
               </div>
-              <div className="mt-3 flex items-center justify-between rounded-xl border border-emerald-400/20 bg-emerald-500/10 px-2 py-1.5 text-[11px] font-medium text-emerald-300">
+              <div className="mt-3 flex items-center justify-between rounded-md border border-xophol-orange/25 bg-xophol-orange/10 px-2 py-1.5 text-[11px] font-medium text-orange-200">
                 <span>{variant === "admin" ? "Access level" : "Learning streak"}</span>
                 <span>{variant === "admin" ? profileRole?.name || profileRole?.code || "Admin" : `${profile?.current_streak || 0}d`}</span>
               </div>
             </div>
           ) : (
             <div className="flex items-center justify-center">
-              <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[linear-gradient(135deg,#d1fae5,#bfdbfe)] text-sm font-bold text-slate-900 shadow-[0_12px_30px_rgba(125,211,252,0.25)]">
+              <div className="flex h-10 w-10 items-center justify-center rounded-md bg-xophol-lightBlue text-sm font-bold text-xophol-blue">
                 {profile?.full_name?.charAt(0)?.toUpperCase() || "S"}
               </div>
             </div>

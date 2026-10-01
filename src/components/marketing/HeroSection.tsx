@@ -2,15 +2,15 @@
 
 import Link from "next/link";
 import { motion, useReducedMotion } from "framer-motion";
-import { ArrowRight, ArrowUpRight, BarChart3, BookOpen, Check, Rocket, ShieldCheck, Star, Timer } from "lucide-react";
+import { ArrowRight, ArrowUpRight, BarChart3, BookOpen, Check, ClipboardCheck, Target, Timer } from "lucide-react";
 
 const trustPoints = ["Free to start", "No card needed", "CBSE & SEBA syllabus"];
 
 const featureHighlights = [
-  { icon: ShieldCheck, title: "Real Exam\nPattern" },
-  { icon: BarChart3, title: "Detailed\nAnalysis" },
-  { icon: Star, title: "Track Your\nProgress" },
-  { icon: Rocket, title: "Achieve\nYour Goals" },
+  { icon: BookOpen, title: "Study\nResources" },
+  { icon: ClipboardCheck, title: "Practice\nTests" },
+  { icon: BarChart3, title: "Track Your\nProgress" },
+  { icon: Target, title: "Achieve\nYour Goals" },
 ];
 
 export function HeroSection() {
@@ -86,27 +86,6 @@ export function HeroSection() {
             </ol>
             <div className="hx-prep-path__foot"><span>Built around your syllabus</span><span>Made for steady progress</span></div>
 
-            <div className="hx-prep-path__pulse" aria-label="Current performance pulse">
-              <div className="hx-prep-path__pulse-top">
-                <span>Score pulse</span>
-                <strong>84%</strong>
-              </div>
-
-              <div className="hx-prep-path__meter" aria-hidden="true">
-                <span style={{ width: "84%" }} />
-              </div>
-
-              <div className="hx-prep-path__mini-grid">
-                <div>
-                  <small>Accuracy</small>
-                  <strong>88%</strong>
-                </div>
-                <div>
-                  <small>Streak</small>
-                  <strong>12 days</strong>
-                </div>
-              </div>
-            </div>
           </motion.aside>
         </div>
 

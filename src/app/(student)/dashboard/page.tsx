@@ -88,7 +88,7 @@ export default async function DashboardPage() {
 
   return (
     <div className="student-dashboard premium-dashboard-shell mx-auto max-w-[1500px] px-1 py-3 sm:px-2 lg:px-4">
-      <section className="premium-hero relative overflow-hidden rounded-[30px] border border-white/10 px-5 py-7 sm:px-8 sm:py-9">
+      <section className="premium-hero relative overflow-hidden rounded-lg border border-white/10 px-5 py-7 sm:px-8 sm:py-9">
         <div className="dashboard-hero-grid" />
         <div className="premium-hero-glow" />
         <div className="relative z-10 flex flex-col justify-between gap-8 lg:flex-row lg:items-end">
@@ -99,7 +99,7 @@ export default async function DashboardPage() {
             <h1 className="max-w-xl text-3xl font-semibold tracking-tight text-white sm:text-5xl">{getGreeting()}, {firstName}.</h1>
             <p className="mt-3 max-w-lg text-sm leading-6 text-slate-300 sm:text-base">A focused session today compounds into a stronger exam day tomorrow. Keep your momentum moving.</p>
             <div className="mt-7 flex flex-wrap gap-3">
-              <Button asChild className="dashboard-primary-action rounded-full px-5 shadow-lg shadow-cyan-500/10">
+              <Button asChild className="dashboard-primary-action rounded-lg px-5 shadow-none">
                 <Link href="/mock-tests"><Play className="mr-2 h-4 w-4 fill-current" /> Start a mock test</Link>
               </Button>
               <Button asChild variant="outline" className="rounded-full border-white/15 bg-white/5 px-5 text-white hover:bg-white/10 hover:text-white">
