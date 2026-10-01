@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
       // Non-fatal in dev: continue if limiter has issues
     }
     const { error } = await supabase.auth.resetPasswordForEmail(parsed.data.email.toLowerCase(), {
-      redirectTo: `${publicEnv.NEXT_PUBLIC_APP_URL}/auth/callback?next=/reset-password`,
+      redirectTo: `${publicEnv.NEXT_PUBLIC_APP_URL}/reset-password`,
     });
     if (error) {
       console.error("Password reset email request failed", { code: error.code, status: error.status });

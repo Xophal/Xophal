@@ -34,7 +34,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
    */
   try {
     const supabase = await createClient();
-    const [boardsResult, booksResult, categoriesResult, contributorsResult] = await Promise.all([
+    const [boardsResult, booksResult, categoriesResult, contributorsResult, blogsResult] = await Promise.all([
       supabase.from("boards").select("slug").eq("is_active", true),
       supabase
         .from("ebook_listings")
@@ -44,6 +44,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         .limit(2000),
       supabase.from("ebook_categories").select("slug").eq("is_active", true),
       supabase.from("ebook_contributors").select("slug").limit(1000),
+      supabase.from("blogs").select("slug, updated_at").eq("is_published", true).order("published_at", { ascending: false }).limit(2000),
     ]);
 
     const boardRoutes: MetadataRoute.Sitemap = (boardsResult.data ?? []).map((board) => ({
@@ -67,8 +68,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: "monthly" as const,
       priority: 0.5,
     }));
+    const blogRoutes: MetadataRoute.Sitemap = (blogsResult.data ?? []).map((post) => ({
+      url: `${base}/blog/${post.slug}`,
+      lastModified: post.updated_at ? new Date(post.updated_at) : undefined,
+      changeFrequency: "monthly" as const,
+      priority: 0.6,
+    }));
 
-    return [...staticRoutes, ...boardRoutes, ...bookRoutes, ...categoryRoutes, ...authorRoutes];
+    return [...staticRoutes, ...boardRoutes, ...bookRoutes, ...categoryRoutes, ...authorRoutes, ...blogRoutes];
   } catch {
     return staticRoutes;
   }

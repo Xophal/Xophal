@@ -2,11 +2,12 @@ import { NextRequest } from "next/server";
 import { z } from "zod";
 import { requireAdminAuth } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { apiSuccess, handleApiError, getPaginationParams, paginatedResponse, validateBody } from "@/lib/api-utils";
+import { ApiError, apiSuccess, handleApiError, getPaginationParams, paginatedResponse, validateBody } from "@/lib/api-utils";
+import { createBlogSlug } from "@/lib/blog-content";
 
 const blogSchema = z.object({
-  title: z.string().min(2).max(500),
-  slug: z.string().min(2).max(500),
+  title: z.string().trim().min(2).max(500),
+  slug: z.string().trim().max(500).optional().or(z.literal("")),
   excerpt: z.string().max(2000).optional().or(z.literal("")),
   content: z.string().max(200000).optional().or(z.literal("")),
   featured_image_url: z.string().url().optional().or(z.literal("")),
@@ -46,10 +47,13 @@ export async function POST(request: NextRequest) {
   try {
     const session = await requireAdminAuth();
     const payload = await validateBody(blogSchema, await request.json());
+    if (payload.is_published && !payload.content?.trim()) {
+      throw new ApiError(400, "Add article content before publishing.", "BLOG_CONTENT_REQUIRED");
+    }
 
     const row = {
       title: payload.title,
-      slug: payload.slug,
+      slug: createBlogSlug(payload.slug || payload.title),
       excerpt: payload.excerpt || null,
       content: payload.content || null,
       featured_image_url: payload.featured_image_url || null,
@@ -62,6 +66,7 @@ export async function POST(request: NextRequest) {
     };
 
     const { data, error } = await createAdminClient().from("blogs").insert([row]).select().single();
+    if (error?.code === "23505") throw new ApiError(409, "That article URL is already in use. Choose a different slug.", "SLUG_TAKEN");
     if (error) throw error;
     return apiSuccess(data, 201);
   } catch (error) {

@@ -1,12 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Newspaper, Pencil, Plus, Search } from "lucide-react";
+import Link from "next/link";
+import { ExternalLink, Newspaper, Pencil, Plus, Search, Trash2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { AdminChip, AdminEmpty, AdminLoading, AdminPage, AdminPageHeader, AdminPanel, AdminPagination, AdminToolbar, readList } from "@/components/admin/ui";
+import { createBlogSlug } from "@/lib/blog-content";
 
 type Blog = {
   id: string;
@@ -42,22 +44,26 @@ export default function AdminBlogsPage() {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [query, setQuery] = useState("");
+  const [status, setStatus] = useState("all");
   const [form, setForm] = useState(blank);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [slugTouched, setSlugTouched] = useState(false);
+  const [editingLoading, setEditingLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
   const limit = 10;
 
   useEffect(() => {
-    load(page, query);
+    load(page, query, status);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, query]);
+  }, [page, query, status]);
 
-  async function load(current: number, q: string) {
+  async function load(current: number, q: string, currentStatus = status) {
     setLoading(true);
     try {
       const params = new URLSearchParams({ page: String(current), limit: String(limit) });
       if (q) params.set("q", q);
+      if (currentStatus !== "all") params.set("published", currentStatus);
       const res = await fetch(`/api/admin/blogs?${params.toString()}`, { cache: "no-store" });
       const json = await res.json();
       if (!res.ok || !json.success) throw new Error(json.error || "Failed to load blogs");
@@ -77,20 +83,32 @@ export default function AdminBlogsPage() {
     setQuery(search.trim());
   }
 
-  function editBlog(blog: Blog) {
-    setEditingId(blog.id);
-    setForm({
-      title: blog.title,
-      slug: blog.slug,
-      excerpt: blog.excerpt || "",
-      content: blog.content || "",
-      featured_image_url: blog.featured_image_url || "",
-      tags: (blog.tags || []).join(", "),
-      is_published: blog.is_published,
-      meta_title: blog.meta_title || "",
-      meta_description: blog.meta_description || "",
-    });
-    window.scrollTo({ top: 0, behavior: "smooth" });
+  async function editBlog(blog: Blog) {
+    setEditingLoading(true);
+    try {
+      const response = await fetch(`/api/admin/blogs/${blog.id}`, { cache: "no-store" });
+      const json = await response.json();
+      if (!response.ok || !json.success) throw new Error(json.error || "Could not load this post");
+      const fullPost = json.data as Blog;
+      setEditingId(fullPost.id);
+      setSlugTouched(true);
+      setForm({
+        title: fullPost.title,
+        slug: fullPost.slug,
+        excerpt: fullPost.excerpt || "",
+        content: fullPost.content || "",
+        featured_image_url: fullPost.featured_image_url || "",
+        tags: (fullPost.tags || []).join(", "),
+        is_published: fullPost.is_published,
+        meta_title: fullPost.meta_title || "",
+        meta_description: fullPost.meta_description || "",
+      });
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    } catch (error) {
+      toast({ title: "Could not open post", description: error instanceof Error ? error.message : "Please try again.", variant: "destructive" });
+    } finally {
+      setEditingLoading(false);
+    }
   }
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -102,7 +120,7 @@ export default function AdminBlogsPage() {
         slug: form.slug,
         excerpt: form.excerpt,
         content: form.content,
-        featured_image_url: form.featured_image_url || undefined,
+        featured_image_url: form.featured_image_url,
         tags: form.tags.split(",").map((t) => t.trim()).filter(Boolean),
         is_published: form.is_published,
         meta_title: form.meta_title,
@@ -118,6 +136,7 @@ export default function AdminBlogsPage() {
       toast({ title: editingId ? "Post updated" : "Post created", description: `${form.title} has been saved.` });
       setForm(blank);
       setEditingId(null);
+      setSlugTouched(false);
       await load(page, query);
     } catch (error) {
       toast({ title: "Save failed", description: error instanceof Error ? error.message : "Please try again.", variant: "destructive" });
@@ -134,7 +153,25 @@ export default function AdminBlogsPage() {
     });
     const json = await res.json().catch(() => ({}));
     if (!res.ok || !json.success) return toast({ title: "Update failed", description: json.error || "Could not update post", variant: "destructive" });
-    setBlogs((prev) => prev.map((b) => (b.id === blog.id ? { ...b, is_published: !blog.is_published } : b)));
+    toast({ title: blog.is_published ? "Post unpublished" : "Post published", description: blog.title });
+    await load(page, query);
+  }
+
+  async function deleteBlog(blog: Blog) {
+    if (!window.confirm(`Delete "${blog.title}"? This cannot be undone.`)) return;
+    const response = await fetch(`/api/admin/blogs/${blog.id}`, { method: "DELETE" });
+    const json = await response.json().catch(() => ({}));
+    if (!response.ok || !json.success) {
+      toast({ title: "Delete failed", description: json.error || "Could not delete post", variant: "destructive" });
+      return;
+    }
+    if (editingId === blog.id) {
+      setEditingId(null);
+      setForm(blank);
+      setSlugTouched(false);
+    }
+    toast({ title: "Post deleted", description: blog.title });
+    await load(page, query);
   }
 
   return (
@@ -151,12 +188,12 @@ export default function AdminBlogsPage() {
           <form onSubmit={onSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="blog-title">Title</Label>
-              <Input id="blog-title" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="10 study habits that actually work" required />
+              <Input id="blog-title" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value, slug: slugTouched ? form.slug : createBlogSlug(e.target.value) })} placeholder="10 study habits that actually work" required />
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="blog-slug">Slug</Label>
-                <Input id="blog-slug" value={form.slug} onChange={(e) => setForm({ ...form, slug: e.target.value })} placeholder="study-habits-that-work" required />
+                <Input id="blog-slug" value={form.slug} onChange={(e) => { setSlugTouched(true); setForm({ ...form, slug: e.target.value }); }} placeholder="study-habits-that-work" />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="blog-image">Featured image URL</Label>
@@ -182,8 +219,9 @@ export default function AdminBlogsPage() {
                 value={form.content}
                 onChange={(e) => setForm({ ...form, content: e.target.value })}
                 className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                placeholder="<p>Start writing…</p>"
+                placeholder="# Article heading\n\nWrite your article in Markdown."
               />
+              <p className="text-xs text-muted-foreground">Markdown supported. Raw HTML is sanitized before publication.</p>
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
@@ -219,6 +257,7 @@ export default function AdminBlogsPage() {
                   onClick={() => {
                     setEditingId(null);
                     setForm(blank);
+                    setSlugTouched(false);
                   }}
                 >
                   Cancel
@@ -237,6 +276,16 @@ export default function AdminBlogsPage() {
                   <Search className="h-4 w-4" /> Search
                 </Button>
               </form>
+              <select
+                aria-label="Filter posts by status"
+                value={status}
+                onChange={(event) => { setPage(1); setStatus(event.target.value); }}
+                className="h-9 rounded-md border border-input bg-background px-2 text-sm"
+              >
+                <option value="all">All statuses</option>
+                <option value="true">Published</option>
+                <option value="false">Drafts</option>
+              </select>
             </AdminToolbar>
           </div>
 
@@ -270,11 +319,19 @@ export default function AdminBlogsPage() {
                           </td>
                           <td>
                             <div className="flex justify-end gap-2">
-                              <Button type="button" size="sm" variant="outline" onClick={() => editBlog(blog)}>
-                                Edit
+                              <Button type="button" size="sm" variant="outline" disabled={editingLoading} onClick={() => void editBlog(blog)}>
+                                <Pencil className="h-4 w-4" /> Edit
                               </Button>
                               <Button type="button" size="sm" variant="outline" onClick={() => void togglePublished(blog)}>
                                 {blog.is_published ? "Unpublish" : "Publish"}
+                              </Button>
+                              {blog.is_published && (
+                                <Link href={`/blog/${blog.slug}`} target="_blank" rel="noreferrer" aria-label={`Preview ${blog.title}`} title="Preview published post" className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-input text-sm hover:bg-accent hover:text-accent-foreground">
+                                  <ExternalLink className="h-4 w-4" />
+                                </Link>
+                              )}
+                              <Button type="button" size="sm" variant="outline" aria-label={`Delete ${blog.title}`} title="Delete post" onClick={() => void deleteBlog(blog)}>
+                                <Trash2 className="h-4 w-4" />
                               </Button>
                             </div>
                           </td>
