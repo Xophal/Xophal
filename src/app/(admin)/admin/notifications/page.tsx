@@ -29,7 +29,7 @@ type SentNotification = {
   profiles?: { full_name?: string | null; email?: string | null } | null;
 };
 
-const blank = { title: "", message: "", type: "info", link_url: "", is_global: true, user_ids: "" };
+const blank = { title: "", message: "", type: "info", link_url: "", is_global: true, user_ids: "", send_email: false, send_push: false };
 
 const TYPE_TONES: Record<string, "info" | "success" | "warning" | "violet" | "neutral"> = {
   info: "info",
@@ -49,7 +49,6 @@ export default function AdminNotificationsPage() {
 
   useEffect(() => {
     load(page);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page]);
 
   async function load(current: number) {
@@ -91,11 +90,27 @@ export default function AdminNotificationsPage() {
           link_url: form.link_url || null,
           is_global: form.is_global,
           user_ids: form.is_global ? [] : userIds,
+          send_email: form.send_email,
+          send_push: form.send_push,
         }),
       });
       const json = await res.json();
       if (!res.ok || !json.success) throw new Error(json.error || "Could not send notification");
-      toast({ title: "Notification sent", description: `${json.data?.created ?? 1} notification(s) queued for delivery.` });
+      const delivery = json.data?.delivery;
+      const deliveryDetails = [
+        form.send_email ? `Email accepted ${delivery?.email?.accepted ?? 0}/${delivery?.email?.attempted ?? 0}` : null,
+        form.send_push ? `Push accepted ${delivery?.push?.accepted ?? 0}/${delivery?.push?.attempted ?? 0}` : null,
+      ].filter(Boolean);
+      const deliveryErrors = [delivery?.email?.error, delivery?.push?.error].filter(Boolean);
+      toast({
+        title: "Notification sent",
+        description: [
+          form.is_global ? "Available in student inboxes." : `Delivered to ${json.data?.created ?? userIds.length} account(s).`,
+          ...deliveryDetails,
+          ...deliveryErrors,
+        ].join(" "),
+        ...(deliveryErrors.length ? { variant: "destructive" as const } : {}),
+      });
       setForm(blank);
       setPage(1);
       await load(1);
@@ -172,6 +187,18 @@ export default function AdminNotificationsPage() {
                 <p className="text-xs text-slate-500">Paste comma or space separated profile IDs for targeted delivery.</p>
               </div>
             )}
+
+            <div className="space-y-2 border-t border-slate-200 pt-4 dark:border-white/10">
+              <p className="text-sm font-medium">Additional delivery channels</p>
+              <label className="flex items-center gap-2 text-sm">
+                <input type="checkbox" checked={form.send_email} onChange={(e) => setForm({ ...form, send_email: e.target.checked })} />
+                Send email to users who enabled email notifications
+              </label>
+              <label className="flex items-center gap-2 text-sm">
+                <input type="checkbox" checked={form.send_push} onChange={(e) => setForm({ ...form, send_push: e.target.checked })} />
+                Send browser push to subscribed users
+              </label>
+            </div>
 
             <Button type="submit" className="w-full" disabled={sending}>
               {sending ? "Sending…" : "Send notification"}

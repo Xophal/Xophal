@@ -12,6 +12,7 @@ Follow this runbook for a full-feature production launch. Production credentials
    - Configure `SUPABASE_SERVICE_ROLE_KEY` as a server-only secret; never use a `NEXT_PUBLIC_` prefix for it.
    - Configure both `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN`. Production auth routes fail closed without rate limiting.
    - Configure `RESEND_API_KEY`, a verified-domain `RESEND_FROM`, and exactly two distinct addresses in `MAIN_ADMIN_EMAILS` for admin approval notifications.
+   - Email notification broadcasts also use `RESEND_API_KEY` and `RESEND_FROM`. Browser push requires `NEXT_PUBLIC_VAPID_PUBLIC_KEY`, `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, and `VAPID_SUBJECT`; generate a matching key pair with `npx web-push generate-vapid-keys`. Keep the private key server-only and set the public value in both public/server variables.
    - Configure `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, and `RAZORPAY_WEBHOOK_SECRET` for payments and payment fulfillment. Use live credentials for production.
    - Razorpay Route payouts remain disabled by default. Enable `RAZORPAY_ROUTE_ENABLED=true` only after Route is activated on the parent account and the webhook at `/api/ebooks/webhook/razorpay-route` is configured; then set `RAZORPAY_ROUTE_WEBHOOK_SECRET` as a server-only secret.
    - `npm run deploy:check` validates these values, rejects placeholders, local auth bypass, and non-HTTPS URLs. Hosting-provided environment variables take precedence over local files.
@@ -21,7 +22,7 @@ Follow this runbook for a full-feature production launch. Production credentials
    - Create a production Supabase project separate from development and staging.
    - Review and back up the production database before applying migrations.
    - Link the Supabase CLI to the intended project and apply all pending repository migrations with `supabase db push`.
-   - Confirm the latest migration is applied, including the question/test access, exam-integrity, and ebook marketplace migrations (`026`–`029`: marketplace schema, commerce, fulfillment/privacy, Razorpay routes).
+   - Confirm the latest migration is applied, including the question/test access, exam-integrity, ebook marketplace migrations (`026`–`029`), and notification delivery-channel migrations (`032`–`033`).
    - Verify RLS policies with an anon/user client and confirm privileged operations use only the server-side service-role client.
    - Seed production only with approved, non-test content; do not copy local test users or payment data.
 
@@ -47,7 +48,7 @@ Follow this runbook for a full-feature production launch. Production credentials
 5. Secrets & CI
    - Add production variables to the hosting platform's Production environment; configure Preview variables separately and use non-production provider credentials there.
    - In GitHub, create Settings > Environments > `production`; require reviewer approval and restrict deployment branches to `main`.
-   - Add these 12 Actions environment secrets to that environment: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `NEXT_PUBLIC_APP_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`, `RESEND_API_KEY`, `RESEND_FROM`, `MAIN_ADMIN_EMAILS`, `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, and `RAZORPAY_WEBHOOK_SECRET`.
+   - Configure the app's required environment variables in hosting and Actions: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `NEXT_PUBLIC_APP_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`, `RESEND_API_KEY`, `RESEND_FROM`, `MAIN_ADMIN_EMAILS`, `NEXT_PUBLIC_VAPID_PUBLIC_KEY`, `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`, `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, and `RAZORPAY_WEBHOOK_SECRET`.
    - `.github/workflows/ci.yml` runs install, typecheck, tests, and build on pushes and pull requests. From the `main` branch, use Actions > CI > Run workflow to run the production-readiness job against the protected environment secrets.
    - Do not run production secrets in pull-request CI. Never print environment values in build logs or expose the service-role, Razorpay secret, webhook secret, Upstash token, or Resend key to the client.
 
@@ -57,6 +58,7 @@ Follow this runbook for a full-feature production launch. Production credentials
 
 7. Post-deploy verification
    - Verify homepage, login/register, forgot/reset email flows end-to-end.
+   - Test notification email, browser push enrollment, push delivery, unsubscribe, and user channel preferences in staging with verified test accounts.
    - Run `npm run deploy:check`, `npm run typecheck`, `npm test`, and `npm run build` against the release configuration.
    - Verify student registration, OTP delivery/verification, login, logout, password reset, and protected-route behavior using non-production test accounts first.
     - Verify admin approval emails go only to the two configured main administrators and that unapproved users cannot access admin routes.

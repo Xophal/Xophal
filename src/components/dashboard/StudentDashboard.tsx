@@ -30,6 +30,8 @@ import StudyCalendar from "./StudyCalendar";
 const t = createTranslator("en");
 
 const numberFormat = new Intl.NumberFormat("en-IN");
+const scoreColor = "var(--dashboard-score)";
+const accuracyColor = "var(--dashboard-accent)";
 
 function percent(value: number | null) {
   return value === null ? "—" : `${Math.round(value)}%`;
@@ -44,9 +46,9 @@ function dateLabel(value: string | null, options: Intl.DateTimeFormatOptions = {
 
 function toneClasses(tone: string) {
   const tones: Record<string, string> = {
-    emerald: "text-emerald-300 bg-emerald-400/10",
-    sky: "text-sky-300 bg-sky-400/10",
-    amber: "text-amber-300 bg-amber-400/10",
+    emerald: "text-[#0b4cc2] bg-[#0b4cc2]/10",
+    sky: "text-[#3974d4] bg-[#3974d4]/10",
+    amber: "text-[#b86b00] bg-[#ff8a00]/10",
     rose: "text-rose-300 bg-rose-400/10",
     slate: "text-slate-300 bg-white/5",
   };
@@ -55,7 +57,7 @@ function toneClasses(tone: string) {
 
 function SectionLink({ href, children }: { href: string; children: React.ReactNode }) {
   return (
-    <Link href={href} className="inline-flex min-h-10 items-center gap-1 rounded-lg px-2 text-sm font-semibold text-cyan-300 transition hover:bg-cyan-300/10 hover:text-cyan-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300">
+    <Link href={href} className="dashboard-section-link inline-flex min-h-10 items-center gap-1 rounded-lg px-2 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2">
       {children}<ArrowRight className="h-4 w-4" aria-hidden="true" />
     </Link>
   );
@@ -83,8 +85,8 @@ function PerformanceChart({ data }: { data: DashboardData["performance"] }) {
   return (
     <div>
       <div className="mb-4 flex flex-wrap gap-x-5 gap-y-2 text-xs text-slate-300" aria-label={t("dashboard.chartLegend")}>
-        <span className="inline-flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full bg-cyan-300" />{t("performance.scoreLegend")}</span>
-        <span className="inline-flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full bg-amber-300" />{t("performance.accuracyLegend")}</span>
+        <span className="inline-flex items-center gap-2"><span className="dashboard-chart-dot dashboard-chart-dot--score" />{t("performance.scoreLegend")}</span>
+        <span className="inline-flex items-center gap-2"><span className="dashboard-chart-dot dashboard-chart-dot--accuracy" />{t("performance.accuracyLegend")}</span>
       </div>
       <div className="w-full overflow-hidden">
         <svg viewBox={`0 0 ${width} ${height}`} className="h-48 w-full overflow-visible" role="img" aria-label={t("performance.subtitle")} preserveAspectRatio="none">
@@ -94,12 +96,12 @@ function PerformanceChart({ data }: { data: DashboardData["performance"] }) {
               <text x="0" y={yFor(tick) + 4} fill="currentColor" className="fill-slate-500" fontSize="11">{tick}</text>
             </g>
           ))}
-          <polyline points={scorePoints} fill="none" stroke="#67e8f9" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
-          {accuracyPoints ? <polyline points={accuracyPoints} fill="none" stroke="#fcd34d" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" strokeDasharray="6 5" /> : null}
+          <polyline points={scorePoints} fill="none" stroke={scoreColor} strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" />
+          {accuracyPoints ? <polyline points={accuracyPoints} fill="none" stroke={accuracyColor} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" strokeDasharray="6 5" /> : null}
           {data.series.map((point, index) => (
             <g key={point.id}>
-              <circle cx={xFor(index)} cy={yFor(point.score)} r="4" fill="#67e8f9" />
-              {point.accuracy !== null ? <circle cx={xFor(index)} cy={yFor(point.accuracy)} r="3.5" fill="#fcd34d" /> : null}
+              <circle cx={xFor(index)} cy={yFor(point.score)} r="4.5" fill={scoreColor} stroke="hsl(var(--card))" strokeWidth="2" />
+              {point.accuracy !== null ? <circle cx={xFor(index)} cy={yFor(point.accuracy)} r="3.5" fill={accuracyColor} stroke="hsl(var(--card))" strokeWidth="1.5" /> : null}
             </g>
           ))}
         </svg>
@@ -118,7 +120,7 @@ function MetricCard({ label, value, note, icon: Icon, tone }: { label: string; v
     <article className={`dashboard-metric dashboard-metric-${tone} min-w-0`}>
       <div className="flex items-center justify-between gap-2">
         <h2 className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">{label}</h2>
-        <Icon className="h-4 w-4 shrink-0 text-cyan-200" aria-hidden="true" />
+        <Icon className="dashboard-metric-icon h-4 w-4 shrink-0" aria-hidden="true" />
       </div>
       <p className="mt-3 text-2xl font-semibold tabular-nums text-white sm:text-3xl">{value}</p>
       <p className="mt-1 min-h-8 text-xs leading-4 text-slate-400">{note}</p>
@@ -162,14 +164,14 @@ export default function StudentDashboard({
         <div className="dashboard-hero-grid" aria-hidden="true" />
         <div className="relative z-10 flex flex-col justify-between gap-6 md:flex-row md:items-end">
           <div className="max-w-2xl">
-            <p className="mb-3 inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-emerald-200"><Sparkles className="h-4 w-4" aria-hidden="true" />{t("hero.eyebrow")}</p>
+            <p className="dashboard-hero-eyebrow mb-3 inline-flex items-center gap-2 text-xs font-semibold uppercase"><Sparkles className="h-4 w-4" aria-hidden="true" />{t("hero.eyebrow")}</p>
             <h1 className="text-3xl font-semibold text-white sm:text-4xl">{firstName ? t("hero.welcomeNamed", { name: firstName }) : t("hero.welcomeAnon")}</h1>
             <p className="mt-2 text-sm text-slate-300">{t("hero.subtitle")}</p>
             <div className="mt-5 flex flex-wrap gap-2">
-              <Link href={continuation?.href ?? "/learn"} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-emerald-300 px-4 text-sm font-bold text-slate-950 transition hover:bg-emerald-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white">
+              <Link href={continuation?.href ?? "/learn"} className="dashboard-primary-action inline-flex min-h-11 items-center justify-center gap-2 rounded-lg px-4 text-sm font-bold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white">
                 <Play className="h-4 w-4" aria-hidden="true" />{t("hero.continuePractice")}
               </Link>
-              <Link href="/mock-tests" className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-white/20 bg-white/5 px-4 text-sm font-semibold text-white transition hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300">
+              <Link href="/mock-tests" className="dashboard-secondary-action inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border bg-white/5 px-4 text-sm font-semibold text-white transition focus-visible:outline-none focus-visible:ring-2">
                 <Target className="h-4 w-4" aria-hidden="true" />{t("hero.takeMockTest")}
               </Link>
             </div>
@@ -186,7 +188,7 @@ export default function StudentDashboard({
         <section className="premium-panel dashboard-surface p-5 sm:p-6" aria-labelledby="onboarding-title">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div><p className="dashboard-eyebrow">{t("onboarding.progress", { done: data.onboarding.done, total: data.onboarding.total })}</p><h2 id="onboarding-title" className="mt-1 text-xl font-semibold text-white">{t("onboarding.title")}</h2><p className="mt-1 text-sm text-slate-400">{t("onboarding.subtitle")}</p></div>
-            <Link href="/mock-tests" className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-cyan-300 px-4 text-sm font-bold text-slate-950 hover:bg-cyan-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"><Play className="h-4 w-4" aria-hidden="true" />{t("onboarding.cta")}</Link>
+            <Link href="/mock-tests" className="dashboard-primary-action inline-flex min-h-11 items-center justify-center gap-2 rounded-lg px-4 text-sm font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"><Play className="h-4 w-4" aria-hidden="true" />{t("onboarding.cta")}</Link>
           </div>
           <ol className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
             {data.onboarding.steps.map((step, index) => (
@@ -220,7 +222,7 @@ export default function StudentDashboard({
               ))}
             </ul>
           </div>
-          <Link href={continuation?.href ?? "/mock-tests"} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-emerald-300 px-5 text-sm font-bold text-slate-950 hover:bg-emerald-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"><ArrowRight className="h-4 w-4" aria-hidden="true" />{t("goal.cta")}</Link>
+          <Link href={continuation?.href ?? "/mock-tests"} className="dashboard-primary-action inline-flex min-h-11 items-center justify-center gap-2 rounded-lg px-5 text-sm font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"><ArrowRight className="h-4 w-4" aria-hidden="true" />{t("goal.cta")}</Link>
         </div>
         {!goal.hasSignal ? <p className="mt-4 text-sm text-slate-400">{t("goal.empty")}</p> : null}
       </DashboardSection>
@@ -250,7 +252,7 @@ export default function StudentDashboard({
             {data.recommendations.slice(0, 3).map((recommendation) => (
               <li key={recommendation.id} className="flex flex-wrap items-center justify-between gap-3 py-3 first:pt-0 last:pb-0">
                 <div className="min-w-0"><p className="truncate font-semibold text-white">{recommendation.name}</p><p className="mt-1 text-xs text-slate-400">{t(recommendation.reasonKey)} · {t("recommended.suggested")}: {t("challenge.questions", { count: recommendation.suggestedQuestions })}{recommendation.estimatedMinutes === null ? "" : ` · ~${recommendation.estimatedMinutes} ${t("dashboard.minutesShort")}`}</p><p className="mt-1 text-xs text-slate-500">{t("weak.accuracy", { accuracy: recommendation.accuracy ?? 0 })} · {t("weak.attempted", { count: recommendation.attempted })}</p></div>
-                <Link href={recommendation.href} className="inline-flex min-h-10 items-center gap-1 rounded-lg border border-white/15 px-3 text-sm font-semibold text-white hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300">{t("recommended.cta")}<ArrowUpRight className="h-4 w-4" aria-hidden="true" /></Link>
+                <Link href={recommendation.href} className="dashboard-inline-action inline-flex min-h-10 items-center gap-1 rounded-lg border px-3 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2">{t("recommended.cta")}<ArrowUpRight className="h-4 w-4" aria-hidden="true" /></Link>
               </li>
             ))}
           </ul> : <DashboardEmpty title={t("recommended.emptyTitle")} description={t("recommended.emptyDesc")} actionHref="/mock-tests" actionLabel={t("state.emptyAction")} />}
@@ -336,7 +338,7 @@ export default function StudentDashboard({
           <div className="mb-4 flex flex-wrap gap-1" aria-label="Leaderboard period">
             {(["weekly", "monthly", "global", "exam"] as const).map((option) => <Link key={option} href={`/dashboard?period=${option}#leaderboard-title`} aria-current={period === option ? "page" : undefined} className={`inline-flex min-h-9 items-center rounded-md px-3 text-xs font-semibold ${period === option ? "bg-cyan-300 text-slate-950" : "text-slate-300 hover:bg-white/5"}`}>{t(`leaderboard.range.${option}`)}</Link>)}
           </div>
-          {data.leaderboard.currentUser ? <div className="flex items-center justify-between gap-3 rounded-lg border border-cyan-300/15 bg-cyan-300/5 p-4"><div><p className="text-xs text-slate-400">{t("leaderboard.yourPosition")}</p><p className="mt-1 text-xl font-semibold text-white">#{data.leaderboard.currentUser.rank} · {t("leaderboard.you")}</p></div><p className="text-sm font-semibold text-cyan-200">{t("leaderboard.score", { xp: numberFormat.format(data.leaderboard.currentUser.xp) })}</p></div> : <DashboardEmpty title={t("leaderboard.notRanked")} description={t("leaderboard.empty")} />}
+          {data.leaderboard.currentUser ? <div className="dashboard-rank-highlight flex items-center justify-between gap-3 rounded-lg border p-4"><div><p className="text-xs text-slate-400">{t("leaderboard.yourPosition")}</p><p className="mt-1 text-xl font-semibold text-white">#{data.leaderboard.currentUser.rank} · {t("leaderboard.you")}</p></div><p className="dashboard-rank-score text-sm font-semibold">{t("leaderboard.score", { xp: numberFormat.format(data.leaderboard.currentUser.xp) })}</p></div> : <DashboardEmpty title={t("leaderboard.notRanked")} description={t("leaderboard.empty")} />}
           {data.leaderboard.entries.length ? <ol className="mt-3 divide-y divide-white/10">{data.leaderboard.entries.slice(0, 5).map((entry) => <li key={`${entry.rank}-${entry.userId}`} className="flex items-center gap-3 py-2 text-sm"><span className="w-8 font-semibold tabular-nums text-slate-400">#{entry.rank}</span><span className="min-w-0 flex-1 truncate text-white">{entry.isCurrentUser ? t("leaderboard.you") : entry.name || t("leaderboard.student")}</span><span className="shrink-0 tabular-nums text-slate-300">{numberFormat.format(entry.xp)} XP</span></li>)}</ol> : null}
         </DashboardSection>
       </div>

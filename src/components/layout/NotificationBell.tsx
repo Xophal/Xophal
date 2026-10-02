@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { Bell } from "lucide-react";
 
 type NotificationItem = {
   id: string;
@@ -17,6 +18,7 @@ export default function NotificationBell() {
   const [items, setItems] = useState<NotificationItem[]>([]);
   const [unread, setUnread] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
 
   async function load() {
     setLoading(true);
@@ -34,12 +36,37 @@ export default function NotificationBell() {
 
   useEffect(() => {
     const timer = window.setTimeout(() => { void load(); }, 0);
-    return () => window.clearTimeout(timer);
+    const interval = window.setInterval(() => { void load(); }, 60_000);
+    const onFocus = () => { void load(); };
+    window.addEventListener("focus", onFocus);
+    return () => {
+      window.clearTimeout(timer);
+      window.clearInterval(interval);
+      window.removeEventListener("focus", onFocus);
+    };
   }, []);
+
+  useEffect(() => {
+    if (!open) return;
+    const onPointerDown = (event: PointerEvent) => {
+      if (!rootRef.current?.contains(event.target as Node)) setOpen(false);
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [open]);
 
   async function markRead(id: string) {
     try {
-      await fetch(`/api/notifications/mark-read`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id }) });
+      const response = await fetch(`/api/notifications/mark-read`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id }) });
+      const result = await response.json();
+      if (!response.ok || !result.success) return;
       setItems((s) => s.map(i => i.id === id ? { ...i, is_read: true } : i));
       setUnread((u) => (u !== null ? Math.max(0, u - 1) : u));
     } catch {}
@@ -47,21 +74,23 @@ export default function NotificationBell() {
 
   async function markAll() {
     try {
-      await fetch(`/api/notifications/mark-all-read`, { method: "POST" });
+      const response = await fetch(`/api/notifications/mark-all-read`, { method: "POST" });
+      const result = await response.json();
+      if (!response.ok || !result.success) return;
       setItems((s) => s.map(i => ({ ...i, is_read: true })));
       setUnread(0);
     } catch {}
   }
 
   return (
-    <div className="relative">
+    <div className="relative" ref={rootRef}>
       <button type="button" aria-label="Notifications" aria-expanded={open} onClick={() => setOpen(o => !o)} className="relative inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white/70 text-slate-600 hover:border-emerald-300 hover:text-emerald-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:border-white/10 dark:bg-slate-900/60 dark:text-slate-300">
-        <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6 6 0 10-12 0v3.159c0 .538-.214 1.055-.595 1.436L4 17h11z"/></svg>
-        {unread ? <span className="absolute -right-1 -top-1 inline-flex h-4 w-4 items-center justify-center rounded-full bg-red-600 text-xs text-white">{unread}</span> : null}
+        <Bell className="h-5 w-5" aria-hidden="true" />
+        {unread ? <span aria-label={`${unread} unread notifications`} className="absolute -right-1 -top-1 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] text-white">{unread > 99 ? "99+" : unread}</span> : null}
       </button>
       {open && (
         <div className="absolute right-0 z-50 mt-2 w-80 rounded-xl border bg-card shadow-lg">
-          <div className="flex items-center justify-between p-3"><div className="text-sm font-semibold">Notifications</div><button type="button" onClick={markAll} className="text-sm text-muted-foreground hover:text-foreground">Mark all</button></div>
+          <div className="flex items-center justify-between p-3"><div className="text-sm font-semibold">Notifications</div><button type="button" onClick={markAll} disabled={!unread || loading} className="text-sm text-muted-foreground hover:text-foreground disabled:opacity-50">Mark all read</button></div>
           <div className="max-h-64 overflow-auto">
             {loading ? <div className="p-4 text-sm text-muted-foreground">Loading…</div> : items.length === 0 ? <div className="p-4 text-sm text-muted-foreground">No notifications</div> : (
               items.map(item => (

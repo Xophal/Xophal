@@ -1,11 +1,17 @@
 import { describe, expect, it } from "vitest";
 import { assertAccess, canAccessPremiumContent, getAccessState } from "@/lib/auth-policy";
-import { normalizeRoleCode } from "@/lib/roles";
+import { getDashboardRoute, normalizeRoleCode } from "@/lib/roles";
 
 describe("auth policy", () => {
   it("normalizes role codes for consistent authorization", () => {
     expect(normalizeRoleCode(" Reviewer ")).toBe("reviewer");
     expect(normalizeRoleCode({ code: "CONTENT_MANAGER" })).toBe("content_manager");
+  });
+
+  it("routes each supported account role to its existing dashboard", () => {
+    expect(getDashboardRoute({ roles: [{ code: "author" }] })).toBe("/dashboard/ebooks");
+    expect(getDashboardRoute({ roles: [{ code: "student" }] })).toBe("/dashboard");
+    expect(getDashboardRoute({ roles: [{ code: "super_admin" }] })).toBe("/admin");
   });
 
   it("builds a full access state for a verified active student", () => {

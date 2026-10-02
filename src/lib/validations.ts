@@ -173,6 +173,7 @@ export const profileUpdateSchema = z.object({
   daily_goal_minutes: z.number().int().min(15).max(480).optional(),
   settings: z.object({
     email_notifications: z.boolean().optional(),
+    push_notifications: z.boolean().optional(),
     weekly_digest: z.boolean().optional(),
     test_reminders: z.boolean().optional(),
     sound_effects: z.boolean().optional(),

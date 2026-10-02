@@ -5,7 +5,7 @@ import Sidenav from "@/components/layout/sidenav";
 import StudentBottomNav from "@/components/layout/StudentBottomNav";
 import { requireAuth } from "@/lib/auth";
 import { assertAccess } from "@/lib/auth-policy";
-import { isAdminRole } from "@/lib/roles";
+import { getDashboardRoute } from "@/lib/roles";
 import { ROUTES } from "@/constants";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
 import StudentHeaderActions from "@/components/layout/StudentHeaderActions";
@@ -45,11 +45,14 @@ export default async function StudentLayout({ children }: { children: React.Reac
   const session = await requireAuth();
   if (!session) redirect(ROUTES.login);
   if (!session.profile) redirect("/verify-email");
-  if (isAdminRole(session.profile)) redirect("/admin");
+  const dashboardRoute = getDashboardRoute(session.profile);
+  if (dashboardRoute === "/admin") redirect(dashboardRoute);
 
   if (!session.profile.email_verified && !session.user.email_confirmed_at) {
     redirect("/verify-email");
   }
+
+  if (dashboardRoute !== ROUTES.dashboard) redirect(dashboardRoute);
 
   try {
     assertAccess(session.profile, session.user, {

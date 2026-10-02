@@ -36,3 +36,9 @@ export function isStudentRole(role: unknown): boolean {
   const roleCode = normalizeRoleCode(role);
   return roleCode === "student";
 }
+
+export function getDashboardRoute(role: unknown): string {
+  if (isAdminRole(role)) return "/admin";
+
+  return normalizeRoleCode(role) === "author" ? "/dashboard/ebooks" : "/dashboard";
+}

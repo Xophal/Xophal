@@ -4,6 +4,7 @@ import { requireAuth } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { finalTestSubmissionSchema } from "@/lib/validations";
+import { deliverNotificationToUsers } from "@/lib/notification-delivery";
 
 export async function POST(request: NextRequest) {
   try {
@@ -23,12 +24,22 @@ export async function POST(request: NextRequest) {
       throw new ApiError(400, error.message, "SUBMISSION_REJECTED");
     }
 
-    // Create an in-app notification for the user about submission/result
+    // Submission success must not depend on notification providers being available.
     try {
-      const admin = createAdminClient();
-      await admin.from("notifications").insert([{ user_id: (await supabase.auth.getUser()).data.user?.id, title: "Test submitted", message: `Your test submission (${body.attempt_id}) has been received. View result.`, link_url: `/test/result/${body.attempt_id}` }]);
+      const userId = (await supabase.auth.getUser()).data.user?.id;
+      if (userId) {
+        const notification = {
+          user_id: userId,
+          title: "Test submitted",
+          message: "Your test submission has been received. View your result.",
+          link_url: `/test/result/${body.attempt_id}`,
+        };
+        const { error: notificationError } = await createAdminClient().from("notifications").insert(notification);
+        if (notificationError) throw notificationError;
+        await deliverNotificationToUsers([userId], notification, { email: true, push: true });
+      }
     } catch {
-      // non-fatal: notification failure should not block submission
+      // Notification failure should not block the completed test submission.
     }
 
     return apiSuccess(data);

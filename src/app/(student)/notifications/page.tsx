@@ -2,6 +2,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { requireAuth } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import NotificationListClient from "@/components/notifications/NotificationListClient";
+import { applyNotificationReceipts } from "@/lib/notification-state";
 
 export const metadata = { title: "Notifications" };
 
@@ -13,7 +14,12 @@ export default async function NotificationsPage() {
   }
 
   const supabase = await createClient();
-  const { data } = await supabase.from("notifications").select("id, title, message, type, link_url, is_read, created_at").or(`user_id.eq.${session.user.id},is_global.eq.true`).order("created_at", { ascending: false }).limit(50);
+  const { data } = await supabase.from("notifications").select("id, title, message, type, link_url, is_read, is_global, created_at").or(`user_id.eq.${session.user.id},is_global.eq.true`).order("created_at", { ascending: false }).limit(50);
+  const { data: receipts } = await supabase
+    .from("notification_receipts")
+    .select("notification_id, is_read, is_dismissed")
+    .eq("user_id", session.user.id);
+  const notifications = applyNotificationReceipts(data || [], receipts || []);
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -28,7 +34,7 @@ export default async function NotificationsPage() {
           <CardDescription>Latest 50 notifications</CardDescription>
         </CardHeader>
         <CardContent>
-          <NotificationListClient initial={data || []} />
+          <NotificationListClient initial={notifications} />
         </CardContent>
       </Card>
     </div>

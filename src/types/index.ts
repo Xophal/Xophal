@@ -185,6 +185,7 @@ export interface Profile {
   bio?: string | null;
   settings?: {
     email_notifications?: boolean;
+    push_notifications?: boolean;
     weekly_digest?: boolean;
     test_reminders?: boolean;
     sound_effects?: boolean;
