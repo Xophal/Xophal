@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { isCapturedRazorpayPayment } from "@/lib/ebooks/payments";
+import { isCapturedRazorpayPayment, isEbookPaymentsEnabled } from "@/lib/ebooks/payments";
 import {
   computeOrderSettlement,
   DEFAULT_PRICING_RULES,
+  ebookDraftSchema,
   ebookMarketplaceConfigSchema,
   ebookPayoutOnboardingSchema,
   ebookReportSchema,
@@ -15,6 +16,12 @@ import {
 } from "@/lib/ebooks/schema";
 
 describe("ebook marketplace validation and accounting primitives", () => {
+  it("keeps marketplace payments disabled unless explicitly enabled", () => {
+    expect(isEbookPaymentsEnabled(undefined)).toBe(false);
+    expect(isEbookPaymentsEnabled("false")).toBe(false);
+    expect(isEbookPaymentsEnabled("true")).toBe(true);
+  });
+
   it("accepts only captured Razorpay payments matching the expected order and settlement", () => {
     const expected = { paymentId: "pay_123", orderId: "order_123", amountMinor: 9900, currency: "INR" };
     const payment = { id: "pay_123", order_id: "order_123", status: "captured", amount: 9900, currency: "INR" };
@@ -29,6 +36,12 @@ describe("ebook marketplace validation and accounting primitives", () => {
   it("normalizes listing slugs without inventing an empty slug", () => {
     expect(slugifyEbookTitle("Assam GK: A Student's Guide!")).toBe("assam-gk-a-student-s-guide");
     expect(slugifyEbookTitle("অসমীয়া")).toBe("");
+  });
+
+  it("allows incomplete private drafts but does not weaken review submission validation", () => {
+    expect(ebookDraftSchema.safeParse({ title: "My working draft", rightsConfirmed: false }).success).toBe(true);
+    expect(ebookDraftSchema.safeParse({ externalProductUrl: "javascript:alert(1)" }).success).toBe(false);
+    expect(ebookSubmissionSchema.safeParse({ title: "Complete book", rightsConfirmed: false }).success).toBe(false);
   });
 
   it("requires all rights declarations and valid product destinations", () => {

@@ -41,6 +41,8 @@ type ImportIssue = {
 
   const [preview, setPreview] = useState<ImportPreview | null>(null);
   const [issues, setIssues] = useState<ImportIssue[]>([]);
+  const [jobId, setJobId] = useState<string | null>(null);
+  const [processing, setProcessing] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -48,6 +50,7 @@ type ImportIssue = {
     setPreview(null);
     setIssues([]);
     setError(null);
+    setJobId(null);
 
     const file = event.target.files?.[0];
     if (!file) {
@@ -79,6 +82,7 @@ type ImportIssue = {
     setLoading(true);
     setPreview(null);
     setIssues([]);
+    setJobId(null);
 
     try {
       let result;
@@ -100,24 +104,6 @@ type ImportIssue = {
           body: form,
         });
         result = await response.json();
-        // if job created, trigger processing automatically
-        if (result?.data?.job?.id) {
-          try {
-            const proc = await fetch("/api/admin/imports/process", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ jobId: result.data.job.id }),
-            });
-            const procJson = await proc.json();
-            if (!proc.ok) {
-              toast({ title: "Import processing failed", description: procJson.error || "Processing failed on server" });
-            } else {
-              toast({ title: "Import processed", description: `Imported ${procJson.data.imported} rows` });
-            }
-          } catch (e) {
-            // ignore
-          }
-        }
       } else {
         response = await fetch("/api/admin/imports", {
           method: "POST",
@@ -141,12 +127,33 @@ type ImportIssue = {
 
       setPreview(result.data.preview ?? null);
       setIssues(result.data.preview?.issues ?? []);
+      setJobId(result.data.job?.id ?? null);
       toast({ title: "Import preview ready", description: "Validation completed successfully." });
     } catch {
       setError("Unable to reach import endpoint.");
       toast({ title: "Import request failed", description: "Please check your connection and try again." });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleProcess = async () => {
+    if (!jobId || !preview || preview.invalidRows > 0 || preview.validRows === 0) return;
+    setProcessing(true);
+    try {
+      const response = await fetch("/api/admin/imports/process", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ jobId }),
+      });
+      const result = await response.json();
+      if (!response.ok || !result.success) throw new Error(result.error || "Import processing failed");
+      setJobId(null);
+      toast({ title: "Import processed", description: `Imported ${result.data.imported} rows` });
+    } catch (error) {
+      toast({ title: "Import processing failed", description: error instanceof Error ? error.message : "Please retry.", variant: "destructive" });
+    } finally {
+      setProcessing(false);
     }
   };
 
@@ -200,6 +207,7 @@ type ImportIssue = {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            {jobId ? <Button type="button" onClick={() => void handleProcess()} disabled={processing || loading || preview.invalidRows > 0 || preview.validRows === 0}>{processing ? "Processing..." : `Process ${preview.validRows} valid rows`}</Button> : null}
             {issues.length > 0 ? (
               <div>
                 <p className="mb-2 text-sm font-medium">Issues</p>

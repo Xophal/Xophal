@@ -17,34 +17,50 @@ const STATUS_TONES: Record<string, "success" | "warning" | "info" | "neutral"> =
   pending: "neutral",
 };
 
+type AttemptRow = {
+  id: string;
+  user_id: string;
+  status: string;
+  submitted_at: string | null;
+  time_spent_seconds: number | null;
+  marks_obtained: number | null;
+  total_marks: number | null;
+  percentage: number | null;
+  correct_count: number | null;
+  wrong_count: number | null;
+  skipped_count: number | null;
+  profiles: { full_name: string | null; email: string | null } | null;
+  mock_tests: { title: string } | null;
+};
+
 export default function AdminResultsPage() {
-  const [items, setItems] = useState<any[]>([]);
+  const [result, setResult] = useState<{ query: string; page: number; items: AttemptRow[]; total: number } | null>(null);
   const [page, setPage] = useState(1);
-  const [total, setTotal] = useState(0);
   const [q, setQ] = useState("");
   const [search, setSearch] = useState("");
-  const [loading, setLoading] = useState(false);
+  const loading = result?.query !== q || result.page !== page;
+  const items = result?.query === q && result.page === page ? result.items : [];
+  const total = result?.query === q && result.page === page ? result.total : 0;
 
-  useEffect(() => { void load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [page]);
-
-  async function load(qValue = q, pageValue = page) {
-    setLoading(true);
-    try {
-      const res = await fetch(`/api/admin/results?page=${pageValue}&limit=20&q=${encodeURIComponent(qValue)}`);
-      const json = await res.json();
-      if (!res.ok || !json.success) throw new Error(json.error || "Failed");
-      setItems(json.data.items || []);
-      setTotal(json.data.total || 0);
-    } catch (e) {
-      console.error(e);
-    } finally { setLoading(false); }
-  }
+  useEffect(() => {
+    let active = true;
+    void (async () => {
+      try {
+        const res = await fetch(`/api/admin/results?page=${page}&limit=20&q=${encodeURIComponent(q)}`, { cache: "no-store" });
+        const json = await res.json();
+        if (!res.ok || !json.success) throw new Error(json.error || "Could not load results");
+        if (active) setResult({ query: q, page, items: json.data.items ?? [], total: json.data.total ?? 0 });
+      } catch {
+        if (active) setResult({ query: q, page, items: [], total: 0 });
+      }
+    })();
+    return () => { active = false; };
+  }, [page, q]);
 
   function onSearch(e: React.FormEvent) {
     e.preventDefault();
     setQ(search);
     setPage(1);
-    void load(search, 1);
   }
 
   return (
@@ -89,7 +105,7 @@ export default function AdminResultsPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {items.map((it: any) => (
+                      {items.map((it) => (
                         <tr key={it.id}>
                           <td><Link href={`/admin/results/${it.id}`}>{it.profiles?.full_name || it.profiles?.email || "User"}</Link></td>
                           <td className="text-slate-300">{it.mock_tests?.title || "—"}</td>

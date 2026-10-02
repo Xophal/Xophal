@@ -12,17 +12,21 @@ type MockTest = {
   title: string;
   slug: string;
   duration_minutes: number;
+  total_questions: number;
+  total_marks: number;
   is_published: boolean;
   is_premium: boolean;
   is_active: boolean;
 };
 type TestSection = { id: string; name: string; duration_minutes: number | null };
+type TestQuestion = { id: string; question_text: string; engine_type: string; status: string; marks: number; topic_id: string | null };
+type AttachedQuestion = { question_id: string; sort_order: number; marks_override: number | null; section_id: string | null; question: TestQuestion | null };
 
 const blankTest = {
   title: "",
   slug: "",
   duration_minutes: 45,
-  is_published: true,
+  is_published: false,
   is_premium: false,
 };
 
@@ -31,7 +35,11 @@ export default function AdminMockTestsPage() {
   const [form, setForm] = useState(blankTest);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const [sections, setSections] = useState<TestSection[]>([]);
+  const [sectionsByTest, setSectionsByTest] = useState<Record<string, TestSection[]>>({});
+  const [sectionsTestId, setSectionsTestId] = useState<string | null>(null);
+  const [questionsByTest, setQuestionsByTest] = useState<Record<string, { attached: AttachedQuestion[]; available: TestQuestion[] }>>({});
+  const [questionsTestId, setQuestionsTestId] = useState<string | null>(null);
+  const [selectedQuestionByTest, setSelectedQuestionByTest] = useState<Record<string, string>>({});
   const [sectionName, setSectionName] = useState("");
   const [sectionDuration, setSectionDuration] = useState("");
 
@@ -99,14 +107,20 @@ export default function AdminMockTestsPage() {
   }
 
   async function loadSections(testId: string) {
-    const response = await fetch(`/api/admin/mock-tests/${testId}/sections`, { cache: "no-store" });
-    const result = await response.json();
-    if (response.ok && result.success) setSections(result.data ?? []);
+    setSectionsTestId(testId);
+    try {
+      const response = await fetch(`/api/admin/mock-tests/${testId}/sections`, { cache: "no-store" });
+      const result = await response.json();
+      if (!response.ok || !result.success) throw new Error(result.error || "Could not load sections");
+      setSectionsByTest((current) => ({ ...current, [testId]: result.data ?? [] }));
+    } catch (error) {
+      toast({ title: "Sections failed to load", description: error instanceof Error ? error.message : "Please try again.", variant: "destructive" });
+    }
   }
 
   async function addSection(testId: string) {
     if (!sectionName.trim()) return;
-    const response = await fetch(`/api/admin/mock-tests/${testId}/sections`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: sectionName, duration_minutes: sectionDuration ? Number(sectionDuration) : null, sort_order: sections.length }) });
+    const response = await fetch(`/api/admin/mock-tests/${testId}/sections`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: sectionName, duration_minutes: sectionDuration ? Number(sectionDuration) : null, sort_order: (sectionsByTest[testId] ?? []).length }) });
     const result = await response.json();
     if (!response.ok || !result.success) return toast({ title: "Section creation failed", description: result.error || "Please try again.", variant: "destructive" });
     setSectionName(""); setSectionDuration(""); await loadSections(testId);
@@ -117,6 +131,39 @@ export default function AdminMockTestsPage() {
     const result = await response.json();
     if (!response.ok || !result.success) return toast({ title: "Section deletion failed", description: result.error || "Please try again.", variant: "destructive" });
     await loadSections(testId);
+  }
+
+  async function loadQuestions(testId: string) {
+    setQuestionsTestId(testId);
+    try {
+      const response = await fetch(`/api/admin/mock-tests/${testId}/questions`, { cache: "no-store" });
+      const result = await response.json();
+      if (!response.ok || !result.success) throw new Error(result.error || "Could not load questions");
+      setQuestionsByTest((current) => ({ ...current, [testId]: result.data }));
+    } catch (error) {
+      toast({ title: "Questions failed to load", description: error instanceof Error ? error.message : "Please try again.", variant: "destructive" });
+    }
+  }
+
+  async function attachQuestion(testId: string) {
+    const questionId = selectedQuestionByTest[testId];
+    if (!questionId) return;
+    const response = await fetch(`/api/admin/mock-tests/${testId}/questions`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ questionId }),
+    });
+    const result = await response.json();
+    if (!response.ok || !result.success) return toast({ title: "Question attach failed", description: result.error || "Please try again.", variant: "destructive" });
+    setSelectedQuestionByTest((current) => ({ ...current, [testId]: "" }));
+    await Promise.all([loadQuestions(testId), loadTests()]);
+  }
+
+  async function detachQuestion(testId: string, questionId: string) {
+    const response = await fetch(`/api/admin/mock-tests/${testId}/questions?questionId=${questionId}`, { method: "DELETE" });
+    const result = await response.json();
+    if (!response.ok || !result.success) return toast({ title: "Question removal failed", description: result.error || "Please try again.", variant: "destructive" });
+    await Promise.all([loadQuestions(testId), loadTests()]);
   }
 
   return (
@@ -178,8 +225,10 @@ export default function AdminMockTestsPage() {
                     </span>
                   </div>
                   <p className="mt-1 text-sm text-muted-foreground">{item.duration_minutes} mins • /{item.slug}</p>
-                  <div className="mt-3 flex flex-wrap gap-2"><Button type="button" size="sm" variant="outline" onClick={() => editTest(item)}>Edit</Button><Button type="button" size="sm" variant="outline" onClick={() => void archiveTest(item)}>Archive</Button><Button type="button" size="sm" variant="outline" asChild><a href={`/test/${item.slug}`} target="_blank" rel="noreferrer">Preview</a></Button><Button type="button" size="sm" variant="outline" onClick={() => void loadSections(item.id)}>Sections</Button></div>
-                  {sections.length > 0 && <div className="mt-3 space-y-2 rounded-lg bg-muted/40 p-3"><p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Sections</p>{sections.map((section) => <div key={section.id} className="flex items-center justify-between text-sm"><span>{section.name}{section.duration_minutes ? ` • ${section.duration_minutes} min` : ""}</span><Button type="button" size="sm" variant="ghost" onClick={() => void deleteSection(item.id, section.id)}>Remove</Button></div>)}<div className="grid gap-2 sm:grid-cols-[1fr_110px_auto]"><Input value={sectionName} onChange={(e) => setSectionName(e.target.value)} placeholder="Section name" /><Input type="number" min={1} value={sectionDuration} onChange={(e) => setSectionDuration(e.target.value)} placeholder="Minutes" /><Button type="button" size="sm" onClick={() => void addSection(item.id)}>Add section</Button></div></div>}
+                  <p className="mt-1 text-xs text-muted-foreground">{item.total_questions} questions · {item.total_marks} marks · {item.is_published ? "Published" : "Draft"}</p>
+                  <div className="mt-3 flex flex-wrap gap-2"><Button type="button" size="sm" variant="outline" onClick={() => editTest(item)}>Edit</Button><Button type="button" size="sm" variant="outline" onClick={() => void archiveTest(item)}>Archive</Button><Button type="button" size="sm" variant="outline" asChild><a href={`/test/${item.slug}`} target="_blank" rel="noreferrer">Preview</a></Button><Button type="button" size="sm" variant="outline" onClick={() => void loadSections(item.id)}>Sections</Button><Button type="button" size="sm" variant="outline" onClick={() => void loadQuestions(item.id)}>Questions</Button></div>
+                  {sectionsTestId === item.id && <div className="mt-3 space-y-2 rounded-lg bg-muted/40 p-3"><p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Sections</p>{(sectionsByTest[item.id] ?? []).map((section) => <div key={section.id} className="flex items-center justify-between text-sm"><span>{section.name}{section.duration_minutes ? ` • ${section.duration_minutes} min` : ""}</span><Button type="button" size="sm" variant="ghost" onClick={() => void deleteSection(item.id, section.id)}>Remove</Button></div>)}<div className="grid gap-2 sm:grid-cols-[1fr_110px_auto]"><Input value={sectionName} onChange={(e) => setSectionName(e.target.value)} placeholder="Section name" /><Input type="number" min={1} value={sectionDuration} onChange={(e) => setSectionDuration(e.target.value)} placeholder="Minutes" /><Button type="button" size="sm" onClick={() => void addSection(item.id)}>Add section</Button></div></div>}
+                  {questionsTestId === item.id && <div className="mt-3 space-y-3 rounded-lg bg-muted/40 p-3"><p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Test questions</p><div className="flex flex-col gap-2 sm:flex-row"><select className="glass-input min-h-10 min-w-0 flex-1 rounded-md px-3 text-sm" aria-label={`Question to add to ${item.title}`} value={selectedQuestionByTest[item.id] ?? ""} onChange={(event) => setSelectedQuestionByTest((current) => ({ ...current, [item.id]: event.target.value }))}><option value="">Select a published question</option>{(questionsByTest[item.id]?.available ?? []).map((question) => <option key={question.id} value={question.id}>{question.question_text} · {question.marks} marks</option>)}</select><Button type="button" size="sm" disabled={!selectedQuestionByTest[item.id]} onClick={() => void attachQuestion(item.id)}>Add question</Button></div>{(questionsByTest[item.id]?.attached ?? []).length ? <ol className="divide-y divide-border">{(questionsByTest[item.id]?.attached ?? []).map((link) => <li key={link.question_id} className="flex items-start justify-between gap-3 py-2 text-sm"><span className="min-w-0">{link.question?.question_text ?? "Question unavailable"}<span className="mt-1 block text-xs text-muted-foreground">{link.question?.engine_type ?? "Question"} · {link.marks_override ?? link.question?.marks ?? 0} marks</span></span><Button type="button" size="sm" variant="ghost" onClick={() => void detachQuestion(item.id, link.question_id)}>Remove</Button></li>)}</ol> : <p className="text-sm text-muted-foreground">No questions attached. Publish questions in the question bank first.</p>}</div>}
                 </div>
               ))}
             </div>

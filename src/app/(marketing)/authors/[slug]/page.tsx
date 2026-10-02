@@ -71,6 +71,9 @@ export default async function AuthorProfilePage({ params }: Props) {
     .filter((item): item is string => typeof item === "string" && item.trim().length > 0)
     .slice(0, 12);
   const links = socialLinks(contributor.social_links);
+  if (contributor.website_url && !links.some((link) => link.href === contributor.website_url)) {
+    links.unshift({ label: "Website", href: contributor.website_url });
+  }
   const canonical = `${APP_URL}/authors/${contributor.slug}`;
   const structuredData = {
     "@context": "https://schema.org",
@@ -86,6 +89,7 @@ export default async function AuthorProfilePage({ params }: Props) {
   return (
     <main className="min-h-screen bg-background">
       <EbookTelemetry eventName="author_profile_view" source="author_page" />
+      <EbookTelemetry eventName="seller_profile_view" source="author_page" />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData).replace(/</g, "\\u003c") }} />
 
       <section className="border-b border-border bg-muted/35">
@@ -141,6 +145,13 @@ export default async function AuthorProfilePage({ params }: Props) {
             ) : null}
           </div>
           {contributor.bio ? <p className="mt-5 max-w-3xl whitespace-pre-line text-sm leading-7 text-muted-foreground">{contributor.bio}</p> : null}
+          {contributor.qualification || contributor.teaching_experience || contributor.location ? (
+            <dl className="mt-5 grid gap-3 border-t border-border pt-4 sm:grid-cols-3">
+              {contributor.qualification ? <div><dt className="text-xs font-medium text-muted-foreground">Qualification</dt><dd className="mt-1 text-sm text-foreground">{contributor.qualification}</dd></div> : null}
+              {contributor.teaching_experience ? <div><dt className="text-xs font-medium text-muted-foreground">Teaching experience</dt><dd className="mt-1 text-sm text-foreground">{contributor.teaching_experience}</dd></div> : null}
+              {contributor.location ? <div><dt className="text-xs font-medium text-muted-foreground">Location</dt><dd className="mt-1 text-sm text-foreground">{contributor.location}</dd></div> : null}
+            </dl>
+          ) : null}
         </div>
       </section>
 

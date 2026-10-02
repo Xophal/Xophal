@@ -14,7 +14,6 @@ import {
   LockKeyhole,
   Play,
   RotateCcw,
-  Sparkles,
   Target,
   Trophy,
   TrendingUp,
@@ -26,6 +25,7 @@ import type { DashboardData } from "@/lib/dashboard/types";
 import type { LeaderboardPeriod } from "@/lib/dashboard/queries";
 import { DashboardEmpty, DashboardSection, ProgressBar } from "./ui";
 import StudyCalendar from "./StudyCalendar";
+import DashboardHero from "./DashboardHero";
 
 const t = createTranslator("en");
 
@@ -150,7 +150,6 @@ export default function StudentDashboard({
   period: LeaderboardPeriod;
   isLocalPreview?: boolean;
 }) {
-  const firstName = fullName?.trim().split(/\s+/)[0] ?? "";
   const goal = data.todayGoal;
   const continuation = data.continuation;
   const weakPracticeHref = data.weakAreas[0]?.practiceHref ?? "/mock-tests";
@@ -160,29 +159,7 @@ export default function StudentDashboard({
   return (
     <div className="student-dashboard premium-dashboard-shell mx-auto max-w-[1500px] space-y-4 sm:space-y-5">
       {isLocalPreview ? <p role="status" className="rounded-lg border border-amber-300/20 bg-amber-300/10 px-4 py-3 text-sm text-amber-100">Local preview. Supabase is not connected, so saved activity and progress are not loaded.</p> : null}
-      <section className="premium-hero relative overflow-hidden rounded-2xl border border-white/10 px-5 py-6 sm:px-7 sm:py-8">
-        <div className="dashboard-hero-grid" aria-hidden="true" />
-        <div className="relative z-10 flex flex-col justify-between gap-6 md:flex-row md:items-end">
-          <div className="max-w-2xl">
-            <p className="dashboard-hero-eyebrow mb-3 inline-flex items-center gap-2 text-xs font-semibold uppercase"><Sparkles className="h-4 w-4" aria-hidden="true" />{t("hero.eyebrow")}</p>
-            <h1 className="text-3xl font-semibold text-white sm:text-4xl">{firstName ? t("hero.welcomeNamed", { name: firstName }) : t("hero.welcomeAnon")}</h1>
-            <p className="mt-2 text-sm text-slate-300">{t("hero.subtitle")}</p>
-            <div className="mt-5 flex flex-wrap gap-2">
-              <Link href={continuation?.href ?? "/learn"} className="dashboard-primary-action inline-flex min-h-11 items-center justify-center gap-2 rounded-lg px-4 text-sm font-bold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white">
-                <Play className="h-4 w-4" aria-hidden="true" />{t("hero.continuePractice")}
-              </Link>
-              <Link href="/mock-tests" className="dashboard-secondary-action inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border bg-white/5 px-4 text-sm font-semibold text-white transition focus-visible:outline-none focus-visible:ring-2">
-                <Target className="h-4 w-4" aria-hidden="true" />{t("hero.takeMockTest")}
-              </Link>
-            </div>
-          </div>
-          <div className="hidden min-w-48 rounded-xl border border-white/10 bg-black/15 p-4 md:block">
-            <p className="text-xs text-slate-400">{t("progress.title")}</p>
-            <p className="mt-1 flex items-center gap-2 text-lg font-semibold text-white"><Flame className="h-4 w-4 text-orange-300" aria-hidden="true" />{data.streak.hasActivity ? t("progress.days", { count: data.streak.current }) : "—"}</p>
-            <p className="mt-2 text-xs text-slate-400">{data.streak.hasActivity ? t("progress.streakSource") : t("progress.streakUnavailable")}</p>
-          </div>
-        </div>
-      </section>
+      <DashboardHero data={data} fullName={fullName} />
 
       {data.onboarding.isNewStudent ? (
         <section className="premium-panel dashboard-surface p-5 sm:p-6" aria-labelledby="onboarding-title">

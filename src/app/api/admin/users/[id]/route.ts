@@ -29,13 +29,13 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
 
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const { user, profile: adminProfile } = await requireAdminAuth();
+    const { profile: adminProfile } = await requireAdminAuth();
     const { id } = await params;
     const body = await request.json();
     const payload = await validateBody(patchSchema, body);
     const admin = createAdminClient();
 
-    const updates: any = {};
+    const updates: Record<string, unknown> = {};
     if (payload.isActive !== undefined) updates.is_active = payload.isActive;
 
     if (payload.role) {

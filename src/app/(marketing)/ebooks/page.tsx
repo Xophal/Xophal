@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import { APP_NAME } from "@/constants";
 import EbookCard from "@/components/ebooks/EbookCard";
 import EbookTelemetry from "@/components/ebooks/EbookTelemetry";
-import { getEbookCategories, listPublishedEbooks, type EbookFilters } from "@/lib/ebooks/data";
+import { getEbookCategories, getPublishedEbookFacets, listPublishedEbooks, type EbookFilters } from "@/lib/ebooks/data";
 
 export const metadata: Metadata = {
   title: `Study eBooks and Guides | ${APP_NAME}`,
@@ -11,9 +11,7 @@ export const metadata: Metadata = {
   alternates: { canonical: "/ebooks" },
 };
 
-type Props = {
-  searchParams: Promise<{ q?: string; category?: string; language?: string; price?: string; min?: string; max?: string; sort?: string; page?: string }>;
-};
+type Props = { searchParams: Promise<{ q?: string; category?: string; subject?: string; exam?: string; language?: string; price?: string; min?: string; max?: string; sort?: string; page?: string }> };
 
 function numericFilter(value?: string) {
   if (!value || !/^\d{1,7}(\.\d{1,2})?$/.test(value)) return undefined;
@@ -22,11 +20,13 @@ function numericFilter(value?: string) {
 
 export default async function EbooksPage({ searchParams }: Props) {
   const params = await searchParams;
-  const categories = await getEbookCategories();
+  const [categories, facets] = await Promise.all([getEbookCategories(), getPublishedEbookFacets()]);
   const price: "free" | "paid" | undefined = params.price === "free" || params.price === "paid" ? params.price : undefined;
   const filters: EbookFilters = {
     search: params.q,
     category: params.category,
+    subject: params.subject,
+    exam: params.exam,
     language: params.language,
     price,
     minPrice: numericFilter(params.min),
@@ -40,6 +40,8 @@ export default async function EbooksPage({ searchParams }: Props) {
   const query = new URLSearchParams();
   if (params.q) query.set("q", params.q);
   if (params.category) query.set("category", params.category);
+  if (params.subject) query.set("subject", params.subject);
+  if (params.exam) query.set("exam", params.exam);
   if (params.language) query.set("language", params.language);
   if (params.price) query.set("price", params.price);
   if (params.min) query.set("min", params.min);
@@ -67,13 +69,21 @@ export default async function EbooksPage({ searchParams }: Props) {
       </section>
 
       <section className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-        <form action="/ebooks" className="grid gap-3 rounded-md border border-border bg-card p-3 sm:grid-cols-2 lg:grid-cols-[minmax(220px,1.5fr)_repeat(5,minmax(110px,1fr))_auto]">
+        <form action="/ebooks" className="grid gap-3 rounded-md border border-border bg-card p-3 sm:grid-cols-2 lg:grid-cols-[minmax(220px,1.5fr)_repeat(7,minmax(110px,1fr))_auto]">
           <label className="sr-only" htmlFor="ebook-q">Search eBooks</label>
           <input id="ebook-q" name="q" defaultValue={params.q} placeholder="Title, author, subject or exam" className="h-11 min-w-0 rounded-md border border-input bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-primary" />
           <label className="sr-only" htmlFor="ebook-category">Category</label>
           <select id="ebook-category" name="category" defaultValue={params.category ?? ""} className="h-11 rounded-md border border-input bg-background px-3 text-sm"><option value="">All categories</option>{categories.map((category) => <option key={category.id} value={category.slug}>{category.name}</option>)}</select>
+          {facets.subjects.length ? <>
+            <label className="sr-only" htmlFor="ebook-subject">Subject</label>
+            <select id="ebook-subject" name="subject" defaultValue={params.subject ?? ""} className="h-11 rounded-md border border-input bg-background px-3 text-sm"><option value="">All subjects</option>{facets.subjects.map((subject) => <option key={subject} value={subject}>{subject}</option>)}</select>
+          </> : null}
+          {facets.exams.length ? <>
+            <label className="sr-only" htmlFor="ebook-exam">Exam</label>
+            <select id="ebook-exam" name="exam" defaultValue={params.exam ?? ""} className="h-11 rounded-md border border-input bg-background px-3 text-sm"><option value="">All exams</option>{facets.exams.map((exam) => <option key={exam} value={exam}>{exam}</option>)}</select>
+          </> : null}
           <label className="sr-only" htmlFor="ebook-language">Language</label>
-          <input id="ebook-language" name="language" defaultValue={params.language} placeholder="Language" className="h-11 min-w-0 rounded-md border border-input bg-background px-3 text-sm" />
+          <select id="ebook-language" name="language" defaultValue={params.language ?? ""} className="h-11 rounded-md border border-input bg-background px-3 text-sm"><option value="">All languages</option>{facets.languages.map((language) => <option key={language} value={language}>{language}</option>)}</select>
           <label className="sr-only" htmlFor="ebook-price">Price</label>
           <select id="ebook-price" name="price" defaultValue={params.price ?? ""} className="h-11 rounded-md border border-input bg-background px-3 text-sm"><option value="">Any price</option><option value="free">Free</option><option value="paid">Paid</option></select>
           <label className="sr-only" htmlFor="ebook-min">Minimum price</label>

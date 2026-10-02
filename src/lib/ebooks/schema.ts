@@ -4,6 +4,7 @@ const httpUrl = z.string().trim().url().refine((value) => {
   const protocol = new URL(value).protocol;
   return protocol === "https:" || protocol === "http:";
 }, "Enter a valid HTTP or HTTPS URL.");
+const httpsUrl = z.string().trim().url().refine((value) => new URL(value).protocol === "https:", "Enter a valid HTTPS URL.");
 
 export const ebookSubmissionSchema = z.object({
   title: z.string().trim().min(3).max(240),
@@ -25,7 +26,41 @@ export const ebookSubmissionSchema = z.object({
   publicationDate: z.string().date().optional().or(z.literal("")),
   contributorBio: z.string().trim().max(2000).optional().or(z.literal("")),
   contributorExpertise: z.array(z.string().trim().min(2).max(80)).max(12).default([]),
+  contributorQualification: z.string().trim().max(240).optional().or(z.literal("")),
+  contributorTeachingExperience: z.string().trim().max(500).optional().or(z.literal("")),
+  contributorProfileImageUrl: httpsUrl.optional().or(z.literal("")),
+  contributorWebsiteUrl: httpsUrl.optional().or(z.literal("")),
+  contributorLocation: z.string().trim().max(120).optional().or(z.literal("")),
+  contributorSocialLinks: z.record(z.string().trim().min(1).max(40), httpsUrl).optional().default({}),
   rightsConfirmed: z.literal(true),
+});
+
+export const ebookDraftSchema = ebookSubmissionSchema.partial().extend({
+  title: z.string().trim().max(240).optional().or(z.literal("")),
+  authorName: z.string().trim().max(160).optional().or(z.literal("")),
+  shortDescription: z.string().trim().max(500).optional().or(z.literal("")),
+  fullDescription: z.string().trim().max(12000).optional().or(z.literal("")),
+  categoryId: z.string().uuid().optional().or(z.literal("")),
+  language: z.string().trim().max(80).optional().or(z.literal("")),
+  price: z.number().min(0).max(100000).finite().optional(),
+  currency: z.string().trim().length(3).transform((value) => value.toUpperCase()).optional(),
+  coverImageUrl: httpUrl.optional().or(z.literal("")),
+  externalProductUrl: httpUrl.optional().or(z.literal("")),
+  previewUrl: httpUrl.optional().or(z.literal("")),
+  contributorBio: z.string().trim().max(2000).optional().or(z.literal("")),
+  contributorQualification: z.string().trim().max(240).optional().or(z.literal("")),
+  contributorTeachingExperience: z.string().trim().max(500).optional().or(z.literal("")),
+  contributorProfileImageUrl: httpsUrl.optional().or(z.literal("")),
+  contributorWebsiteUrl: httpsUrl.optional().or(z.literal("")),
+  contributorLocation: z.string().trim().max(120).optional().or(z.literal("")),
+  contributorSocialLinks: z.record(z.string().trim().min(1).max(40), httpsUrl).optional(),
+  rightsConfirmed: z.boolean().optional(),
+});
+
+export const ebookSubmissionActionSchema = z.enum(["save_draft", "submit"]);
+export const ebookDraftRequestSchema = z.object({
+  action: ebookSubmissionActionSchema.optional(),
+  payload: ebookDraftSchema,
 });
 
 export const ebookReportSchema = z.object({
@@ -40,6 +75,7 @@ export const ebookEventSchema = z.object({
     "ebook_rejected", "ebook_external_click", "ebook_purchase_started",
     "ebook_purchase_completed", "mock_test_from_ebook", "mock_test_started",
     "mock_test_completed", "author_profile_view",
+    "seller_profile_view", "ebook_created", "ebook_submitted", "ebook_resubmitted",
   ]),
   ebookId: z.string().uuid().optional(),
   source: z.string().trim().max(100).optional(),

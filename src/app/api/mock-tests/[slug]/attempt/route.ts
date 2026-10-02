@@ -42,8 +42,10 @@ export async function POST(_: Request, { params }: { params: Promise<{ slug: str
 
     const { data: questionRows, error: questionError } = await adminClient
       .from("mock_test_questions")
-      .select("question_id, sort_order, marks_override, questions(id, question_text, question_html, image_url, marks, negative_marks, time_seconds, topic_id, chapter_id, subject_id, question_types(code), question_options(id, option_text, option_html, image_url, sort_order, label, body, position))")
+      .select("question_id, sort_order, marks_override, questions!inner(id, question_text, question_html, image_url, marks, negative_marks, time_seconds, topic_id, chapter_id, subject_id, status, is_active, question_types(code), question_options(id, option_text, option_html, image_url, sort_order, label, body, position))")
       .eq("mock_test_id", test.id)
+      .eq("questions.status", "published")
+      .eq("questions.is_active", true)
       .order("sort_order", { ascending: true });
 
     if (questionError) throw questionError;

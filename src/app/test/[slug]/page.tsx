@@ -12,6 +12,8 @@ import {
   Trophy,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
+import EbookCard, { type EbookCardData } from "@/components/ebooks/EbookCard";
+import { getRelatedPublishedEbooks } from "@/lib/ebooks/data";
 
 type PageProps = { params: Promise<{ slug: string }> };
 
@@ -21,7 +23,7 @@ export default async function TestDetailPage({ params }: PageProps) {
   const { data: test } = await supabase
     .from("mock_tests")
     .select(
-      "title, slug, description, total_questions, total_marks, duration_minutes, passing_marks, negative_marking, negative_marks_ratio, max_attempts, instructions, test_types(name), subjects(name), chapters(name)"
+      "title, slug, description, total_questions, total_marks, duration_minutes, passing_marks, negative_marking, negative_marks_ratio, max_attempts, instructions, subject_id, exam_id, test_types(name), subjects(name), chapters(name)"
     )
     .eq("slug", slug)
     .eq("is_published", true)
@@ -32,6 +34,7 @@ export default async function TestDetailPage({ params }: PageProps) {
   const testType = (Array.isArray(test.test_types) ? test.test_types[0] : test.test_types)?.name;
   const subject = (Array.isArray(test.subjects) ? test.subjects[0] : test.subjects)?.name;
   const chapter = (Array.isArray(test.chapters) ? test.chapters[0] : test.chapters)?.name;
+  const relatedEbooks = await getRelatedPublishedEbooks({ subjectId: test.subject_id, examId: test.exam_id, search: subject || test.title });
   const validDuration = test.duration_minutes > 0;
   const available = test.total_questions > 0 && validDuration;
   const averageMinutes = test.total_questions > 0 ? test.duration_minutes / test.total_questions : 0;
@@ -178,6 +181,20 @@ export default async function TestDetailPage({ params }: PageProps) {
             </div>
           )}
         </section>
+        {relatedEbooks.length ? (
+          <section aria-labelledby="related-ebooks-heading" className="mt-8">
+            <div className="border-b border-border pb-3">
+              <h2 id="related-ebooks-heading" className="text-xl font-bold text-foreground">Need more study material?</h2>
+              <p className="mt-1 text-sm text-muted-foreground">Explore eBooks related to this mock test.</p>
+            </div>
+            <div className="mt-3 grid gap-x-8 md:grid-cols-2">
+              {(relatedEbooks as EbookCardData[]).map((book) => <EbookCard key={book.id} book={book} />)}
+            </div>
+            <Link href={`/ebooks?search=${encodeURIComponent(subject || test.title)}`} className="mt-3 inline-flex min-h-10 items-center text-sm font-semibold text-primary hover:underline">
+              Explore eBooks
+            </Link>
+          </section>
+        ) : null}
       </section>
     </main>
   );

@@ -17,7 +17,7 @@ export async function GET(_: Request, { params }: { params: Promise<{ attemptId:
     if (!data) throw new ApiError(404, "Attempt not found", "NOT_FOUND");
 
     // prefer question_snapshot where available; indicate whether snapshots exist
-    const hasSnapshots = (data.test_responses || []).every((r: any) => !!r.question_snapshot);
+    const hasSnapshots = (data.test_responses || []).every((r: { question_snapshot?: unknown }) => !!r.question_snapshot);
 
     return apiSuccess({ ...data, hasSnapshots });
   } catch (err) {

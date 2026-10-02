@@ -1,11 +1,14 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { BookOpen, Coins, Eye, Flag, LayoutGrid, Search, Settings2, Star } from "lucide-react";
+import Link from "next/link";
+import { Ban, BookOpen, Clock, Coins, Eye, EyeOff, Flag, LayoutGrid, Search, Settings2, Star } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Dialog, DialogContent, DialogFooter, DialogHeader } from "@/components/ui/dialog";
 import {
   AdminChip,
   AdminEmpty,
@@ -29,7 +32,8 @@ type Listing = {
   title: string;
   slug: string;
   cover_image_url?: string | null;
-  status: "DRAFT" | "PENDING_REVIEW" | "PUBLISHED" | "REJECTED" | "SUSPENDED";
+  status: "DRAFT" | "PENDING_REVIEW" | "PUBLISHED" | "REJECTED" | "SUSPENDED" | "NEEDS_CHANGES" | "UNPUBLISHED";
+  seller_feedback?: string | null;
   price: number | string;
   currency: string;
   author_name?: string | null;
@@ -83,7 +87,21 @@ const STATUS_TONES: Record<Listing["status"], AdminChipTone> = {
   PUBLISHED: "success",
   REJECTED: "danger",
   SUSPENDED: "violet",
+  NEEDS_CHANGES: "info",
+  UNPUBLISHED: "neutral",
 };
+
+/** Status-filter tabs (§4). Default is Pending Review so action items lead. */
+const STATUS_TABS: Array<{ value: string; label: string }> = [
+  { value: "", label: "All" },
+  { value: "PENDING_REVIEW", label: "Pending review" },
+  { value: "PUBLISHED", label: "Published" },
+  { value: "REJECTED", label: "Rejected" },
+  { value: "SUSPENDED", label: "Suspended" },
+  { value: "UNPUBLISHED", label: "Unpublished" },
+];
+
+type PanelAction = "request_changes" | "suspend" | "unpublish" | "reinstate";
 
 const REPORT_TONES: Record<Report["status"], AdminChipTone> = {
   OPEN: "warning",
@@ -117,9 +135,17 @@ export default function AdminEbooksPanel() {
   const [revenue, setRevenue] = useState<Revenue>(null);
   const [commissionPercent, setCommissionPercent] = useState(0);
   const [page, setPage] = useState(1);
-  const [status, setStatus] = useState("");
+  const [status, setStatus] = useState("PENDING_REVIEW");
   const [search, setSearch] = useState("");
   const [query, setQuery] = useState("");
+  const [stats, setStats] = useState<Record<string, number | string> | null>(null);
+  const [sort, setSort] = useState("submitted");
+  const [filters, setFilters] = useState({ category: "", exam: "", language: "", seller: "", submittedFrom: "", submittedTo: "" });
+  const [draft, setDraft] = useState({ category: "", exam: "", language: "", seller: "", submittedFrom: "", submittedTo: "" });
+  const [filterOptions, setFilterOptions] = useState<{ categories: Array<{ id: string; name: string }>; exams: Array<{ id: string; name: string }> }>({ categories: [], exams: [] });
+  const [dialog, setDialog] = useState<{ listing: Listing; action: PanelAction; heading: string; body: string; requireReason?: boolean; reasonLabel?: string } | null>(null);
+  const [dialogReason, setDialogReason] = useState("");
+  const [dialogNote, setDialogNote] = useState("");
   const [busyId, setBusyId] = useState<string | null>(null);
   const limit = 10;
 
@@ -141,7 +167,7 @@ export default function AdminEbooksPanel() {
     if (tab !== "listings") return;
     void loadListings();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tab, page, status, query]);
+  }, [tab, page, status, query, sort, filters]);
 
   useEffect(() => {
     if (tab !== "reports") return;
@@ -159,18 +185,35 @@ export default function AdminEbooksPanel() {
     void loadConfig();
   }, [tab]);
 
+  // Category / exam options used by the moderation-queue filters (§18).
+  useEffect(() => {
+    fetch("/api/ebooks/form-data", { cache: "no-store" })
+      .then((response) => response.json())
+      .then((json) => {
+        if (json.success) setFilterOptions({ categories: json.data?.categories ?? [], exams: json.data?.exams ?? [] });
+      })
+      .catch(() => undefined);
+  }, []);
+
   async function loadListings() {
     setLoading(true);
     try {
-      const params = new URLSearchParams({ page: String(page), limit: String(limit) });
+      const params = new URLSearchParams({ page: String(page), limit: String(limit), sort });
       if (status) params.set("status", status);
       if (query) params.set("q", query);
+      if (filters.category) params.set("category", filters.category);
+      if (filters.exam) params.set("exam", filters.exam);
+      if (filters.language) params.set("language", filters.language);
+      if (filters.seller) params.set("seller", filters.seller);
+      if (filters.submittedFrom) params.set("submittedFrom", filters.submittedFrom);
+      if (filters.submittedTo) params.set("submittedTo", filters.submittedTo);
       const response = await fetch(`/api/admin/ebooks?${params.toString()}`, { cache: "no-store" });
       const json = await response.json();
       if (!response.ok || !json.success) throw new Error(json.error || "Failed to load listings");
       setListings(json.data?.data ?? []);
       setListingsTotal(Number(json.data?.pagination?.total ?? 0));
       setCounts(json.data?.counts ?? {});
+      setStats(json.data?.stats ?? null);
       setRevenue(json.data?.revenue ?? null);
       setCommissionPercent(Number(json.data?.commissionPercent ?? 0));
     } catch (error) {
@@ -226,28 +269,78 @@ export default function AdminEbooksPanel() {
     }
   }
 
-  /** Moderation transitions are applied server-side; the UI only mirrors the response. */
-  async function moderate(listing: Listing, action: "approve" | "reject" | "suspend" | "reinstate" | "feature" | "unfeature") {
-    let reason: string | undefined;
-    if (action === "reject" || action === "suspend") {
-      const input = window.prompt(
-        action === "reject"
-          ? "Why is this listing being rejected? (shared with the seller)"
-          : "Internal reason for suspending this listing"
-      );
-      if (!input || input.trim().length < 3) return;
-      reason = input.trim();
-    }
+  /** Feature/unfeature needs no confirmation dialog (no status change). */
+  async function moderate(listing: Listing, action: "feature" | "unfeature") {
     setBusyId(listing.id);
     try {
       const response = await fetch(`/api/admin/ebooks/${listing.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action, reason }),
+        body: JSON.stringify({ action }),
       });
       const json = await response.json();
       if (!response.ok || !json.success) throw new Error(json.error || "Action failed");
       toast({ title: "Listing updated", description: `${listing.title} → ${json.data?.book?.status ?? action}` });
+      await loadListings();
+    } catch (error) {
+      toast({ title: "Action failed", description: error instanceof Error ? error.message : "Please try again.", variant: "destructive" });
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  /** Status changes always go through a confirmation dialog (§23). */
+  function askAction(listing: Listing, action: PanelAction) {
+    setDialogReason("");
+    setDialogNote("");
+    const copy: Record<PanelAction, { heading: string; body: string; requireReason?: boolean; reasonLabel?: string }> = {
+      request_changes: {
+        heading: "Request changes?",
+        body: "The seller sees your message, edits the listing, and resubmits it for review.",
+        requireReason: true,
+        reasonLabel: "Message to the seller",
+      },
+      suspend: {
+        heading: "Suspend this eBook?",
+        body: "Are you sure you want to suspend this eBook? It disappears from public discovery until restored.",
+        requireReason: true,
+        reasonLabel: "Reason (shared with the seller)",
+      },
+      unpublish: {
+        heading: "Unpublish this eBook?",
+        body: "Are you sure you want to remove this eBook from public discovery?",
+        requireReason: false,
+      },
+      reinstate: {
+        heading: "Restore this eBook?",
+        body: "Make this listing publicly available on Xophol again?",
+        requireReason: false,
+      },
+    };
+    setDialog({ listing, action, ...copy[action] });
+  }
+
+  async function confirmDialog() {
+    if (!dialog) return;
+    const trimmed = dialogReason.trim();
+    if (dialog.requireReason && trimmed.length < 3) {
+      toast({ title: "Reason required", description: "Provide a short explanation for the seller.", variant: "destructive" });
+      return;
+    }
+    setBusyId(dialog.listing.id);
+    try {
+      const response = await fetch(`/api/admin/ebooks/${dialog.listing.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: dialog.action, reason: trimmed || undefined, note: dialogNote.trim() || undefined }),
+      });
+      const json = await response.json();
+      if (!response.ok || !json.success) throw new Error(json.error || "Action failed");
+      toast({
+        title: "Listing updated",
+        description: `${dialog.listing.title} → ${String(json.data?.book?.status ?? dialog.action).replace("_", " ")}`,
+      });
+      setDialog(null);
       await loadListings();
     } catch (error) {
       toast({ title: "Action failed", description: error instanceof Error ? error.message : "Please try again.", variant: "destructive" });
@@ -353,9 +446,17 @@ export default function AdminEbooksPanel() {
         description="Review seller submissions, act on reader reports, curate categories and set the commission Xophol keeps on each verified sale."
       />
 
-      <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <AdminStat label="Awaiting review" value={counts.PENDING_REVIEW ?? 0} hint="Submitted and not yet published" icon={BookOpen} tone="amber" />
+      {/* Summary cards (§3): real per-status counts from the database. */}
+      <div className="mt-6 grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-5">
+        <AdminStat label="Pending review" value={counts.PENDING_REVIEW ?? 0} hint="Awaiting a moderation decision" icon={BookOpen} tone="amber" />
         <AdminStat label="Published" value={counts.PUBLISHED ?? 0} hint="Visible on the public marketplace" icon={Eye} tone="emerald" />
+        <AdminStat label="Rejected" value={counts.REJECTED ?? 0} hint="Declined with a recorded reason" icon={Flag} tone="rose" />
+        <AdminStat label="Suspended" value={counts.SUSPENDED ?? 0} hint="Temporarily removed from sale" icon={Ban} tone="violet" />
+        <AdminStat label="Unpublished" value={counts.UNPUBLISHED ?? 0} hint="Hidden from public discovery" icon={EyeOff} tone="cyan" />
+      </div>
+
+      {/* Moderation analytics (§29): real database values only. */}
+      <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <AdminStat
           label="Marketplace revenue"
           value={formatEbookPrice(verifiedRevenue, "INR")}
@@ -369,6 +470,14 @@ export default function AdminEbooksPanel() {
           hint={revenue ? `Gross ${formatEbookPrice(money(revenue.gross_sales), "INR")} · refunds ${formatEbookPrice(money(revenue.refunds_total), "INR")}` : "No settled transactions yet"}
           icon={Star}
           tone="violet"
+        />
+        <AdminStat label="Open reports" value={Number(stats?.open_reports ?? 0)} hint={`${Number(stats?.changes_requested_total ?? 0)} change requests · ${Number(stats?.suspended_total ?? 0)} suspensions`} icon={Flag} tone="amber" />
+        <AdminStat
+          label="Avg review time"
+          value={`${Number(stats?.avg_review_hours ?? 0).toFixed(1)}h`}
+          hint={`${Number(stats?.approved_total ?? 0)} approved · ${Number(stats?.rejected_total ?? 0)} rejected all-time`}
+          icon={Clock}
+          tone="emerald"
         />
       </div>
 
@@ -385,23 +494,30 @@ export default function AdminEbooksPanel() {
         {tab === "listings" ? (
           <AdminPanel eyebrow="Moderation queue" title="Listings" icon={LayoutGrid} flush>
             <div className="px-5 pt-5">
+              {/* Status tabs (§4): Pending Review leads so action items come first. */}
+              <div className="flex flex-wrap gap-2 pb-3" role="tablist" aria-label="Filter listings by status">
+                {STATUS_TABS.map((tabOption) => (
+                  <button
+                    key={tabOption.value || "all"}
+                    type="button"
+                    role="tab"
+                    aria-selected={status === tabOption.value}
+                    onClick={() => {
+                      setPage(1);
+                      setStatus(tabOption.value);
+                    }}
+                    className={
+                      status === tabOption.value
+                        ? "rounded-full border border-cyan-400/40 bg-cyan-400/10 px-3 py-1.5 text-xs font-semibold text-cyan-200"
+                        : "rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-semibold text-slate-300 transition hover:border-cyan-400/30 hover:text-white"
+                    }
+                  >
+                    {tabOption.label}
+                    <span className="ml-1.5 text-slate-400">({tabOption.value ? (counts[tabOption.value] ?? 0) : listingsTotal})</span>
+                  </button>
+                ))}
+              </div>
               <AdminToolbar>
-                <select
-                  value={status}
-                  onChange={(event) => {
-                    setPage(1);
-                    setStatus(event.target.value);
-                  }}
-                  className="h-10 rounded-md border border-white/10 bg-slate-900/60 px-3 text-sm text-slate-200"
-                  aria-label="Filter by status"
-                >
-                  <option value="">All statuses ({listingsTotal})</option>
-                  {Object.entries(counts).map(([value, total]) => (
-                    <option key={value} value={value}>
-                      {value.replace("_", " ")} ({total})
-                    </option>
-                  ))}
-                </select>
                 <form
                   className="admin-toolbar-grow flex gap-2"
                   onSubmit={(event) => {
@@ -410,19 +526,118 @@ export default function AdminEbooksPanel() {
                     setQuery(search.trim());
                   }}
                 >
-                  <Input placeholder="Search title or author" value={search} onChange={(event) => setSearch(event.target.value)} />
+                  <Input placeholder="Search title, author, seller, id, exam…" value={search} onChange={(event) => setSearch(event.target.value)} />
                   <Button type="submit" variant="outline" size="sm">
                     <Search className="h-4 w-4" aria-hidden /> Search
                   </Button>
                 </form>
+                <select
+                  value={sort}
+                  onChange={(event) => {
+                    setPage(1);
+                    setSort(event.target.value);
+                  }}
+                  className="h-10 rounded-md border border-white/10 bg-slate-900/60 px-3 text-sm text-slate-200"
+                  aria-label="Sort listings"
+                >
+                  <option value="submitted">Recently submitted</option>
+                  <option value="newest">Newest</option>
+                  <option value="oldest">Oldest</option>
+                  <option value="updated">Recently updated</option>
+                  <option value="published">Recently published</option>
+                </select>
               </AdminToolbar>
+
+              {/* Advanced filters (§18): category, exam, language, seller, submission window */}
+              <details className="mt-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3">
+                <summary className="cursor-pointer text-sm font-semibold text-slate-300">More filters</summary>
+                <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  <div className="grid gap-1.5">
+                    <Label htmlFor="filter-category">Category</Label>
+                    <select
+                      id="filter-category"
+                      value={draft.category}
+                      onChange={(event) => setDraft({ ...draft, category: event.target.value })}
+                      className="h-10 rounded-md border border-white/10 bg-slate-900/60 px-3 text-sm text-slate-200"
+                    >
+                      <option value="">All categories</option>
+                      {filterOptions.categories.map((item) => (
+                        <option key={item.id} value={item.id}>
+                          {item.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="grid gap-1.5">
+                    <Label htmlFor="filter-exam">Exam</Label>
+                    <select
+                      id="filter-exam"
+                      value={draft.exam}
+                      onChange={(event) => setDraft({ ...draft, exam: event.target.value })}
+                      className="h-10 rounded-md border border-white/10 bg-slate-900/60 px-3 text-sm text-slate-200"
+                    >
+                      <option value="">All exams</option>
+                      {filterOptions.exams.map((item) => (
+                        <option key={item.id} value={item.id}>
+                          {item.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="grid gap-1.5">
+                    <Label htmlFor="filter-language">Language</Label>
+                    <Input id="filter-language" value={draft.language} onChange={(event) => setDraft({ ...draft, language: event.target.value })} placeholder="e.g. English" />
+                  </div>
+                  <div className="grid gap-1.5">
+                    <Label htmlFor="filter-seller">Seller</Label>
+                    <Input id="filter-seller" value={draft.seller} onChange={(event) => setDraft({ ...draft, seller: event.target.value })} placeholder="Name or email" />
+                  </div>
+                  <div className="grid gap-1.5">
+                    <Label htmlFor="filter-from">Submitted from</Label>
+                    <Input id="filter-from" type="date" value={draft.submittedFrom} onChange={(event) => setDraft({ ...draft, submittedFrom: event.target.value })} />
+                  </div>
+                  <div className="grid gap-1.5">
+                    <Label htmlFor="filter-to">Submitted to</Label>
+                    <Input id="filter-to" type="date" value={draft.submittedTo} onChange={(event) => setDraft({ ...draft, submittedTo: event.target.value })} />
+                  </div>
+                </div>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={() => {
+                      setPage(1);
+                      setFilters({ ...draft });
+                    }}
+                  >
+                    Apply filters
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      const cleared = { category: "", exam: "", language: "", seller: "", submittedFrom: "", submittedTo: "" };
+                      setDraft(cleared);
+                      setFilters(cleared);
+                      setPage(1);
+                    }}
+                  >
+                    Clear
+                  </Button>
+                </div>
+              </details>
             </div>
 
             <div className="admin-panel-body mt-4">
               {loading ? (
                 <AdminLoading label="Loading listings…" />
               ) : listings.length === 0 ? (
-                <AdminEmpty icon={BookOpen} title="No listings found" hint={query || status ? "Try a different filter or search." : "Seller submissions appear here for review."} />
+                <AdminEmpty
+                  icon={BookOpen}
+                  title={status === "PENDING_REVIEW" && !query ? "Review queue is clear" : "No listings found"}
+                  hint={status === "PENDING_REVIEW" && !query ? "No eBooks are waiting for review right now." : "Try a different filter or search."}
+                />
               ) : (
                 <>
                   <div className="admin-table-wrap">
@@ -464,6 +679,9 @@ export default function AdminEbooksPanel() {
                                       {category?.name ? ` · ${category.name}` : ""} · submitted {formatDate(listing.submitted_at ?? listing.created_at)}
                                     </p>
                                     {listing.rejection_reason ? <p className="text-xs text-rose-300">Rejected: {listing.rejection_reason}</p> : null}
+                                    {listing.status === "NEEDS_CHANGES" && listing.seller_feedback ? (
+                                      <p className="text-xs text-cyan-300">Changes requested: {listing.seller_feedback}</p>
+                                    ) : null}
                                   </div>
                                 </div>
                               </td>
@@ -477,29 +695,25 @@ export default function AdminEbooksPanel() {
                               </td>
                               <td>
                                 <div className="flex flex-wrap justify-end gap-2">
-                                  {listing.status === "PENDING_REVIEW" || listing.status === "DRAFT" ? (
-                                    <>
-                                      <Button type="button" size="sm" disabled={busy} onClick={() => void moderate(listing, "approve")}>
-                                        Approve
-                                      </Button>
-                                      <Button type="button" size="sm" variant="outline" disabled={busy} onClick={() => void moderate(listing, "reject")}>
-                                        Reject
-                                      </Button>
-                                    </>
-                                  ) : null}
+                                  <Button asChild type="button" size="sm" variant="outline">
+                                    <Link href={`/admin/ebooks/${listing.id}/review`}>Review</Link>
+                                  </Button>
                                   {listing.status === "PUBLISHED" ? (
                                     <>
                                       <Button type="button" size="sm" variant="outline" disabled={busy} onClick={() => void moderate(listing, listing.is_featured ? "unfeature" : "feature")}>
                                         {listing.is_featured ? "Unfeature" : "Feature"}
                                       </Button>
-                                      <Button type="button" size="sm" variant="outline" disabled={busy} onClick={() => void moderate(listing, "suspend")}>
+                                      <Button type="button" size="sm" variant="outline" disabled={busy} onClick={() => askAction(listing, "suspend")}>
                                         Suspend
+                                      </Button>
+                                      <Button type="button" size="sm" variant="outline" disabled={busy} onClick={() => askAction(listing, "unpublish")}>
+                                        Unpublish
                                       </Button>
                                     </>
                                   ) : null}
-                                  {listing.status === "SUSPENDED" || listing.status === "REJECTED" ? (
-                                    <Button type="button" size="sm" disabled={busy} onClick={() => void moderate(listing, "reinstate")}>
-                                      Reinstate
+                                  {listing.status === "SUSPENDED" || listing.status === "UNPUBLISHED" ? (
+                                    <Button type="button" size="sm" disabled={busy} onClick={() => askAction(listing, "reinstate")}>
+                                      Restore
                                     </Button>
                                   ) : null}
                                 </div>
@@ -902,6 +1116,43 @@ export default function AdminEbooksPanel() {
 
 
       </div>
+
+      {/* Confirmation dialog (§23) for status-changing moderation actions */}
+      <Dialog open={Boolean(dialog)} onOpenChange={(open) => { if (!open) setDialog(null); }}>
+        <DialogContent className="border-white/10 bg-slate-950/95 text-slate-100 sm:max-w-lg">
+          <DialogHeader>
+            <p className="admin-eyebrow">Confirm action</p>
+            <h2 className="text-lg font-semibold text-white">{dialog?.heading}</h2>
+            <p className="text-sm leading-6 text-slate-400">{dialog?.body}</p>
+          </DialogHeader>
+          <div className="space-y-4">
+            {dialog?.requireReason ? (
+              <div className="space-y-1.5">
+                <Label htmlFor="panel-action-reason">{dialog.reasonLabel ?? "Reason (required)"}</Label>
+                <Textarea
+                  id="panel-action-reason"
+                  value={dialogReason}
+                  onChange={(event) => setDialogReason(event.target.value)}
+                  rows={3}
+                  placeholder="Explain this decision to the seller…"
+                />
+              </div>
+            ) : null}
+            <div className="space-y-1.5">
+              <Label htmlFor="panel-action-note">Admin note (optional, internal)</Label>
+              <Textarea id="panel-action-note" value={dialogNote} onChange={(event) => setDialogNote(event.target.value)} rows={2} placeholder="Recorded in the audit trail only." />
+            </div>
+          </div>
+          <DialogFooter className="gap-2 border-t border-white/10 pt-4">
+            <Button type="button" variant="outline" disabled={busyId === dialog?.listing.id} onClick={() => setDialog(null)}>
+              Cancel
+            </Button>
+            <Button type="button" disabled={busyId === dialog?.listing.id} onClick={() => void confirmDialog()}>
+              {busyId === dialog?.listing.id ? "Working…" : "Confirm"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AdminPage>
   );
 }

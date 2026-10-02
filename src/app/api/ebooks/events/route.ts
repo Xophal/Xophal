@@ -5,7 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { ebookEventSchema } from "@/lib/ebooks/schema";
 import { checkRateLimit } from "@/lib/rate-limit";
 
-const browserEvents = new Set(["ebook_view", "ebook_search", "mock_test_from_ebook", "author_profile_view"]);
+const browserEvents = new Set(["ebook_view", "ebook_search", "mock_test_from_ebook", "author_profile_view", "seller_profile_view"]);
 
 export async function POST(request: NextRequest) {
   try {

@@ -8,6 +8,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getMarketplaceConfig } from "@/lib/ebooks/config";
 import { createPendingEbookOrder, hasVerifiedEbookPurchase, loadPurchasableEbook } from "@/lib/ebooks/orders";
 import { isRazorpayRouteConfigured } from "@/lib/ebooks/razorpay-route";
+import { isEbookPaymentsEnabled } from "@/lib/ebooks/payments";
 import { ebookCheckoutSchema } from "@/lib/ebooks/schema";
 
 /**
@@ -19,6 +20,9 @@ import { ebookCheckoutSchema } from "@/lib/ebooks/schema";
  */
 export async function POST(request: NextRequest) {
   try {
+    if (!isEbookPaymentsEnabled(serverEnv.EBOOK_PAYMENTS_ENABLED)) {
+      throw new ApiError(503, "Marketplace payments are coming soon.", "PAYMENTS_DISABLED");
+    }
     assertTrustedOrigin(request);
     await checkRateLimit(request);
 

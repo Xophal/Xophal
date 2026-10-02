@@ -1,5 +1,7 @@
 import { NextRequest } from "next/server";
 import { ApiError, apiSuccess, assertTrustedOrigin, handleApiError, validateBody } from "@/lib/api-utils";
+import { serverEnv } from "@/lib/env.server";
+import { isEbookPaymentsEnabled } from "@/lib/ebooks/payments";
 import { requireAuth } from "@/lib/auth";
 import { requireVerifiedSession } from "@/lib/auth-policy";
 import { checkRateLimit } from "@/lib/rate-limit";
@@ -11,6 +13,7 @@ export async function GET() {
   try {
     const session = await requireAuth();
     if (!session) throw new ApiError(401, "Authentication required.", "UNAUTHORIZED");
+    if (!isEbookPaymentsEnabled(serverEnv.EBOOK_PAYMENTS_ENABLED)) return apiSuccess({ enabled: false, account: null });
     if (!isRazorpayRouteConfigured()) return apiSuccess({ enabled: false, account: null });
 
     const { data, error } = await createAdminClient()
@@ -53,6 +56,9 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
+    if (!isEbookPaymentsEnabled(serverEnv.EBOOK_PAYMENTS_ENABLED)) {
+      throw new ApiError(503, "Marketplace payments are coming soon.", "PAYMENTS_DISABLED");
+    }
     assertTrustedOrigin(request);
     await checkRateLimit(request);
     const session = await requireAuth();

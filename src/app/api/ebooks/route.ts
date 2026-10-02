@@ -4,7 +4,7 @@ import { requireAuth } from "@/lib/auth";
 import { requireVerifiedSession } from "@/lib/auth-policy";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { listPublishedEbooks, type EbookFilters } from "@/lib/ebooks/data";
-import { ebookSubmissionSchema } from "@/lib/ebooks/schema";
+import { ebookDraftRequestSchema, ebookSubmissionSchema } from "@/lib/ebooks/schema";
 import { createEbookListing } from "@/lib/ebooks/submit";
 
 const SORTS = ["latest", "popular", "price_low", "price_high"] as const;
@@ -49,8 +49,12 @@ export async function POST(request: NextRequest) {
     const session = await requireAuth();
     if (!session) throw new ApiError(401, "Sign in to publish an eBook listing.", "UNAUTHORIZED");
     requireVerifiedSession(session.profile, session.user, {});
-    const payload = await validateBody(ebookSubmissionSchema, await request.json());
-    const listing = await createEbookListing({ userId: session.user.id, payload });
+    const requestPayload = await validateBody(ebookDraftRequestSchema, await request.json());
+    const action = requestPayload.action ?? "save_draft";
+    const payload = action === "submit"
+      ? await validateBody(ebookSubmissionSchema, requestPayload.payload)
+      : requestPayload.payload;
+    const listing = await createEbookListing({ userId: session.user.id, payload, action });
     return apiSuccess({ listing, listingFee: 0 }, 201);
   } catch (error) {
     return rateLimitOrError(error);

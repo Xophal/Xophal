@@ -52,10 +52,10 @@ export default function RecentActivity() {
       ]);
 
       const merged: ActivityItem[] = [];
-      imports.forEach((it: any) =>
+      imports.forEach((it: ActivityItem & { name?: string; filename?: string; created_at?: string; updated_at?: string }) =>
         merged.push({ id: it.id, title: it.name || it.filename || `Import ${it.id}`, type: "import", date: it.created_at || it.updated_at })
       );
-      edits.forEach((it: any) =>
+      edits.forEach((it: ActivityItem & { updated_at?: string; created_at?: string }) =>
         merged.push({ id: it.id, title: it.title || `Content ${it.id}`, type: "edit", date: it.updated_at || it.created_at })
       );
       merged.sort((a, b) => {

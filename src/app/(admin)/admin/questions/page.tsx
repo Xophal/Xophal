@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import EngineQuestionEditor, {
   type EngineQuestionRow,
   type EngineVocab,
@@ -66,34 +66,38 @@ export default function EngineQuestionsPage() {
   }, []);
 
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      const params = new URLSearchParams({ page: String(page), limit: "20" });
-      if (search) params.set("search", search);
-      if (typeFilter) params.set("type", typeFilter);
-      if (statusFilter) params.set("status", statusFilter);
-      if (topicFilter) params.set("topicId", topicFilter);
-      if (difficultyFilter) params.set("difficulty", difficultyFilter);
-      const res = await fetch(`/api/admin/engine/questions?${params.toString()}`, { cache: "no-store" });
-      const json = (await res.json()) as ListResponse & { success: boolean; error?: string };
-      if (!res.ok || !json.success) throw new Error(json.error ?? "Failed to load questions");
-      setRows(json.data ?? []);
-      setPagination(json.pagination ?? null);
-    } catch (err) {
-      toast({
-        title: "Load failed",
-        description: err instanceof Error ? err.message : String(err),
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  }, [page, search, typeFilter, statusFilter, topicFilter, difficultyFilter]);
-
   useEffect(() => {
-    void load();
-  }, [load]);
+    let active = true;
+    void (async () => {
+      try {
+        setLoading(true);
+        const params = new URLSearchParams({ page: String(page), limit: "20" });
+        if (search) params.set("search", search);
+        if (typeFilter) params.set("type", typeFilter);
+        if (statusFilter) params.set("status", statusFilter);
+        if (topicFilter) params.set("topicId", topicFilter);
+        if (difficultyFilter) params.set("difficulty", difficultyFilter);
+        const res = await fetch(`/api/admin/engine/questions?${params.toString()}`, { cache: "no-store" });
+        const json = (await res.json()) as ListResponse & { success: boolean; error?: string };
+        if (!res.ok || !json.success) throw new Error(json.error ?? "Failed to load questions");
+        if (active) {
+          setRows(json.data ?? []);
+          setPagination(json.pagination ?? null);
+        }
+      } catch (err) {
+        if (active) {
+          toast({
+            title: "Load failed",
+            description: err instanceof Error ? err.message : String(err),
+            variant: "destructive",
+          });
+        }
+      } finally {
+        if (active) setLoading(false);
+      }
+    })();
+    return () => { active = false; };
+  }, [page, search, typeFilter, statusFilter, topicFilter, difficultyFilter]);
 
   function resetFilters() {
     setPage(1);
@@ -144,6 +148,28 @@ export default function EngineQuestionsPage() {
       });
     } finally {
       setBusyId(null);
+    }
+  }
+
+  async function load() {
+    try {
+      const params = new URLSearchParams({ page: String(page), limit: "20" });
+      if (search) params.set("search", search);
+      if (typeFilter) params.set("type", typeFilter);
+      if (statusFilter) params.set("status", statusFilter);
+      if (topicFilter) params.set("topicId", topicFilter);
+      if (difficultyFilter) params.set("difficulty", difficultyFilter);
+      const res = await fetch(`/api/admin/engine/questions?${params.toString()}`, { cache: "no-store" });
+      const json = (await res.json()) as ListResponse & { success: boolean; error?: string };
+      if (!res.ok || !json.success) throw new Error(json.error ?? "Failed to load questions");
+      setRows(json.data ?? []);
+      setPagination(json.pagination ?? null);
+    } catch (err) {
+      toast({
+        title: "Load failed",
+        description: err instanceof Error ? err.message : String(err),
+        variant: "destructive",
+      });
     }
   }
 
@@ -443,7 +469,7 @@ function ReviewQueue({ onDone, onEdit }: { onDone: () => void; onEdit: (id: stri
   const [loading, setLoading] = useState(true);
   const [notes, setNotes] = useState<Record<string, string>>({});
 
-  const load = useCallback(async () => {
+  async function load() {
     setLoading(true);
     try {
       const res = await fetch("/api/admin/engine/questions?status=draft&limit=50", { cache: "no-store" });
@@ -454,11 +480,24 @@ function ReviewQueue({ onDone, onEdit }: { onDone: () => void; onEdit: (id: stri
     } finally {
       setLoading(false);
     }
-  }, []);
+  }
 
   useEffect(() => {
-    void load();
-  }, [load]);
+    let cancelled = false;
+    void (async () => {
+      try {
+        setLoading(true);
+        const res = await fetch("/api/admin/engine/questions?status=draft&limit=50", { cache: "no-store" });
+        const json = (await res.json()) as ListResponse & { success: boolean };
+        if (!cancelled) setItems(json.success ? (json.data ?? []) : []);
+      } catch {
+        if (!cancelled) setItems([]);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   async function decide(id: string, to: EngineStatus) {
     try {

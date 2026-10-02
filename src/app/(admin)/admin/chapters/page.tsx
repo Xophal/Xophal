@@ -29,16 +29,46 @@ export default function AdminChaptersPage() {
   const [editingTopicId, setEditingTopicId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => { void load("/api/admin/boards", setBoards); }, []);
-  useEffect(() => { setClassId(""); setSubjectId(""); setChapterId(""); setClasses([]); setSubjects([]); setChapters([]); setTopics([]); if (boardId) void load(`/api/admin/classes?boardId=${boardId}`, setClasses); }, [boardId]);
-  useEffect(() => { setSubjectId(""); setChapterId(""); setSubjects([]); setChapters([]); setTopics([]); if (classId) void load(`/api/admin/subjects?classId=${classId}`, setSubjects); }, [classId]);
-  useEffect(() => { setChapterId(""); setChapters([]); setTopics([]); if (subjectId) void load(`/api/admin/chapters?subjectId=${subjectId}`, setChapters); }, [subjectId]);
-  useEffect(() => { setTopics([]); if (chapterId) void load(`/api/admin/topics?chapterId=${chapterId}`, setTopics); }, [chapterId]);
+  useEffect(() => {
+    let active = true;
+    void load<Board>("/api/admin/boards").then((rows) => { if (active) setBoards(rows); });
+    return () => { active = false; };
+  }, []);
+  useEffect(() => {
+    if (!boardId) return;
+    let active = true;
+    void load<ClassRow>(`/api/admin/classes?boardId=${boardId}`).then((rows) => { if (active) setClasses(rows); });
+    return () => { active = false; };
+  }, [boardId]);
+  useEffect(() => {
+    if (!classId) return;
+    let active = true;
+    void load<Subject>(`/api/admin/subjects?classId=${classId}`).then((rows) => { if (active) setSubjects(rows); });
+    return () => { active = false; };
+  }, [classId]);
+  useEffect(() => {
+    if (!subjectId) return;
+    let active = true;
+    void load<Row>(`/api/admin/chapters?subjectId=${subjectId}`).then((rows) => { if (active) setChapters(rows); });
+    return () => { active = false; };
+  }, [subjectId]);
+  useEffect(() => {
+    if (!chapterId) return;
+    let active = true;
+    void load<Row>(`/api/admin/topics?chapterId=${chapterId}`).then((rows) => { if (active) setTopics(rows); });
+    return () => { active = false; };
+  }, [chapterId]);
 
-  async function load<T>(url: string, setter: (value: T[]) => void) {
-    const response = await fetch(url, { cache: "no-store" });
-    const result = await response.json();
-    if (response.ok && result.success) setter(result.data ?? []);
+  async function load<T>(url: string): Promise<T[]> {
+    try {
+      const response = await fetch(url, { cache: "no-store" });
+      const result = await response.json();
+      if (!response.ok || !result.success) throw new Error(result.error || "Could not load catalogue");
+      return result.data ?? [];
+    } catch (error) {
+      toast({ title: "Catalogue failed to load", description: error instanceof Error ? error.message : "Please retry.", variant: "destructive" });
+      return [];
+    }
   }
 
   async function submit(url: string, body: unknown, reset: () => void, title: string, method: "POST" | "PATCH" = "POST") {
@@ -50,8 +80,8 @@ export default function AdminChaptersPage() {
       toast({ title }); reset();
       setEditingChapterId(null);
       setEditingTopicId(null);
-      if (subjectId) await load(`/api/admin/chapters?subjectId=${subjectId}`, setChapters);
-      if (chapterId) await load(`/api/admin/topics?chapterId=${chapterId}`, setTopics);
+      if (subjectId) setChapters(await load<Row>(`/api/admin/chapters?subjectId=${subjectId}`));
+      if (chapterId) setTopics(await load<Row>(`/api/admin/topics?chapterId=${chapterId}`));
     } catch (error) {
       toast({ title: "Save failed", description: error instanceof Error ? error.message : "Please try again.", variant: "destructive" });
     } finally { setSaving(false); }
@@ -62,8 +92,8 @@ export default function AdminChaptersPage() {
     const result = await response.json();
     if (!response.ok || !result.success) return toast({ title: "Archive failed", description: result.error || "Please try again.", variant: "destructive" });
     toast({ title: `${entity} archived` });
-    if (entity === "chapter" && subjectId) await load(`/api/admin/chapters?subjectId=${subjectId}`, setChapters);
-    if (entity === "topic" && chapterId) await load(`/api/admin/topics?chapterId=${chapterId}`, setTopics);
+    if (entity === "chapter" && subjectId) setChapters(await load<Row>(`/api/admin/chapters?subjectId=${subjectId}`));
+    if (entity === "topic" && chapterId) setTopics(await load<Row>(`/api/admin/topics?chapterId=${chapterId}`));
   }
 
   return <AdminPage>
@@ -76,10 +106,10 @@ export default function AdminChaptersPage() {
     <div className="mt-6">
       <AdminPanel eyebrow="Location" title="Choose location" icon={ListTree}>
         <div className="grid gap-4 md:grid-cols-4">
-          <Select label="Board" value={boardId} onChange={setBoardId} options={boards} />
-          <Select label="Class" value={classId} onChange={setClassId} options={classes} disabled={!boardId} />
-          <Select label="Subject" value={subjectId} onChange={setSubjectId} options={subjects} disabled={!classId} />
-          <Select label="Chapter" value={chapterId} onChange={setChapterId} options={chapters} disabled={!subjectId} />
+          <Select label="Board" value={boardId} onChange={(value) => { setBoardId(value); setClassId(""); setSubjectId(""); setChapterId(""); setClasses([]); setSubjects([]); setChapters([]); setTopics([]); }} options={boards} />
+          <Select label="Class" value={classId} onChange={(value) => { setClassId(value); setSubjectId(""); setChapterId(""); setSubjects([]); setChapters([]); setTopics([]); }} options={classes} disabled={!boardId} />
+          <Select label="Subject" value={subjectId} onChange={(value) => { setSubjectId(value); setChapterId(""); setChapters([]); setTopics([]); }} options={subjects} disabled={!classId} />
+          <Select label="Chapter" value={chapterId} onChange={(value) => { setChapterId(value); setTopics([]); }} options={chapters} disabled={!subjectId} />
         </div>
       </AdminPanel>
     </div>

@@ -63,6 +63,7 @@ const serverEnvShape = {
   RAZORPAY_KEY_ID: z.string().min(1).optional(),
   RAZORPAY_KEY_SECRET: z.string().min(1).optional(),
   RAZORPAY_ROUTE_ENABLED: z.enum(["true", "false"]).default("false"),
+  EBOOK_PAYMENTS_ENABLED: z.enum(["true", "false"]).default("false"),
   UPSTASH_REDIS_REST_URL: z.string().url().optional(),
   UPSTASH_REDIS_REST_TOKEN: z.string().min(1).optional(),
 };
@@ -155,6 +156,7 @@ export const serverEnv = serverEnvSchema.parse({
   RAZORPAY_KEY_ID: normalizeOptionalString(process.env.RAZORPAY_KEY_ID),
   RAZORPAY_KEY_SECRET: normalizeOptionalString(process.env.RAZORPAY_KEY_SECRET),
   RAZORPAY_ROUTE_ENABLED: process.env.RAZORPAY_ROUTE_ENABLED?.trim().toLowerCase() === "true" ? "true" : "false",
+  EBOOK_PAYMENTS_ENABLED: process.env.EBOOK_PAYMENTS_ENABLED?.trim().toLowerCase() === "true" ? "true" : "false",
   UPSTASH_REDIS_REST_URL: normalizeOptionalString(process.env.UPSTASH_REDIS_REST_URL),
   UPSTASH_REDIS_REST_TOKEN: normalizeOptionalString(process.env.UPSTASH_REDIS_REST_TOKEN),
 });
@@ -189,13 +191,14 @@ export function validateEnv() {
     RAZORPAY_KEY_ID: normalizeOptionalString(process.env.RAZORPAY_KEY_ID),
     RAZORPAY_KEY_SECRET: normalizeOptionalString(process.env.RAZORPAY_KEY_SECRET),
     RAZORPAY_ROUTE_ENABLED: process.env.RAZORPAY_ROUTE_ENABLED?.trim().toLowerCase() === "true" ? "true" : "false",
+    EBOOK_PAYMENTS_ENABLED: process.env.EBOOK_PAYMENTS_ENABLED?.trim().toLowerCase() === "true" ? "true" : "false",
     UPSTASH_REDIS_REST_URL: normalizeOptionalString(process.env.UPSTASH_REDIS_REST_URL),
     UPSTASH_REDIS_REST_TOKEN: normalizeOptionalString(process.env.UPSTASH_REDIS_REST_TOKEN),
   };
 
   const result = startupEnvSchema.safeParse(raw);
   const warnings = result.success
-    ? [...collectRedisPairWarning(raw), ...collectAppUrlWarning(raw)]
+      ? [...collectRedisPairWarning(raw), ...collectAppUrlWarning(raw)]
     : formatIssues(result.error);
 
   for (const warning of warnings) {

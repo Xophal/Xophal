@@ -127,6 +127,9 @@ export async function POST(request: NextRequest) {
     await requireAdminRole(["super_admin", "admin", "content_manager"]);
     const body = await request.json();
     const payload = await validateBody(mockTestCreateSchema, body);
+    if (payload.is_published) {
+      throw new ApiError(400, "Create the test as a draft, add questions, then publish it.", "TEST_EMPTY");
+    }
     const adminClient = createAdminClient();
 
     const { data: duplicateSlug } = await adminClient
@@ -138,7 +141,7 @@ export async function POST(request: NextRequest) {
       throw new ApiError(409, "A mock test with this slug already exists.", "DUPLICATE_SLUG");
     }
 
-    const testTypeId = payload.test_type_id || (await adminClient.from("test_types").select("id").eq("code", "mock").maybeSingle())?.data?.id;
+    const testTypeId = payload.test_type_id || (await adminClient.from("test_types").select("id").eq("code", "full_mock").maybeSingle())?.data?.id;
     if (!testTypeId) {
       throw new Error("No test type configured for mock tests.");
     }

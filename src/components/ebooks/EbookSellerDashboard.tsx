@@ -1,58 +1,33 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { AlertCircle, ArrowLeft, ArrowRight, BookOpen, Eye, Pencil, Plus } from "lucide-react";
+import { AlertCircle, ArrowLeft, ArrowRight, BookOpen, CopyPlus, Eye, Pencil, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import EbookPayoutControls from "@/components/ebooks/EbookPayoutControls";
+import type { EbookListingStatus } from "@/lib/ebooks/status";
 
 type EbookListing = {
   id: string;
-  title: string;
+  title: string | null;
   slug: string;
-  cover_image_url: string;
-  status: "DRAFT" | "PENDING_REVIEW" | "PUBLISHED" | "REJECTED" | "SUSPENDED";
+  cover_image_url: string | null;
+  status: EbookListingStatus;
   price: number | string;
   currency: string;
   author_name: string;
   rejection_reason: string | null;
+  seller_feedback?: string | null;
   view_count: number;
   created_at: string;
-};
-
-type Earnings = {
-  sales_count: number | string;
-  gross_sales: number | string;
-  commission_total: number | string;
-  seller_gross: number | string;
-  payment_fees: number | string;
-  tax_total: number | string;
-  refunds_total: number | string;
-  pending_amount: number | string;
-  available_amount: number | string;
-  paid_amount: number | string;
+  published_at: string | null;
+  ebook_categories?: { name: string } | { name: string }[] | null;
 };
 
 type DashboardData = {
   data: EbookListing[];
   pagination: { page: number; total: number; totalPages: number; hasMore: boolean };
   counts: Record<string, number>;
-  sales: { transaction_count: number | string; gross_sales: number | string; xophol_commission: number | string; seller_earnings: number | string };
-  earnings: Earnings;
-  commissionPercent: number;
-};
-
-const emptyEarnings: Earnings = {
-  sales_count: 0,
-  gross_sales: 0,
-  commission_total: 0,
-  seller_gross: 0,
-  payment_fees: 0,
-  tax_total: 0,
-  refunds_total: 0,
-  pending_amount: 0,
-  available_amount: 0,
-  paid_amount: 0,
 };
 
 const statusLabels: Record<EbookListing["status"], string> = {
@@ -61,6 +36,8 @@ const statusLabels: Record<EbookListing["status"], string> = {
   PUBLISHED: "Published",
   REJECTED: "Rejected",
   SUSPENDED: "Suspended",
+  NEEDS_CHANGES: "Changes requested",
+  UNPUBLISHED: "Unpublished",
 };
 
 function money(value: number | string, currency = "INR") {
@@ -78,8 +55,19 @@ function formatStatus(status: EbookListing["status"]) {
     PUBLISHED: "border-emerald-600/30 bg-emerald-600/5 text-emerald-700",
     REJECTED: "border-destructive/30 bg-destructive/5 text-destructive",
     SUSPENDED: "border-destructive/30 bg-destructive/5 text-destructive",
+    NEEDS_CHANGES: "border-amber-500/30 bg-amber-500/5 text-amber-700",
+    UNPUBLISHED: "border-border text-muted-foreground",
   };
   return <span className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-semibold ${styles[status]}`}>{statusLabels[status]}</span>;
+}
+
+/** Statuses the API allows a seller to edit and resubmit. */
+const EDITABLE_STATUSES: EbookListing["status"][] = ["DRAFT", "REJECTED", "NEEDS_CHANGES", "PUBLISHED"];
+
+function editHint(status: EbookListing["status"]) {
+  return status === "PENDING_REVIEW"
+    ? "Editing is locked while this listing is under review."
+    : "This listing is locked by Xophol Admin. Contact support to change it.";
 }
 
 export default function EbookSellerDashboard() {
@@ -87,6 +75,8 @@ export default function EbookSellerDashboard() {
   const [result, setResult] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [busyId, setBusyId] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -109,9 +99,23 @@ export default function EbookSellerDashboard() {
     return () => {
       active = false;
     };
-  }, [page]);
+  }, [page, refreshKey]);
 
-  const earnings = result?.earnings ?? emptyEarnings;
+  async function manageListing(book: EbookListing, action: "duplicate" | "delete") {
+    if (action === "delete" && !window.confirm("Delete this draft? This cannot be undone.")) return;
+    setBusyId(book.id);
+    setError("");
+    try {
+      const response = await fetch(`/api/ebooks/mine/${book.id}`, { method: action === "duplicate" ? "POST" : "DELETE" });
+      const json = await response.json();
+      if (!response.ok || !json.success) throw new Error(json.error || "Could not update this listing.");
+      setRefreshKey((current) => current + 1);
+    } catch (actionError) {
+      setError(actionError instanceof Error ? actionError.message : "Could not update this listing.");
+    } finally {
+      setBusyId(null);
+    }
+  }
 
   return (
     <main className="mx-auto max-w-6xl space-y-7">
@@ -128,43 +132,27 @@ export default function EbookSellerDashboard() {
         </Button>
       </header>
 
-      <section aria-label="Sales and earnings" className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <section aria-label="Listing status overview" className="grid grid-cols-2 gap-3 sm:grid-cols-4 xl:grid-cols-8">
         {[
-          { label: "Gross sales", value: money(earnings.gross_sales) },
-          { label: "Xophol commission", value: money(earnings.commission_total) },
-          { label: "Seller gross before deductions", value: money(earnings.seller_gross) },
-          { label: "Transactions", value: String(Number(earnings.sales_count) || 0) },
+          { label: "Total eBooks", value: result?.pagination.total ?? 0 },
+          { label: "Published", value: result?.counts.PUBLISHED ?? 0 },
+          { label: "Pending review", value: result?.counts.PENDING_REVIEW ?? 0 },
+          { label: "Rejected", value: result?.counts.REJECTED ?? 0 },
+          { label: "Drafts", value: result?.counts.DRAFT ?? 0 },
+          { label: "Changes requested", value: result?.counts.NEEDS_CHANGES ?? 0 },
+          { label: "Suspended", value: result?.counts.SUSPENDED ?? 0 },
+          { label: "Unpublished", value: result?.counts.UNPUBLISHED ?? 0 },
         ].map((metric) => (
-          <div key={metric.label} className="rounded-md border border-border bg-card p-4">
+          <div key={metric.label} className="rounded-md border border-border bg-card p-3">
             <p className="text-xs font-medium text-muted-foreground">{metric.label}</p>
-            <p className="mt-2 text-xl font-semibold text-foreground">{metric.value}</p>
+            <p className="mt-1 text-xl font-semibold text-foreground">{metric.value}</p>
           </div>
         ))}
       </section>
 
-      <dl className="grid gap-3 border-y border-border py-4 sm:grid-cols-3">
-        <div><dt className="text-xs font-medium text-muted-foreground">Payment-provider fees</dt><dd className="mt-1 font-semibold text-foreground">{money(earnings.payment_fees)}</dd></div>
-        <div><dt className="text-xs font-medium text-muted-foreground">Tax deductions</dt><dd className="mt-1 font-semibold text-foreground">{money(earnings.tax_total)}</dd></div>
-        <div><dt className="text-xs font-medium text-muted-foreground">Refunded gross sales</dt><dd className="mt-1 font-semibold text-foreground">{money(earnings.refunds_total)}</dd></div>
-      </dl>
-
-      <section className="grid gap-3 border-y border-border py-5 sm:grid-cols-3" aria-label="Payout lifecycle">
-        {[
-          { label: "Pending during refund hold", value: money(earnings.pending_amount) },
-          { label: "Available for transfer", value: money(earnings.available_amount) },
-          { label: "Transferred to Razorpay account", value: money(earnings.paid_amount) },
-        ].map((balance) => (
-          <div key={balance.label}>
-            <p className="text-xs font-medium text-muted-foreground">{balance.label}</p>
-            <p className="mt-1 text-lg font-semibold text-foreground">{balance.value}</p>
-          </div>
-        ))}
-        <p className="text-xs leading-5 text-muted-foreground sm:col-span-3">
-          Balances include captured payment fees and tax. Razorpay Route transfer fees are shown separately; a completed transfer may still be awaiting bank settlement.
-        </p>
-      </section>
-
-      <EbookPayoutControls />
+      <p className="border-y border-border py-3 text-sm text-muted-foreground">
+        Sales &amp; earnings will be available after marketplace payments are enabled.
+      </p>
 
       <section>
         <div className="flex items-center justify-between gap-3">
@@ -197,22 +185,44 @@ export default function EbookSellerDashboard() {
         {!loading && !error && result?.data.length ? (
           <div className="mt-4 divide-y divide-border border-y border-border">
             {result.data.map((book) => (
-              <article key={book.id} className="grid gap-3 py-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
+              <article key={book.id} className="grid grid-cols-[48px_minmax(0,1fr)] gap-3 py-4 sm:grid-cols-[48px_minmax(0,1fr)_auto] sm:items-center">
+                {book.cover_image_url ? (
+                  <Image src={book.cover_image_url} alt={`Cover of ${book.title || "untitled eBook"}`} width={48} height={64} className="h-16 w-12 rounded-sm border border-border object-cover" />
+                ) : <div aria-hidden="true" className="h-16 w-12 border border-border bg-muted" />}
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
-                    <h3 className="font-semibold text-foreground">{book.title}</h3>
+                    <h3 className="font-semibold text-foreground">{book.title || "Untitled eBook"}</h3>
                     {formatStatus(book.status)}
                   </div>
                   <p className="mt-1 text-sm text-muted-foreground">
-                    {money(book.price, book.currency)} <span aria-hidden="true">·</span> {Number(book.view_count) || 0} views
+                    {money(book.price, book.currency)} <span aria-hidden="true">·</span> {book.ebook_categories ? (Array.isArray(book.ebook_categories) ? book.ebook_categories[0]?.name ?? "Uncategorized" : book.ebook_categories.name) : "Uncategorized"}
+                    {` · Created ${new Date(book.created_at).toLocaleDateString()}`}
+                    {book.published_at ? ` · Published ${new Date(book.published_at).toLocaleDateString()}` : ""}
                   </p>
                   {book.rejection_reason ? <p className="mt-2 text-sm text-destructive">Review note: {book.rejection_reason}</p> : null}
+                  {book.status === "NEEDS_CHANGES" && book.seller_feedback ? (
+                    <p className="mt-2 text-sm text-amber-700">Changes requested by Xophol Admin: {book.seller_feedback}</p>
+                  ) : null}
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
                   {book.status === "PUBLISHED" ? (
                     <Button asChild size="sm" variant="outline"><Link href={`/ebooks/${book.slug}`}><Eye aria-hidden="true" />View</Link></Button>
                   ) : null}
-                  <Button asChild size="sm" variant="outline"><Link href={`/dashboard/ebooks/${book.id}/edit`}><Pencil aria-hidden="true" />Edit</Link></Button>
+                  {EDITABLE_STATUSES.includes(book.status) ? (
+                    <Button asChild size="sm" variant="outline"><Link href={`/dashboard/ebooks/${book.id}/edit`}><Pencil aria-hidden="true" />{book.status === "NEEDS_CHANGES" || book.status === "REJECTED" ? "Fix and resubmit" : "Edit"}</Link></Button>
+                  ) : (
+                    <p className="text-xs text-muted-foreground sm:text-right">{editHint(book.status)}</p>
+                  )}
+                  {!(["PENDING_REVIEW", "SUSPENDED", "UNPUBLISHED"].includes(book.status)) ? (
+                    <Button type="button" size="sm" variant="outline" disabled={busyId === book.id} onClick={() => void manageListing(book, "duplicate")} title="Duplicate as draft">
+                      <CopyPlus aria-hidden="true" />Duplicate
+                    </Button>
+                  ) : null}
+                  {book.status === "DRAFT" ? (
+                    <Button type="button" size="sm" variant="outline" disabled={busyId === book.id} onClick={() => void manageListing(book, "delete")} title="Delete draft">
+                      <Trash2 aria-hidden="true" />Delete
+                    </Button>
+                  ) : null}
                 </div>
               </article>
             ))}

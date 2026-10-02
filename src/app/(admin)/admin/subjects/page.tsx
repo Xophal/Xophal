@@ -27,22 +27,21 @@ export default function AdminSubjectsPage() {
   }, []);
 
   useEffect(() => {
-    if (!form.board_id) {
-      setClasses([]);
-      setSubjects([]);
-      setForm((current) => ({ ...current, class_id: "" }));
-      return;
-    }
-
-    loadClassesByBoard(form.board_id);
+    if (!form.board_id) return;
+    let active = true;
+    void loadClassesByBoard(form.board_id).then((rows) => { if (active) setClasses(rows); }).catch((error) => {
+      if (active) toast({ title: "Classes failed to load", description: error instanceof Error ? error.message : "Please retry.", variant: "destructive" });
+    });
+    return () => { active = false; };
   }, [form.board_id]);
 
   useEffect(() => {
-    if (!form.class_id) {
-      setSubjects([]);
-      return;
-    }
-    loadSubjectsByClass(form.class_id);
+    if (!form.class_id) return;
+    let active = true;
+    void loadSubjectsByClass(form.class_id).then((rows) => { if (active) setSubjects(rows); }).catch((error) => {
+      if (active) toast({ title: "Subjects failed to load", description: error instanceof Error ? error.message : "Please retry.", variant: "destructive" });
+    });
+    return () => { active = false; };
   }, [form.class_id]);
 
   async function loadBoards() {
@@ -51,18 +50,18 @@ export default function AdminSubjectsPage() {
     if (res.ok && json.success) setBoards(json.data || []);
   }
 
-  async function loadClassesByBoard(boardId: string) {
+  async function loadClassesByBoard(boardId: string): Promise<ClassItem[]> {
     const res = await fetch(`/api/admin/classes?boardId=${boardId}`, { cache: "no-store" });
     const json = await res.json();
-    if (res.ok && json.success) setClasses(json.data || []);
-    setForm((current) => ({ ...current, class_id: "" }));
-    setSubjects([]);
+    if (!res.ok || !json.success) throw new Error(json.error || "Could not load classes");
+    return json.data || [];
   }
 
-  async function loadSubjectsByClass(classId: string) {
+  async function loadSubjectsByClass(classId: string): Promise<SubjectItem[]> {
     const res = await fetch(`/api/admin/subjects?classId=${classId}`, { cache: "no-store" });
     const json = await res.json();
-    if (res.ok && json.success) setSubjects(json.data || []);
+    if (!res.ok || !json.success) throw new Error(json.error || "Could not load subjects");
+    return json.data || [];
   }
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -84,7 +83,7 @@ export default function AdminSubjectsPage() {
       toast({ title: editingId ? "Subject updated" : "Subject created", description: `${form.name} has been saved.` });
       setEditingId(null);
       setForm({ ...blankSubject, board_id: form.board_id });
-      await loadSubjectsByClass(form.class_id);
+      setSubjects(await loadSubjectsByClass(form.class_id));
     } catch (error) {
       toast({
         title: "Creation failed",
@@ -100,7 +99,7 @@ export default function AdminSubjectsPage() {
     const response = await fetch(`/api/admin/subjects/${item.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ is_active: !item.is_active }) });
     const result = await response.json().catch(() => ({}));
     if (!response.ok || !result.success) return toast({ title: "Update failed", description: result.error || "Could not update subject", variant: "destructive" });
-    if (form.class_id) await loadSubjectsByClass(form.class_id);
+    if (form.class_id) setSubjects(await loadSubjectsByClass(form.class_id));
   }
 
   function editSubject(item: SubjectItem) {
@@ -122,7 +121,7 @@ export default function AdminSubjectsPage() {
             <form onSubmit={onSubmit} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="subject-board">Board</Label>
-                <select id="subject-board" value={form.board_id} onChange={(e) => setForm({ ...blankSubject, board_id: e.target.value })} className="flex h-10 w-full px-3 py-2 text-sm glass-input" required>
+                <select id="subject-board" value={form.board_id} onChange={(e) => { setEditingId(null); setClasses([]); setSubjects([]); setForm({ ...blankSubject, board_id: e.target.value }); }} className="flex h-10 w-full px-3 py-2 text-sm glass-input" required>
                   <option value="">Select board</option>
                   {boards.map((board) => (
                     <option key={board.id} value={board.id}>{board.name}</option>

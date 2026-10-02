@@ -6,6 +6,14 @@ import { AdminChip, AdminEmpty, AdminLoading, AdminPage, AdminPageHeader, AdminP
 
 
 type RangeKey = "today" | "7d" | "30d" | "90d" | "all";
+type AnalyticsData = {
+  users: { total: number; active: number };
+  tests: { total: number; published: number };
+  attempts: { total: number; completed: number };
+  averages: { averageScore: number; averagePercentage: number; averageAccuracy: number };
+  topTests: Array<{ id: string; title: string; attempts: number }>;
+  trends: Array<{ date: string; completed_count: number }> | null;
+};
 
 const RANGES: Array<{ key: RangeKey; label: string }> = [
   { key: "today", label: "Today" },
@@ -16,21 +24,25 @@ const RANGES: Array<{ key: RangeKey; label: string }> = [
 ];
 
 export default function AdminAnalyticsPage() {
-  const [data, setData] = useState<any>(null);
+  const [result, setResult] = useState<{ range: RangeKey; data: AnalyticsData | null } | null>(null);
   const [range, setRange] = useState<RangeKey>("30d");
-  const [loading, setLoading] = useState(true);
+  const loading = result?.range !== range;
+  const data = result?.range === range ? result.data : null;
 
-  useEffect(() => { load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [range]);
-
-  async function load() {
-    setLoading(true);
-    try {
-      const res = await fetch(`/api/admin/analytics?range=${range}`);
-      const json = await res.json();
-      if (!res.ok || !json.success) throw new Error(json.error || "Failed");
-      setData(json.data);
-    } catch (e) { console.error(e); } finally { setLoading(false); }
-  }
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const res = await fetch(`/api/admin/analytics?range=${range}`, { cache: "no-store" });
+        const json = (await res.json()) as { success: boolean; data?: AnalyticsData; error?: string };
+        if (!res.ok || !json.success || !json.data) throw new Error(json.error || "Failed to load analytics");
+        if (!cancelled) setResult({ range, data: json.data });
+      } catch {
+        if (!cancelled) setResult({ range, data: null });
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [range]);
 
   const stats: Array<{ label: string; value: React.ReactNode; icon: LucideIcon; tone: "cyan" | "emerald" | "violet" | "amber" }> = [
     { label: "Total users", value: data?.users?.total, icon: Users, tone: "cyan" },
@@ -93,7 +105,7 @@ export default function AdminAnalyticsPage() {
                 <AdminEmpty icon={Target} title="No ranked tests yet" hint="Once students attempt tests, popularity rankings appear here." />
               ) : (
                 <ol className="space-y-3">
-                  {data.topTests.map((t: any) => (
+                  {data.topTests.map((t) => (
                     <li key={t.id} className="admin-row">
                       <span className="admin-row-title">{t.title}</span>
                       <AdminChip tone="info">{t.attempts} attempts</AdminChip>
@@ -108,7 +120,7 @@ export default function AdminAnalyticsPage() {
                 <AdminEmpty icon={TrendingUp} title="No trend data" hint="Daily completion trends appear once attempts exist in this range." />
               ) : (
                 <ul className="space-y-2 text-sm">
-                  {data.trends.slice(-10).map((point: any) => (
+                  {data.trends.slice(-10).map((point) => (
                     <li key={point.date} className="admin-row">
                       <span className="text-slate-400">{new Date(point.date).toLocaleDateString()}</span>
                       <span className="font-semibold text-white">{point.completed_count} completed</span>

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -23,17 +23,13 @@ export default function QuestionEditor({ mockTestId, existing, onSaved, onCancel
   const [status, setStatus] = useState(typeof existing?.status === "string" ? existing.status : "draft");
   const [marks, setMarks] = useState(typeof existing?.marks === "number" ? existing.marks : 1);
   const [negativeMarks, setNegativeMarks] = useState(typeof existing?.negative_marks === "number" ? existing.negative_marks : 0);
-  const [options, setOptions] = useState<Option[]>(existingOptions.length > 0 ? existingOptions : [
+  const [options, setOptions] = useState<Option[]>(() => existingOptions.length > 0 ? existingOptions : [
     { label: "A", text: "" },
     { label: "B", text: "" },
     { label: "C", text: "" },
     { label: "D", text: "" },
   ]);
   const [saving, setSaving] = useState(false);
-
-  useEffect(() => {
-    if (existing && existingOptions.length > 0) setOptions(existingOptions);
-  }, [existing]);
 
   function setOptionText(index: number, text: string) {
     setOptions((s) => s.map((o, i) => (i === index ? { ...o, text } : o)));

@@ -8,7 +8,7 @@ export default function EbookTelemetry({
   source,
   searchTerm,
 }: {
-  eventName: "ebook_view" | "ebook_search" | "mock_test_from_ebook" | "author_profile_view";
+  eventName: "ebook_view" | "ebook_search" | "mock_test_from_ebook" | "author_profile_view" | "seller_profile_view";
   ebookId?: string;
   source?: string;
   searchTerm?: string;

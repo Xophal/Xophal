@@ -1,5 +1,9 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 
+export function isEbookPaymentsEnabled(value: string | undefined) {
+  return value === "true";
+}
+
 /**
  * Verifies the Razorpay checkout handshake signature:
  *   expected = HMAC_SHA256(`${orderId}|${paymentId}`, key_secret)

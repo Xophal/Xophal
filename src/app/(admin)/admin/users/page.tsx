@@ -8,38 +8,49 @@ import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
 import { AdminChip, AdminEmpty, AdminLoading, AdminPage, AdminPageHeader, AdminPanel, AdminPagination, AdminToolbar, readList } from "@/components/admin/ui";
 
+type UserRow = {
+  id: string;
+  full_name: string | null;
+  email: string | null;
+  created_at: string | null;
+  roles: { code: string; name: string } | null;
+};
+
 export default function AdminUsersPage() {
-  const [query, setQuery] = useState("");
-  const [users, setUsers] = useState<any[]>([]);
+  const [search, setSearch] = useState("");
+  const [activeQuery, setActiveQuery] = useState("");
+  const [result, setResult] = useState<{ query: string; page: number; users: UserRow[]; total: number } | null>(null);
   const [page, setPage] = useState(1);
   const [limit] = useState(20);
-  const [total, setTotal] = useState(0);
-  const [loading, setLoading] = useState(false);
+  const loading = result?.query !== activeQuery || result?.page !== page;
+  const users = result?.query === activeQuery && result.page === page ? result.users : [];
+  const total = result?.query === activeQuery && result.page === page ? result.total : 0;
 
-  useEffect(() => { load(); }, [page]);
-
-  async function load() {
-    setLoading(true);
-    try {
-      const params = new URLSearchParams();
-      params.set("page", String(page));
-      params.set("limit", String(limit));
-      if (query) params.set("q", query);
-      const res = await fetch(`/api/admin/users?${params.toString()}`, { cache: "no-store" });
-      const json = await res.json();
-      if (!res.ok || !json.success) throw new Error(json.error || "Failed");
-      const parsed = readList<(typeof users)[number]>(json);
-      setUsers(parsed.items);
-      setTotal(parsed.total);
-    } catch (err) {
-      toast({ title: "Load failed", description: err instanceof Error ? err.message : String(err), variant: "destructive" });
-    } finally { setLoading(false); }
-  }
+  useEffect(() => {
+    let active = true;
+    void (async () => {
+      try {
+        const params = new URLSearchParams({ page: String(page), limit: String(limit) });
+        if (activeQuery) params.set("q", activeQuery);
+        const res = await fetch(`/api/admin/users?${params.toString()}`, { cache: "no-store" });
+        const json = await res.json();
+        if (!res.ok || !json.success) throw new Error(json.error || "Failed");
+        const parsed = readList<UserRow>(json);
+        if (active) setResult({ query: activeQuery, page, users: parsed.items, total: parsed.total });
+      } catch (err) {
+        if (active) {
+          toast({ title: "Load failed", description: err instanceof Error ? err.message : String(err), variant: "destructive" });
+          setResult({ query: activeQuery, page, users: [], total: 0 });
+        }
+      }
+    })();
+    return () => { active = false; };
+  }, [activeQuery, limit, page]);
 
   function onSearch(e: React.FormEvent) {
     e.preventDefault();
     setPage(1);
-    load();
+    setActiveQuery(search);
   }
 
   return (
@@ -56,16 +67,16 @@ export default function AdminUsersPage() {
           <div className="px-5 pt-5">
             <AdminToolbar>
               <form onSubmit={onSearch} className="admin-toolbar-grow flex gap-2">
-                <Input placeholder="Search name or email" value={query} onChange={(e) => setQuery(e.target.value)} />
+                <Input placeholder="Search name or email" value={search} onChange={(e) => setSearch(e.target.value)} />
                 <Button type="submit" variant="outline" size="sm">Search</Button>
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
                   onClick={() => {
-                    setQuery("");
+                    setSearch("");
+                    setActiveQuery("");
                     setPage(1);
-                    load();
                   }}
                 >
                   Reset

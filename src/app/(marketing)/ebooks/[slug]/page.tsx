@@ -45,7 +45,6 @@ export default async function EbookDetailPage({ params }: Props) {
   const contributor = relation(book.ebook_contributors);
   const tests = await getRelatedFreeMockTests(book);
   const session = await requireAuth();
-  const signedIn = Boolean(session);
   const owned = session ? await hasVerifiedEbookPurchase(session.user.id, book.id) : false;
   const related = category ? await listPublishedEbooks({ category: category.slug, limit: 4 }) : { books: [] };
   const offer = book.price === 0 ? "Free" : new Intl.NumberFormat("en-IN", { style: "currency", currency: book.currency || "INR", maximumFractionDigits: 0 }).format(Number(book.price));
@@ -61,7 +60,6 @@ export default async function EbookDetailPage({ params }: Props) {
     numberOfPages: book.page_count || undefined,
     datePublished: book.publication_date || undefined,
     url: canonicalUrl,
-    offers: { "@type": "Offer", price: Number(book.price), priceCurrency: book.currency || "INR", url: canonicalUrl, availability: "https://schema.org/InStock" },
   };
 
   return (
@@ -93,12 +91,8 @@ export default async function EbookDetailPage({ params }: Props) {
             <div className="mt-6 max-w-md border-y border-border py-4">
               <EbookPurchase
                 ebookId={book.id}
-                slug={book.slug}
-                title={book.title}
                 price={book.price}
-                currency={book.currency || "INR"}
                 owned={owned}
-                signedIn={signedIn}
               />
               {book.preview_url ? <a href={book.preview_url} target="_blank" rel="noreferrer" className="mt-3 inline-flex min-h-11 items-center rounded-md border border-border px-4 text-sm font-semibold hover:bg-muted">Preview</a> : null}
               <p className="mt-3 text-xs text-muted-foreground">The original book file lives on the author&apos;s own destination and opens here only after access is granted. Xophol never stores the book itself.</p>

@@ -5,6 +5,7 @@
 @import "../styles/student-dashboard.css";
 @import "../styles/admin-dashboard.css";
 @import "../styles/xophol-brand.css";
+@import "../styles/student-header.css";
 
 @tailwind base;
 @tailwind components;

@@ -1,41 +1,39 @@
 import { NextRequest } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireAdminAuth } from "@/lib/auth";
-import { validateBody, apiSuccess, apiError, handleApiError } from "@/lib/api-utils";
+import { apiSuccess, apiError, handleApiError } from "@/lib/api-utils";
 import { parseCsvRows, validateImportRows } from "@/lib/cms-import";
-import { importJobSchema } from "@/lib/validations";
 
 async function parseXlsx(buffer: ArrayBuffer) {
   try {
     const ExcelJS = (await import("exceljs")).default ?? (await import("exceljs"));
     const workbook = new ExcelJS.Workbook();
-    const nodeBuffer = Buffer.from(new Uint8Array(buffer as any));
-    await workbook.xlsx.load(nodeBuffer as any);
+    const nodeBuffer = Buffer.from(new Uint8Array(buffer));
+    const xlsxBuffer = nodeBuffer as unknown as Parameters<typeof workbook.xlsx.load>[0];
+    await workbook.xlsx.load(xlsxBuffer);
     const worksheet = workbook.worksheets[0];
     if (!worksheet) return [];
 
     // Use first row as headers
     const headerRow = worksheet.getRow(1);
     const headerValues = Array.isArray(headerRow.values) ? headerRow.values.slice(1) : [];
-    const headers = headerValues.map((h: any) => (h === null || h === undefined ? "" : String(h).trim()));
+    const headers = headerValues.map((header) => (header === null || header === undefined ? "" : String(header).trim()));
 
-    const rows: any[] = [];
+    const rows: Record<string, unknown>[] = [];
     worksheet.eachRow((row, rowNumber) => {
       if (rowNumber === 1) return; // skip header
-      const obj: Record<string, any> = {};
+      const obj: Record<string, unknown> = {};
       row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
         const key = headers[colNumber - 1] || `col${colNumber}`;
-        let val: any = cell.value;
-        if (val === null || val === undefined) val = "";
-        else if (typeof (val as any).toString === "function") val = (val as any).toString();
-        else val = String(val);
+        const value = cell.value;
+        const val = value === null || value === undefined ? "" : typeof value === "object" && "text" in value ? String(value.text) : String(value);
         obj[key] = val;
       });
       rows.push(obj);
     });
 
     return rows as unknown[];
-  } catch (err) {
+  } catch {
     throw new Error("Excel parsing not available. Ensure `exceljs` is installed to enable Excel imports.");
   }
 }
@@ -96,10 +94,10 @@ export async function POST(request: NextRequest) {
         options: null,
         user_id: user.id,
       },
-    ]);
+    ]).select("id").single();
 
     if (error) throw error;
-    return apiSuccess({ job: data?.[0] ?? null, preview });
+    return apiSuccess({ job: data ?? null, preview });
   } catch (error) {
     return handleApiError(error);
   }

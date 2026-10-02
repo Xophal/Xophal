@@ -16,11 +16,11 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     const payload = await validateBody(reorderSchema, body);
     const admin = createAdminClient();
 
-    const qIds = payload.order.map((o: any) => o.questionId);
+    const qIds = payload.order.map((o) => o.questionId);
     // verify all questions belong to this mock test
     const { data: existing, error: existErr } = await admin.from("mock_test_questions").select("question_id").eq("mock_test_id", mockTestId).in("question_id", qIds);
     if (existErr) throw existErr;
-    const existingIds = (existing || []).map((r: any) => r.question_id);
+    const existingIds = (existing || []).map((row) => (row as { question_id: string }).question_id);
     for (const q of payload.order) {
       if (!existingIds.includes(q.questionId)) throw new Error("One or more questions do not belong to the specified mock test");
     }

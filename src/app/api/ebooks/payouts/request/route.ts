@@ -4,6 +4,7 @@ import { requireAuth } from "@/lib/auth";
 import { requireVerifiedSession } from "@/lib/auth-policy";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { serverEnv } from "@/lib/env.server";
+import { isEbookPaymentsEnabled } from "@/lib/ebooks/payments";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getMarketplaceConfig } from "@/lib/ebooks/config";
 import { recordVerifiedEbookPaymentCosts, releaseDueEbookBalances } from "@/lib/ebooks/orders";
@@ -11,6 +12,9 @@ import { createRazorpayRouteTransfer, isRazorpayRouteConfigured, RazorpayRouteEr
 
 export async function POST(request: NextRequest) {
   try {
+    if (!isEbookPaymentsEnabled(serverEnv.EBOOK_PAYMENTS_ENABLED)) {
+      throw new ApiError(503, "Marketplace payments are coming soon.", "PAYMENTS_DISABLED");
+    }
     assertTrustedOrigin(request);
     await checkRateLimit(request);
     const session = await requireAuth();

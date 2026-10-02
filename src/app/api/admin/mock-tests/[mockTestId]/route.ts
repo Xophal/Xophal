@@ -24,6 +24,16 @@ export async function PATCH(request: NextRequest, { params }: Params) {
     const { mockTestId } = await params;
     const payload = await validateBody(updateSchema, await request.json());
     const admin = createAdminClient();
+    if (payload.is_published === true) {
+      const { count, error: countError } = await admin
+        .from("mock_test_questions")
+        .select("question_id, questions!inner(id)", { count: "exact", head: true })
+        .eq("mock_test_id", mockTestId)
+        .eq("questions.status", "published")
+        .eq("questions.is_active", true);
+      if (countError) throw countError;
+      if (!count) throw new ApiError(400, "Add at least one active, published question before publishing this test.", "TEST_EMPTY");
+    }
     const { data, error } = await admin.from("mock_tests").update({
       ...payload,
       instructions: payload.instructions || null,

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { serverEnv } from "@/lib/env.server";
+import { isEbookPaymentsEnabled } from "@/lib/ebooks/payments";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { findOrderByProviderOrderId, markEbookOrderFulfilled, markEbookOrderPaid, recordVerifiedEbookPaymentCosts, refundEbookOrder } from "@/lib/ebooks/orders";
 import { isValidRazorpayWebhookSignature } from "@/lib/ebooks/payments";
@@ -18,6 +19,9 @@ type RazorpayWebhookPayload = {
  * checked before any order state changes.
  */
 export async function POST(request: NextRequest) {
+  if (!isEbookPaymentsEnabled(serverEnv.EBOOK_PAYMENTS_ENABLED)) {
+    return NextResponse.json({ success: false, error: "Marketplace payments are coming soon." }, { status: 503 });
+  }
   const rawBody = await request.text();
   const signature = request.headers.get("x-razorpay-signature") ?? "";
 

@@ -3,6 +3,7 @@ import { ApiError, apiSuccess, assertTrustedOrigin, handleApiError, validateBody
 import { requireAuth } from "@/lib/auth";
 import { requireVerifiedSession } from "@/lib/auth-policy";
 import { serverEnv } from "@/lib/env.server";
+import { isEbookPaymentsEnabled } from "@/lib/ebooks/payments";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { findOrderByProviderOrderId, markEbookOrderFulfilled, markEbookOrderPaid, recordVerifiedEbookPaymentCosts } from "@/lib/ebooks/orders";
 import { isCapturedRazorpayPayment, isValidRazorpaySignature } from "@/lib/ebooks/payments";
@@ -15,6 +16,9 @@ import { ebookPurchaseVerificationSchema } from "@/lib/ebooks/schema";
  */
 export async function POST(request: NextRequest) {
   try {
+    if (!isEbookPaymentsEnabled(serverEnv.EBOOK_PAYMENTS_ENABLED)) {
+      throw new ApiError(503, "Marketplace payments are coming soon.", "PAYMENTS_DISABLED");
+    }
     assertTrustedOrigin(request);
     const session = await requireAuth();
     if (!session) throw new ApiError(401, "Please sign in before verifying payment.", "UNAUTHORIZED");

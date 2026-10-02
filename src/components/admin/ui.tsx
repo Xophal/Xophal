@@ -115,15 +115,19 @@ export type AdminChipTone = "neutral" | "success" | "warning" | "danger" | "info
  * via `apiSuccess([])` while paginated routes return
  * `apiSuccess({ data: [...], pagination: { total } })`.
  */
-export function readList<T>(json: any): { items: T[]; total: number } {
-  const payload = json?.data;
+export function readList<T>(json: unknown): { items: T[]; total: number } {
+  if (Array.isArray(json)) {
+    return { items: json as T[], total: json.length };
+  }
+  const value = json as { data?: unknown; pagination?: { total?: number } } | null;
+  const payload = value?.data;
   if (Array.isArray(payload)) {
-    return { items: payload as T[], total: Number(json?.pagination?.total ?? payload.length) || 0 };
+    return { items: payload as T[], total: Number(value?.pagination?.total ?? payload.length) || 0 };
   }
-  if (payload && Array.isArray(payload.data)) {
-    return { items: payload.data as T[], total: Number(payload.pagination?.total ?? payload.data.length) || 0 };
+  if (payload && typeof payload === "object" && Array.isArray((payload as { data?: unknown }).data)) {
+    const nested = (payload as { data: T[]; pagination?: { total?: number } }).data;
+    return { items: nested, total: Number((payload as { pagination?: { total?: number } }).pagination?.total ?? nested.length) || 0 };
   }
-  if (Array.isArray(json)) return { items: json as T[], total: (json as T[]).length };
   return { items: [], total: 0 };
 }
 

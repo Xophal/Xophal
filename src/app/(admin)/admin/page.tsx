@@ -25,6 +25,7 @@ import { AdminPage, AdminPanel } from "@/components/admin/ui";
 import AdminMetrics from "@/components/admin/AdminMetrics";
 import RecentActivity from "@/components/admin/RecentActivity";
 import OverviewInsights from "@/components/admin/OverviewInsights";
+import EbookReviewQueueWidget from "@/components/admin/EbookReviewQueueWidget";
 
 const adminModules = [
   { title: "Boards", description: "Add and manage boards like CBSE and SEBA", href: "/admin/boards", icon: School },
@@ -111,6 +112,9 @@ export default function AdminDashboardPage() {
           </div>
         </div>
       </section>
+
+      {/* Moderation priority (§25): pending eBooks lead the overview. */}
+      <EbookReviewQueueWidget />
 
       <div className="mt-6 grid gap-6 xl:grid-cols-[1.35fr_0.65fr]">
         <AdminPanel eyebrow="Overview" title="Platform snapshot" icon={BarChart3} actions={<span className="hidden rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-slate-200 sm:inline-flex">All time</span>}>

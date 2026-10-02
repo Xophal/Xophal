@@ -1,14 +1,11 @@
 import { notFound, redirect } from "next/navigation";
-import Link from "next/link";
-import { Sparkles } from "lucide-react";
 import Sidenav from "@/components/layout/sidenav";
 import StudentBottomNav from "@/components/layout/StudentBottomNav";
 import { requireAuth } from "@/lib/auth";
 import { assertAccess } from "@/lib/auth-policy";
 import { getDashboardRoute } from "@/lib/roles";
 import { ROUTES } from "@/constants";
-import { ThemeToggle } from "@/components/layout/theme-toggle";
-import StudentHeaderActions from "@/components/layout/StudentHeaderActions";
+import StudentCommandBar from "@/components/layout/StudentCommandBar";
 import { createTranslator } from "@/lib/i18n";
 
 const t = createTranslator("en");
@@ -76,31 +73,14 @@ export default async function StudentLayout({ children }: { children: React.Reac
         </div>
 
         <div className="flex min-h-screen min-w-0 flex-1 flex-col lg:min-h-[calc(100vh-2.5rem)]">
-          <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-3 border border-xophol-blue/20 bg-xophol-ink px-4 text-white shadow-md lg:h-20 lg:rounded-t-lg lg:px-6">
-            <div className="flex min-w-0 items-center gap-3">
-              <div className="flex min-w-0 items-center gap-2 rounded-md border border-white/15 bg-white/5 px-2.5 py-1.5 text-[10px] font-semibold uppercase text-white lg:text-[11px]">
-                <Sparkles className="h-3.5 w-3.5 shrink-0 text-xophol-orange" aria-hidden="true" />
-                <span className="hidden sm:inline">Student app</span>
-                <span className="sm:hidden">Xophol</span>
-              </div>
-              <span className="hidden truncate text-sm font-medium text-slate-300 md:inline">
-                {firstName}&apos;s learning hub
-              </span>
-            </div>
-
-            <nav className="hidden min-w-0 flex-1 items-center justify-center gap-3 overflow-x-auto px-2 xl:flex 2xl:gap-5" aria-label={t("nav.primary")}>
-              {topNavItems.map((item) => (
-                <Link key={item.href} href={item.href} className="shrink-0 rounded-md px-1 py-2 text-xs font-medium text-slate-300 transition hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300 2xl:text-sm">
-                  {item.label}
-                </Link>
-              ))}
-            </nav>
-
-            <div className="flex shrink-0 items-center gap-2">
-              <StudentHeaderActions fullName={session.profile?.full_name ?? null} email={session.profile?.email ?? null} />
-              <ThemeToggle />
-            </div>
-          </header>
+          <StudentCommandBar
+            items={topNavItems}
+            fullName={session.profile?.full_name ?? null}
+            email={session.profile?.email ?? null}
+            firstName={firstName}
+            totalXp={session.profile?.total_xp ?? 0}
+            currentStreak={session.profile?.current_streak ?? 0}
+          />
 
           <main className="flex-1 pb-20 lg:pb-0">
             <div className="mx-auto w-full max-w-[1500px] p-3 sm:p-4 md:p-6 lg:p-8">{children}</div>
