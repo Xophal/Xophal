@@ -12,6 +12,7 @@ type ProfilePhotoProps = {
   name?: string;
   alt: string;
   shape: "portrait" | "square";
+  position?: "top" | "left";
   className: string;
 };
 
@@ -27,6 +28,7 @@ export default function ProfilePhoto({
   name,
   alt,
   shape,
+  position = "top",
   className,
 }: ProfilePhotoProps) {
   const teamDirectory = path.join(process.cwd(), "public", "team");
@@ -44,7 +46,7 @@ export default function ProfilePhoto({
           alt={alt}
           fill
           sizes={shape === "portrait" ? "(max-width: 1023px) 100vw, 40vw" : "(max-width: 639px) 100vw, 176px"}
-          className="object-cover object-top"
+          className={`object-cover ${position === "left" ? "object-[24%_top]" : "object-top"}`}
         />
       ) : (
         <div

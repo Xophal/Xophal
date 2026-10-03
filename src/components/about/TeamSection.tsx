@@ -12,6 +12,7 @@ type TeamMember = {
   photoSlug: string;
   photoAlt: string;
   photoShape: "portrait" | "square";
+  photoPosition?: "top" | "left";
   pills: readonly string[];
   socialLinks?: readonly SocialLink[];
 };
@@ -59,6 +60,7 @@ const TEAM_GROUPS: readonly TeamGroup[] = [
         photoSlug: "teacher",
         photoAlt: "Teacher portrait",
         photoShape: "square",
+        photoPosition: "left",
         pills: ["M.A. English", "M.A. Mass Communication", "NET 2019", "CTET", "D.El.Ed"],
       },
     ],
@@ -169,6 +171,7 @@ export default function TeamSection() {
                         name={member.name}
                         alt={member.photoAlt}
                         shape={member.photoShape}
+                        position={member.photoPosition}
                         className="aspect-[3/4] w-full max-h-[34rem] self-start"
                       />
                       <div className="p-6 sm:p-8 lg:p-10">
@@ -191,6 +194,7 @@ export default function TeamSection() {
                         name={member.name}
                         alt={member.photoAlt}
                         shape={member.photoShape}
+                        position={member.photoPosition}
                         className="aspect-square w-full shrink-0 self-start sm:w-40 md:w-44"
                       />
                       <div className="min-w-0 p-5 sm:p-6">
@@ -212,6 +216,7 @@ export default function TeamSection() {
                       name={member.name}
                       alt={member.photoAlt}
                       shape={member.photoShape}
+                      position={member.photoPosition}
                       className="aspect-square w-full max-h-72 self-start md:w-full md:max-h-none"
                     />
                     <div className="p-6 sm:p-8 lg:p-10">
