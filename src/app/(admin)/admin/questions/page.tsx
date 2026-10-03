@@ -18,7 +18,11 @@ import type { EngineStatus } from "@/lib/engine/vocab";
 import { ENGINE_STATUSES, ENGINE_TYPES } from "@/lib/engine/vocab";
 
 type Pagination = { page: number; limit: number; total: number; totalPages: number; hasMore: boolean };
-type ListResponse = { data: EngineQuestionRow[]; pagination: Pagination };
+type ListResponse = {
+  success: boolean;
+  data?: { data: EngineQuestionRow[]; pagination: Pagination };
+  error?: string;
+};
 
 const STATUS_BADGE: Record<EngineStatus, "default" | "secondary" | "outline" | "destructive"> = {
   draft: "secondary",
@@ -33,6 +37,13 @@ const CSV_TEMPLATE = [
   '"[ {""label"":""A"",""body"":""Oxygen"",""is_correct"":false},{""label"":""B"",""body"":""Carbon dioxide"",""is_correct"":true},{""label"":""C"",""body"":""Hydrogen"",""is_correct"":false} ]",',
   '"{""correct_option"":""B""}","", "Carbon dioxide reacts with limewater to form calcium carbonate."',
 ].join("\n");
+
+function questionListPayload(response: ListResponse) {
+  if (!response.data || !Array.isArray(response.data.data)) {
+    throw new Error(response.error ?? "Invalid questions response.");
+  }
+  return response.data;
+}
 
 export default function EngineQuestionsPage() {
   const [vocab, setVocab] = useState<EngineVocab | null>(null);
@@ -78,11 +89,12 @@ export default function EngineQuestionsPage() {
         if (topicFilter) params.set("topicId", topicFilter);
         if (difficultyFilter) params.set("difficulty", difficultyFilter);
         const res = await fetch(`/api/admin/engine/questions?${params.toString()}`, { cache: "no-store" });
-        const json = (await res.json()) as ListResponse & { success: boolean; error?: string };
+        const json = (await res.json()) as ListResponse;
         if (!res.ok || !json.success) throw new Error(json.error ?? "Failed to load questions");
+        const result = questionListPayload(json);
         if (active) {
-          setRows(json.data ?? []);
-          setPagination(json.pagination ?? null);
+          setRows(result.data);
+          setPagination(result.pagination);
         }
       } catch (err) {
         if (active) {
@@ -111,7 +123,7 @@ export default function EngineQuestionsPage() {
   async function transition(id: string, to: EngineStatus, reviewNotes: string) {
     setBusyId(id);
     try {
-      const res = await fetch(`/api/admin/engine/questions/${id}/status`, {
+      const res = await fetch(`/api/admin/engine/questions/${id}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: to, reviewNotes }),
@@ -160,10 +172,11 @@ export default function EngineQuestionsPage() {
       if (topicFilter) params.set("topicId", topicFilter);
       if (difficultyFilter) params.set("difficulty", difficultyFilter);
       const res = await fetch(`/api/admin/engine/questions?${params.toString()}`, { cache: "no-store" });
-      const json = (await res.json()) as ListResponse & { success: boolean; error?: string };
+      const json = (await res.json()) as ListResponse;
       if (!res.ok || !json.success) throw new Error(json.error ?? "Failed to load questions");
-      setRows(json.data ?? []);
-      setPagination(json.pagination ?? null);
+      const result = questionListPayload(json);
+      setRows(result.data);
+      setPagination(result.pagination);
     } catch (err) {
       toast({
         title: "Load failed",
@@ -473,10 +486,16 @@ function ReviewQueue({ onDone, onEdit }: { onDone: () => void; onEdit: (id: stri
     setLoading(true);
     try {
       const res = await fetch("/api/admin/engine/questions?status=draft&limit=50", { cache: "no-store" });
-      const json = (await res.json()) as ListResponse & { success: boolean };
-      setItems(json.success ? (json.data ?? []) : []);
-    } catch {
+      const json = (await res.json()) as ListResponse;
+      if (!res.ok || !json.success) throw new Error(json.error ?? "Failed to load review queue.");
+      setItems(questionListPayload(json).data);
+    } catch (err) {
       setItems([]);
+      toast({
+        title: "Review queue failed to load",
+        description: err instanceof Error ? err.message : String(err),
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
@@ -488,10 +507,18 @@ function ReviewQueue({ onDone, onEdit }: { onDone: () => void; onEdit: (id: stri
       try {
         setLoading(true);
         const res = await fetch("/api/admin/engine/questions?status=draft&limit=50", { cache: "no-store" });
-        const json = (await res.json()) as ListResponse & { success: boolean };
-        if (!cancelled) setItems(json.success ? (json.data ?? []) : []);
-      } catch {
-        if (!cancelled) setItems([]);
+        const json = (await res.json()) as ListResponse;
+        if (!res.ok || !json.success) throw new Error(json.error ?? "Failed to load review queue.");
+        if (!cancelled) setItems(questionListPayload(json).data);
+      } catch (err) {
+        if (!cancelled) {
+          setItems([]);
+          toast({
+            title: "Review queue failed to load",
+            description: err instanceof Error ? err.message : String(err),
+            variant: "destructive",
+          });
+        }
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -501,7 +528,7 @@ function ReviewQueue({ onDone, onEdit }: { onDone: () => void; onEdit: (id: stri
 
   async function decide(id: string, to: EngineStatus) {
     try {
-      const res = await fetch(`/api/admin/engine/questions/${id}/status`, {
+      const res = await fetch(`/api/admin/engine/questions/${id}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: to, reviewNotes: notes[id] ?? "" }),

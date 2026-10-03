@@ -46,7 +46,7 @@ export async function DELETE(_: NextRequest, { params }: Ctx) {
   }
 }
 
-/** POST /api/admin/engine/questions/:id/status — review-queue transition. */
+/** POST /api/admin/engine/questions/:id — review-queue status transition. */
 export async function POST(request: NextRequest, { params }: Ctx) {
   try {
     const { user } = await requireAdminAuth();
