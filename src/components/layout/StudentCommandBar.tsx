@@ -77,6 +77,7 @@ export default function StudentCommandBar({
   items,
   fullName,
   email,
+  avatarUrl,
   firstName,
   totalXp,
   currentStreak,
@@ -84,6 +85,7 @@ export default function StudentCommandBar({
   items: CommandBarItem[];
   fullName: string | null;
   email: string | null;
+  avatarUrl: string | null;
   firstName: string;
   totalXp: number;
   currentStreak: number;
@@ -281,7 +283,7 @@ export default function StudentCommandBar({
 
           <div className="sx-bar__icons">
             <NotificationBell />
-            <StudentProfileMenu fullName={fullName} email={email} />
+            <StudentProfileMenu fullName={fullName} email={email} avatarUrl={avatarUrl} />
             <ThemeToggle />
           </div>
         </div>

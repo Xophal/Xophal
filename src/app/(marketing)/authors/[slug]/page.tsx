@@ -3,12 +3,16 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { BookOpenCheck, Target } from "lucide-react";
-import { APP_URL } from "@/constants";
-import EbookCard, { type EbookCardData } from "@/components/ebooks/EbookCard";
+import { APP_NAME } from "@/constants";
+import EbookCard from "@/components/ebooks/EbookCard";
 import EbookTelemetry from "@/components/ebooks/EbookTelemetry";
-import { getPublicContributor } from "@/lib/ebooks/data";
+import { getPublicContributor, getPublicContributorEbooks, getRelatedMockTestsForEbooks } from "@/lib/ebooks/data";
+import { getAppUrl, getImageSource, getPublicImageUrl, getPublicSocialImage, getSeoDescription, getSeoTitle } from "@/lib/ebooks/seo";
 
-type Props = { params: Promise<{ slug: string }> };
+type Props = {
+  params: Promise<{ slug: string }>;
+  searchParams: Promise<{ page?: string | string[] }>;
+};
 
 const SOCIAL_LABELS: Record<string, string> = {
   website: "Website",
@@ -41,32 +45,59 @@ function initials(name: string) {
   return letters || "X";
 }
 
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
+function getPageNumber(value?: string | string[]) {
+  const page = Number(Array.isArray(value) ? value[0] : value);
+  return Number.isSafeInteger(page) && page > 0 ? page : 1;
+}
+
+function getAuthorUrl(slug: string, page: number) {
+  const path = `/authors/${encodeURIComponent(slug)}`;
+  return page > 1 ? `${path}?page=${page}` : path;
+}
+
+export async function generateMetadata({ params, searchParams }: Props): Promise<Metadata> {
   const { slug } = await params;
+  const { page: rawPage } = await searchParams;
+  const page = getPageNumber(rawPage);
   const contributor = await getPublicContributor(slug);
-  if (!contributor) return { title: "Educator not found | Xophol", robots: { index: false, follow: false } };
-  const description = contributor.bio?.slice(0, 160) || `Browse educational eBooks published by ${contributor.display_name} on Xophol.`;
-  const url = `${APP_URL}/authors/${contributor.slug}`;
+  if (!contributor) return { title: "Educator not found", robots: { index: false, follow: false } };
+  const title = getSeoTitle(`${contributor.display_name} — educator eBooks${page > 1 ? ` — Page ${page}` : ""}`);
+  const description = getSeoDescription(contributor.bio, `Browse published educational eBooks by ${contributor.display_name} on Xophol.`);
+  const url = getAppUrl(getAuthorUrl(contributor.slug, page));
+  const pageCount = Math.ceil(contributor.publishedCount / 24);
   return {
-    title: `${contributor.display_name} — educator eBooks | Xophol`,
+    title,
     description,
+    robots: page <= pageCount ? undefined : { index: false, follow: true },
     alternates: { canonical: url },
     openGraph: {
       type: "profile",
+      siteName: APP_NAME,
       url,
-      title: `${contributor.display_name} | Xophol`,
+      title,
       description,
-      images: contributor.profile_image_url ? [{ url: contributor.profile_image_url, alt: contributor.display_name }] : undefined,
+      images: [{ url: getPublicSocialImage(contributor.profile_image_url), alt: contributor.display_name }],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: [getPublicSocialImage(contributor.profile_image_url)],
     },
   };
 }
 
-export default async function AuthorProfilePage({ params }: Props) {
+export default async function AuthorProfilePage({ params, searchParams }: Props) {
   const { slug } = await params;
+  const { page: rawPage } = await searchParams;
+  const page = getPageNumber(rawPage);
   const contributor = await getPublicContributor(slug);
   if (!contributor) notFound();
 
-  const books = (contributor.ebook_listings ?? []) as EbookCardData[];
+  const { books, total, limit } = await getPublicContributorEbooks(slug, page);
+  const pageCount = Math.ceil(total / limit);
+  if (total === 0 || page > pageCount) notFound();
+  const relatedTests = await getRelatedMockTestsForEbooks(books);
   const expertise = ((contributor.expertise ?? []) as unknown[])
     .filter((item): item is string => typeof item === "string" && item.trim().length > 0)
     .slice(0, 12);
@@ -74,37 +105,49 @@ export default async function AuthorProfilePage({ params }: Props) {
   if (contributor.website_url && !links.some((link) => link.href === contributor.website_url)) {
     links.unshift({ label: "Website", href: contributor.website_url });
   }
-  const canonical = `${APP_URL}/authors/${contributor.slug}`;
+  const canonical = getAppUrl(`/authors/${encodeURIComponent(contributor.slug)}`);
   const structuredData = {
     "@context": "https://schema.org",
     "@type": "Person",
     name: contributor.display_name,
     description: contributor.bio || undefined,
-    image: contributor.profile_image_url || undefined,
+    image: getPublicImageUrl(contributor.profile_image_url) || undefined,
     url: canonical,
     knowsAbout: expertise.length ? expertise : undefined,
     sameAs: links.length ? links.map((link) => link.href) : undefined,
+  };
+  const breadcrumbData = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Home", item: getAppUrl("/") },
+      { "@type": "ListItem", position: 2, name: "eBooks", item: getAppUrl("/ebooks") },
+      { "@type": "ListItem", position: 3, name: contributor.display_name, item: canonical },
+    ],
   };
 
   return (
     <main className="min-h-screen bg-background">
       <EbookTelemetry eventName="author_profile_view" source="author_page" />
+      <EbookTelemetry eventName="ebook_author_view" source="author_page" />
       <EbookTelemetry eventName="seller_profile_view" source="author_page" />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData).replace(/</g, "\\u003c") }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbData).replace(/</g, "\\u003c") }} />
 
       <section className="border-b border-border bg-muted/35">
         <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
-          <p className="text-xs font-bold uppercase text-primary">
-            <Link href="/ebooks" className="hover:underline">
-              eBooks
-            </Link>{" "}
-            / Educator
-          </p>
+          <nav aria-label="Breadcrumb" className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+            <Link href="/" className="hover:text-foreground hover:underline">Home</Link>
+            <span aria-hidden="true">/</span>
+            <Link href="/ebooks" className="hover:text-foreground hover:underline">eBooks</Link>
+            <span aria-hidden="true">/</span>
+            <span aria-current="page" className="text-foreground">{contributor.display_name}</span>
+          </nav>
           <div className="mt-4 flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
             <div className="flex min-w-0 items-start gap-4">
               <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-full border border-border bg-background">
-                {contributor.profile_image_url ? (
-                  <Image src={contributor.profile_image_url} alt={contributor.display_name} fill sizes="80px" className="object-cover" />
+                {getPublicImageUrl(contributor.profile_image_url) ? (
+                  <Image src={getImageSource(contributor.profile_image_url)} alt={contributor.display_name} fill sizes="80px" className="object-cover" />
                 ) : (
                   <span aria-hidden="true" className="flex h-full w-full items-center justify-center text-xl font-bold text-primary">
                     {initials(contributor.display_name)}
@@ -114,7 +157,7 @@ export default async function AuthorProfilePage({ params }: Props) {
               <div className="min-w-0">
                 <h1 className="text-2xl font-bold text-foreground sm:text-3xl">{contributor.display_name}</h1>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  {books.length} published {books.length === 1 ? "eBook" : "eBooks"} on Xophol
+                  {contributor.publishedCount} published {contributor.publishedCount === 1 ? "eBook" : "eBooks"} on Xophol
                 </p>
                 {expertise.length ? (
                   <ul className="mt-3 flex flex-wrap gap-2">
@@ -171,16 +214,44 @@ export default async function AuthorProfilePage({ params }: Props) {
               <EbookCard key={book.id} book={book} />
             ))}
           </div>
-        ) : (
-          <div className="py-14 text-center">
-            <h3 className="text-lg font-semibold text-foreground">No published eBooks yet</h3>
-            <p className="mt-2 text-sm text-muted-foreground">This educator has no public listing right now.</p>
-            <Link href="/ebooks" className="mt-4 inline-flex min-h-11 items-center rounded-md bg-primary px-4 text-sm font-semibold text-primary-foreground">
-              Browse the store
-            </Link>
-          </div>
-        )}
+        ) : null}
+        {pageCount > 1 ? (
+          <nav aria-label="Educator eBook pages" className="mt-8 flex items-center justify-between gap-4 border-t border-border pt-4">
+            {page > 1 ? (
+              <Link rel="prev" href={getAuthorUrl(contributor.slug, page - 1)} className="inline-flex min-h-10 items-center rounded-md border border-border px-4 text-sm font-semibold hover:bg-muted">
+                Previous page
+              </Link>
+            ) : <span />}
+            <span className="text-sm text-muted-foreground">Page {page} of {pageCount}</span>
+            {page < pageCount ? (
+              <Link rel="next" href={getAuthorUrl(contributor.slug, page + 1)} className="inline-flex min-h-10 items-center rounded-md border border-border px-4 text-sm font-semibold hover:bg-muted">
+                Next page
+              </Link>
+            ) : <span />}
+          </nav>
+        ) : null}
       </section>
+
+      {relatedTests.length ? (
+        <section className="border-t border-border bg-muted/35">
+          <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+            <h2 className="text-xl font-bold text-foreground">Practice with related Xophol Mock Tests</h2>
+            <div className="mt-4 divide-y divide-border border-y border-border">
+              {relatedTests.map((test) => (
+                <article key={test.id} className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="min-w-0">
+                    <h3 className="font-semibold text-foreground">{test.title}</h3>
+                    {test.description ? <p className="mt-1 line-clamp-1 text-sm text-muted-foreground">{test.description}</p> : null}
+                  </div>
+                  <Link href={`/test/${test.slug}`} className="inline-flex min-h-10 shrink-0 items-center justify-center gap-2 rounded-md border border-primary/40 px-4 text-sm font-semibold text-primary hover:bg-primary/5">
+                    Start Mock Test <Target className="h-4 w-4" aria-hidden="true" />
+                  </Link>
+                </article>
+              ))}
+            </div>
+          </div>
+        </section>
+      ) : null}
 
       <section className="border-t border-border bg-muted/35">
         <div className="mx-auto flex max-w-7xl flex-col gap-3 px-4 py-8 sm:flex-row sm:items-end sm:justify-between sm:px-6 lg:px-8">

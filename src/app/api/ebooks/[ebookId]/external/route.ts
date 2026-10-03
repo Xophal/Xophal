@@ -3,6 +3,9 @@ import { ApiError } from "@/lib/api-utils";
 import { isAdmin, requireAuth } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { hasVerifiedEbookPurchase } from "@/lib/ebooks/orders";
+import { getRelatedPublishedEbooks } from "@/lib/ebooks/data";
+import { recordLearningDiscoveryEvent } from "@/lib/ebooks/discovery-events";
+import { z } from "zod";
 
 type Context = { params: Promise<{ ebookId: string }> };
 
@@ -47,6 +50,36 @@ export async function GET(request: NextRequest, context: Context) {
 
     const { data: destination } = await admin.rpc("record_ebook_external_click", { p_ebook_id: ebookId });
     if (!destination) throw new ApiError(404, "This book is not available.", "NOT_FOUND");
+
+    const sourceCandidate = request.nextUrl.searchParams.get("sourceMockTestId");
+    const parsedSource = sourceCandidate ? z.string().uuid().safeParse(sourceCandidate) : null;
+    if (parsedSource?.success) {
+      const { data: sourceTest, error: sourceTestError } = await admin
+        .from("mock_tests")
+        .select("id, subject_id, exam_id")
+        .eq("id", parsedSource.data)
+        .eq("is_published", true)
+        .eq("is_active", true)
+        .maybeSingle();
+      if (sourceTestError) throw sourceTestError;
+      if (sourceTest) {
+        const relatedEbooks = await getRelatedPublishedEbooks({
+          mockTestId: sourceTest.id,
+          subjectId: sourceTest.subject_id,
+          examId: sourceTest.exam_id,
+        });
+        if (relatedEbooks.some((book) => book.id === ebookId)) {
+          const session = await requireAuth();
+          await recordLearningDiscoveryEvent({
+            eventName: "mock_test_ebook_external_click",
+            ebookId,
+            mockTestId: sourceTest.id,
+            userId: session?.user.id,
+            source: "external_ebook_redirect",
+          });
+        }
+      }
+    }
 
     return NextResponse.redirect(destination, { status: 302 });
   } catch (error) {

@@ -3,6 +3,7 @@ import { requireAuth } from "@/lib/auth";
 import ProfileForm from "@/components/profile/ProfileForm";
 import ProfileSettingsForm from "@/components/profile/ProfileSettingsForm";
 import LogoutButton from "@/components/auth/LogoutButton";
+import ChangePasswordForm from "@/components/auth/ChangePasswordForm";
 
 export const metadata = { title: "Settings" };
 
@@ -60,6 +61,16 @@ export default async function SettingsPage() {
           </CardHeader>
           <CardContent>
             <ProfileSettingsForm initial={session.profile} />
+          </CardContent>
+        </Card>
+
+        <Card className="md:col-span-2">
+          <CardHeader>
+            <CardTitle>Account security</CardTitle>
+            <CardDescription>Keep your account secure by updating your password.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ChangePasswordForm />
           </CardContent>
         </Card>
 

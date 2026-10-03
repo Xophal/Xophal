@@ -2,8 +2,11 @@ import { ApiError, apiSuccess, handleApiError } from "@/lib/api-utils";
 import { requireAuth } from "@/lib/auth";
 import { canAccessPremiumContent } from "@/lib/auth-policy";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { recordLearningDiscoveryEvent } from "@/lib/ebooks/discovery-events";
+import { getRecommendedMockTestsForEbook } from "@/lib/ebooks/data";
+import { z } from "zod";
 
-export async function POST(_: Request, { params }: { params: Promise<{ slug: string }> }) {
+export async function POST(request: Request, { params }: { params: Promise<{ slug: string }> }) {
   try {
     const session = await requireAuth();
     if (!session?.profile) throw new ApiError(401, "Authentication required", "UNAUTHORIZED");
@@ -20,6 +23,23 @@ export async function POST(_: Request, { params }: { params: Promise<{ slug: str
 
     if (testError) throw testError;
     if (!test) throw new ApiError(404, "Mock test not found", "TEST_NOT_FOUND");
+
+    const sourceCandidate = new URL(request.url).searchParams.get("sourceEbookId");
+    const parsedSource = sourceCandidate ? z.string().uuid().safeParse(sourceCandidate) : null;
+    let sourceEbookId: string | null = null;
+    if (parsedSource?.success) {
+      const { data: sourceEbook, error: sourceEbookError } = await adminClient
+        .from("ebook_listings")
+        .select("id, exam_id, subject_id")
+        .eq("id", parsedSource.data)
+        .eq("status", "PUBLISHED")
+        .maybeSingle();
+      if (sourceEbookError) throw sourceEbookError;
+      if (sourceEbook) {
+        const recommendedTests = await getRecommendedMockTestsForEbook(sourceEbook);
+        if (recommendedTests.some((candidate) => candidate.id === test.id)) sourceEbookId = parsedSource.data;
+      }
+    }
 
     const { data: subscription } = await adminClient
       .from("subscriptions")
@@ -69,7 +89,7 @@ export async function POST(_: Request, { params }: { params: Promise<{ slug: str
 
     const { data: existingAttempt } = await adminClient
       .from("test_attempts")
-      .select("id, started_at, status")
+      .select("id, started_at, status, metadata")
       .eq("user_id", session.user.id)
       .eq("mock_test_id", test.id)
       .eq("status", "in_progress")
@@ -77,19 +97,58 @@ export async function POST(_: Request, { params }: { params: Promise<{ slug: str
       .limit(1)
       .maybeSingle();
 
-    const attempt = existingAttempt || (await adminClient
-      .from("test_attempts")
-      .insert({
-        user_id: session.user.id,
-        mock_test_id: test.id,
-        status: "in_progress",
-        total_questions: questions.length,
-        total_marks: questions.reduce((total, question) => total + Number(question.marks || 0), 0),
-      })
-      .select("id, started_at, status")
-      .single()).data;
+    const startingMetadata = existingAttempt?.metadata && typeof existingAttempt.metadata === "object"
+      ? existingAttempt.metadata
+      : {};
+    const sourceAlreadyRecorded = Boolean(
+      startingMetadata &&
+      "source_ebook_id" in startingMetadata &&
+      startingMetadata.source_ebook_id,
+    );
+    const attemptResult = existingAttempt
+      ? sourceEbookId && !sourceAlreadyRecorded
+        ? await adminClient
+            .from("test_attempts")
+            .update({ metadata: { ...startingMetadata, source_ebook_id: sourceEbookId } })
+            .eq("id", existingAttempt.id)
+            .select("id, started_at, status")
+            .single()
+        : { data: existingAttempt, error: null }
+      : await adminClient
+          .from("test_attempts")
+          .insert({
+            user_id: session.user.id,
+            mock_test_id: test.id,
+            status: "in_progress",
+            total_questions: questions.length,
+            total_marks: questions.reduce((total, question) => total + Number(question.marks || 0), 0),
+            metadata: sourceEbookId ? { source_ebook_id: sourceEbookId } : {},
+          })
+          .select("id, started_at, status")
+          .single();
+    if (attemptResult.error) throw attemptResult.error;
+    const attempt = attemptResult.data;
 
     if (!attempt) throw new ApiError(500, "Unable to start this mock test", "ATTEMPT_CREATE_FAILED");
+
+    if (sourceEbookId && !sourceAlreadyRecorded) {
+      await recordLearningDiscoveryEvent({
+        eventName: "ebook_mock_test_started",
+        ebookId: sourceEbookId,
+        mockTestId: test.id,
+        attemptId: attempt.id,
+        userId: session.user.id,
+        source: "test_attempt",
+      });
+    } else if (!existingAttempt) {
+      await recordLearningDiscoveryEvent({
+        eventName: "mock_test_started",
+        mockTestId: test.id,
+        attemptId: attempt.id,
+        userId: session.user.id,
+        source: "test_attempt",
+      });
+    }
 
     const { data: savedResponses } = await adminClient
       .from("test_responses")

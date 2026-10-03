@@ -3,6 +3,7 @@ import { KeyRound, ShieldCheck, UserCog, Users } from "lucide-react";
 import { requireAdminAuth } from "@/lib/auth";
 import { normalizeRoleCode } from "@/lib/roles";
 import { AdminChip, AdminPage, AdminPageHeader, AdminPanel } from "@/components/admin/ui";
+import ChangePasswordForm from "@/components/auth/ChangePasswordForm";
 
 export default async function AdminSettingsPage() {
   const { profile } = await requireAdminAuth();
@@ -53,6 +54,10 @@ export default async function AdminSettingsPage() {
             )}
             <p className="text-xs text-slate-500">Only super administrators can provision new privileged accounts.</p>
           </div>
+        </AdminPanel>
+
+        <AdminPanel eyebrow="Security" title="Change password" icon={KeyRound}>
+          <ChangePasswordForm />
         </AdminPanel>
       </div>
     </AdminPage>

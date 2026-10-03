@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
 import type { MarketplacePricingRules } from "@/lib/ebooks/pricing";
+import { clientErrorMessage, readApiData } from "@/lib/client-api";
 
 type FormOptions = {
   categories: { id: string; name: string }[];
@@ -164,12 +165,11 @@ export default function EbookSubmissionForm({ listingId }: { listingId?: string 
       const body = new FormData();
       body.append("file", file);
       const response = await fetch("/api/ebooks/cover", { method: "POST", body });
-      const json = await response.json();
-      if (!response.ok || !json.success) throw new Error(json.error || "Cover upload failed.");
-      update("coverImageUrl", json.data.coverImageUrl);
+      const result = await readApiData<{ coverImageUrl: string }>(response, "Cover upload failed.");
+      update("coverImageUrl", result.coverImageUrl);
       toast({ title: "Cover uploaded", description: "Your cover image is ready for the listing." });
     } catch (uploadError) {
-      setError(uploadError instanceof Error ? uploadError.message : "Cover upload failed.");
+      setError(clientErrorMessage(uploadError, "Cover upload failed."));
     } finally {
       setUploading(false);
     }
@@ -219,8 +219,7 @@ export default function EbookSubmissionForm({ listingId }: { listingId?: string 
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action, payload }),
       });
-      const json = await response.json();
-      if (!response.ok || !json.success) throw new Error(json.error || "Could not save this listing.");
+      await readApiData<{ listing: { id: string } }>(response, "Could not save this listing.");
       toast({
         title: action === "submit" ? (listingId ? "Listing resubmitted" : "Listing submitted") : "Draft saved",
         description: action === "submit"
@@ -230,7 +229,7 @@ export default function EbookSubmissionForm({ listingId }: { listingId?: string 
       router.push("/dashboard/ebooks");
       router.refresh();
     } catch (submitError) {
-      setError(submitError instanceof Error ? submitError.message : "Could not save this listing.");
+      setError(clientErrorMessage(submitError, "Could not save this listing."));
       window.scrollTo({ top: 0, behavior: "smooth" });
     } finally {
       setSaving(false);

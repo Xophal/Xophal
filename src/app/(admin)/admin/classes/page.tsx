@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
 import { AdminChip, AdminEmpty, AdminPage, AdminPageHeader, AdminPanel } from "@/components/admin/ui";
+import { clientErrorMessage, readApiData } from "@/lib/client-api";
 
 type Board = { id: string; name: string; code: string };
 type ClassItem = { id: string; board_id: string; code: string; name: string; slug: string; grade_number?: number | null; is_active: boolean };
@@ -54,11 +55,7 @@ export default function AdminClassesPage() {
           sort_order: editingId ? undefined : classes.length,
         }),
       });
-      const result = await response.json();
-
-      if (!response.ok || !result.success) {
-        throw new Error(result.error || "Could not create class");
-      }
+      await readApiData<ClassItem>(response, "Could not save the class.");
 
       toast({ title: editingId ? "Class updated" : "Class created", description: `${form.name} has been saved.` });
       setEditingId(null);
@@ -67,7 +64,7 @@ export default function AdminClassesPage() {
     } catch (error) {
       toast({
         title: "Creation failed",
-        description: error instanceof Error ? error.message : "Please try again.",
+        description: clientErrorMessage(error, "Please try again."),
         variant: "destructive",
       });
     } finally {

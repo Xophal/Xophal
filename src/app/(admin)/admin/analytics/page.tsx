@@ -11,6 +11,14 @@ type AnalyticsData = {
   tests: { total: number; published: number };
   attempts: { total: number; completed: number };
   averages: { averageScore: number; averagePercentage: number; averageAccuracy: number };
+  discovery: {
+    ebookViewers: number;
+    ebookToMockTestUsers: number;
+    ebookToMockTestConversion: number;
+    mockTestUsers: number;
+    mockTestToEbookUsers: number;
+    mockTestToEbookDiscovery: number;
+  };
   topTests: Array<{ id: string; title: string; attempts: number }>;
   trends: Array<{ date: string; completed_count: number }> | null;
 };
@@ -54,6 +62,10 @@ export default function AdminAnalyticsPage() {
     { label: "Average score", value: data?.averages?.averageScore != null ? Number(data.averages.averageScore).toFixed(1) : "—", icon: BarChart3, tone: "violet" },
     { label: "Average percentage", value: data?.averages?.averagePercentage != null ? `${Number(data.averages.averagePercentage).toFixed(1)}%` : "—", icon: BarChart3, tone: "cyan" },
     { label: "Average accuracy", value: data?.averages?.averageAccuracy != null ? `${Number(data.averages.averageAccuracy).toFixed(1)}%` : "—", icon: Target, tone: "amber" },
+    { label: "eBook → mock test", value: data?.discovery ? `${Number(data.discovery.ebookToMockTestConversion).toFixed(1)}%` : "—", icon: TrendingUp, tone: "emerald" },
+    { label: "eBook → test users", value: data?.discovery?.ebookToMockTestUsers ?? "—", icon: Users, tone: "cyan" },
+    { label: "Mock test → eBook", value: data?.discovery ? `${Number(data.discovery.mockTestToEbookDiscovery).toFixed(1)}%` : "—", icon: TrendingUp, tone: "violet" },
+    { label: "Mock → eBook users", value: data?.discovery?.mockTestToEbookUsers ?? "—", icon: Users, tone: "amber" },
   ];
 
   return (
@@ -93,7 +105,7 @@ export default function AdminAnalyticsPage() {
         </div>
       ) : (
         <>
-          <div className="mt-6 grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-3">
+          <div className="mt-6 grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-4">
             {stats.map((stat) => (
               <AdminStat key={stat.label} label={stat.label} value={stat.value ?? "—"} icon={stat.icon} tone={stat.tone} />
             ))}
@@ -135,4 +147,3 @@ export default function AdminAnalyticsPage() {
     </AdminPage>
   );
 }
-

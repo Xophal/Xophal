@@ -5,11 +5,13 @@ import { useEffect } from "react";
 export default function EbookTelemetry({
   eventName,
   ebookId,
+  mockTestId,
   source,
   searchTerm,
 }: {
-  eventName: "ebook_view" | "ebook_search" | "mock_test_from_ebook" | "author_profile_view" | "seller_profile_view";
+  eventName: "ebook_page_view" | "ebook_search" | "ebook_filter_used" | "ebook_category_view" | "ebook_author_view" | "ebook_share" | "ebook_share_clicked" | "mock_test_view" | "mock_test_from_ebook" | "ebook_from_mock_test" | "author_profile_view" | "seller_profile_view" | "ebook_external_click";
   ebookId?: string;
+  mockTestId?: string;
   source?: string;
   searchTerm?: string;
 }) {
@@ -22,12 +24,16 @@ export default function EbookTelemetry({
       body: JSON.stringify({
         eventName,
         ebookId,
+        mockTestId,
         source,
         metadata: searchTerm ? { searchTerm: searchTerm.slice(0, 100) } : {},
       }),
-    }).catch(() => undefined);
+    }).catch((error: unknown) => {
+      if (error instanceof DOMException && error.name === "AbortError") return;
+      console.error("Could not record eBook telemetry event", error);
+    });
     return () => controller.abort();
-  }, [ebookId, eventName, searchTerm, source]);
+  }, [ebookId, eventName, mockTestId, searchTerm, source]);
 
   return null;
 }

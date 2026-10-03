@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
 import type { Board, Class, Profile } from "@/types";
 import { getFallbackBoards, getFallbackClassesForBoard } from "@/lib/board-data";
+import ProfileAvatarEditor from "@/components/profile/ProfileAvatarEditor";
 
 type Props = {
   initial?: Partial<Profile>;
@@ -82,6 +83,7 @@ export default function ProfileForm({ initial }: Props) {
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+      <ProfileAvatarEditor initialAvatarUrl={initial?.avatar_url} name={initial?.full_name} />
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div>
           <Label htmlFor="full_name">Full name</Label>

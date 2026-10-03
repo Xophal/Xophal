@@ -13,7 +13,7 @@ import { useTestStore } from "@/stores/test-store";
 import { cn } from "@/lib/utils";
 import { EmptyState } from "@/components/shared/empty-state";
 
-export default function MockRunner({ slug }: { slug: string }) {
+export default function MockRunner({ slug, sourceEbookId }: { slug: string; sourceEbookId?: string }) {
   const router = useRouter();
   const questions = useTestStore((state) => state.questions);
   const mockTest = useTestStore((state) => state.mockTest);
@@ -73,7 +73,8 @@ export default function MockRunner({ slug }: { slug: string }) {
       setLoading(true);
       setError(null);
       try {
-        const response = await fetch(`/api/mock-tests/${encodeURIComponent(slug)}/attempt`, { method: "POST" });
+        const sourceQuery = sourceEbookId ? `?sourceEbookId=${encodeURIComponent(sourceEbookId)}` : "";
+        const response = await fetch(`/api/mock-tests/${encodeURIComponent(slug)}/attempt${sourceQuery}`, { method: "POST" });
         const result = await response.json().catch(() => ({}));
         if (!response.ok || !result.success) throw new Error(result.error || "Unable to start this mock test.");
         if (active) {
@@ -88,7 +89,7 @@ export default function MockRunner({ slug }: { slug: string }) {
     }
     loadAttempt();
     return () => { active = false; };
-  }, [setAttempt, slug]);
+  }, [setAttempt, slug, sourceEbookId]);
 
   const question = questions[currentIndex];
   const response = question ? responses[question.id] : undefined;

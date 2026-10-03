@@ -9,7 +9,7 @@ import { listPublishedEbooks } from "@/lib/ebooks/data";
  * published so the primary mock-test funnel is never padded with empty states.
  */
 export default async function EbookResources() {
-  const { books, total } = await listPublishedEbooks({ sort: "popular", limit: 3 });
+  const { books } = await listPublishedEbooks({ sort: "latest", limit: 3 });
   if (!books.length) return null;
 
   return (
@@ -21,16 +21,16 @@ export default async function EbookResources() {
               <BookOpen className="h-4 w-4" aria-hidden="true" />
               Study resources
             </p>
-            <h2 className="mt-2 text-2xl font-bold text-foreground sm:text-3xl">eBooks from educators</h2>
+            <h2 className="mt-2 text-2xl font-bold text-foreground sm:text-3xl">Explore Study Resources</h2>
             <p className="mt-2 text-sm leading-6 text-muted-foreground">
-              Explore guides published by teachers on {APP_NAME}, then put what you learn to work in a free mock test.
+              Discover study materials, exam guides, notes and educational eBooks on {APP_NAME}, then put what you learn to work in a free mock test.
             </p>
           </div>
           <Link
             href="/ebooks"
             className="inline-flex min-h-11 w-fit items-center gap-1 rounded-md border border-border px-4 text-sm font-semibold hover:bg-background"
           >
-            Browse all {total > 99 ? "eBooks" : `${total} ${total === 1 ? "eBook" : "eBooks"}`} <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
+            Explore All eBooks <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
           </Link>
         </div>
 

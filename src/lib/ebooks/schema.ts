@@ -71,13 +71,17 @@ export const ebookReportSchema = z.object({
 
 export const ebookEventSchema = z.object({
   eventName: z.enum([
-    "ebook_view", "ebook_search", "ebook_listing_submit", "ebook_approved",
+    "ebook_page_view", "ebook_search", "ebook_filter_used", "ebook_category_view",
+    "ebook_author_view", "ebook_share", "ebook_share_clicked", "mock_test_view",
+    "mock_test_from_ebook", "ebook_from_mock_test",
+    "ebook_listing_submit", "ebook_approved",
     "ebook_rejected", "ebook_external_click", "ebook_purchase_started",
-    "ebook_purchase_completed", "mock_test_from_ebook", "mock_test_started",
+    "ebook_purchase_completed", "mock_test_started",
     "mock_test_completed", "author_profile_view",
     "seller_profile_view", "ebook_created", "ebook_submitted", "ebook_resubmitted",
   ]),
   ebookId: z.string().uuid().optional(),
+  mockTestId: z.string().uuid().optional(),
   source: z.string().trim().max(100).optional(),
   metadata: z.record(z.unknown()).optional().default({}),
 });

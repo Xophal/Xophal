@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { motion, useReducedMotion } from "framer-motion";
 import { usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
@@ -12,6 +13,7 @@ type NavItem = { href: string; icon: string; label: string; group?: string };
 type SideNavProfile = {
   full_name?: string | null;
   email?: string | null;
+  avatar_url?: string | null;
   current_streak?: number | null;
   roles?: { name?: string | null; code?: string | null } | { name?: string | null; code?: string | null }[] | null;
 };
@@ -129,8 +131,10 @@ export function Sidenav({ items, profile, variant = "student" }: { items: NavIte
           {!collapsed ? (
             <div className="rounded-2xl border border-white/10 bg-[linear-gradient(135deg,rgba(15,23,42,0.8),rgba(30,41,59,0.7))] p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
               <div className="flex items-center gap-3">
-                <div className="flex h-11 w-11 items-center justify-center rounded-md bg-xophol-lightBlue text-sm font-bold text-xophol-blue">
-                  {profile?.full_name?.charAt(0)?.toUpperCase() || "S"}
+                <div className="relative flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-md bg-xophol-lightBlue text-sm font-bold text-xophol-blue">
+                  {profile?.avatar_url ? (
+                    <Image src={profile.avatar_url} alt="" fill sizes="44px" unoptimized className="object-cover" />
+                  ) : profile?.full_name?.charAt(0)?.toUpperCase() || "S"}
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-semibold text-white">{profile?.full_name || "Student"}</p>
@@ -144,8 +148,10 @@ export function Sidenav({ items, profile, variant = "student" }: { items: NavIte
             </div>
           ) : (
             <div className="flex items-center justify-center">
-              <div className="flex h-10 w-10 items-center justify-center rounded-md bg-xophol-lightBlue text-sm font-bold text-xophol-blue">
-                {profile?.full_name?.charAt(0)?.toUpperCase() || "S"}
+              <div className="relative flex h-10 w-10 items-center justify-center overflow-hidden rounded-md bg-xophol-lightBlue text-sm font-bold text-xophol-blue">
+                {profile?.avatar_url ? (
+                  <Image src={profile.avatar_url} alt="" fill sizes="40px" unoptimized className="object-cover" />
+                ) : profile?.full_name?.charAt(0)?.toUpperCase() || "S"}
               </div>
             </div>
           )}

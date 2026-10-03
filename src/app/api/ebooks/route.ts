@@ -7,7 +7,7 @@ import { listPublishedEbooks, type EbookFilters } from "@/lib/ebooks/data";
 import { ebookDraftRequestSchema, ebookSubmissionSchema } from "@/lib/ebooks/schema";
 import { createEbookListing } from "@/lib/ebooks/submit";
 
-const SORTS = ["latest", "popular", "price_low", "price_high"] as const;
+const SORTS = ["latest", "oldest", "price_low", "price_high", "az"] as const;
 
 function numeric(value: string | null) {
   if (!value || !/^\d{1,7}(\.\d{1,2})?$/.test(value)) return undefined;
@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
       category: searchParams.get("category") ?? undefined,
       author: searchParams.get("author") ?? undefined,
       language: searchParams.get("language") ?? undefined,
-      price: price === "free" || price === "paid" ? price : undefined,
+      price: price === "free" || price === "paid" || price === "under50" || price === "50to99" || price === "100to199" || price === "200to399" || price === "400plus" ? price : undefined,
       minPrice: numeric(searchParams.get("minPrice")),
       maxPrice: numeric(searchParams.get("maxPrice")),
       sort: SORTS.includes(sort as typeof SORTS[number]) ? (sort as typeof SORTS[number]) : "latest",

@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
@@ -12,18 +13,61 @@ import {
   Trophy,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
+import { APP_NAME } from "@/constants";
 import EbookCard, { type EbookCardData } from "@/components/ebooks/EbookCard";
+import LearningDiscoveryTracker from "@/components/ebooks/LearningDiscoveryTracker";
+import EbookTelemetry from "@/components/ebooks/EbookTelemetry";
 import { getRelatedPublishedEbooks } from "@/lib/ebooks/data";
+import { getAppUrl, getPublicSocialImage, getSeoDescription } from "@/lib/ebooks/seo";
 
 type PageProps = { params: Promise<{ slug: string }> };
 
-export default async function TestDetailPage({ params }: PageProps) {
+function firstRelation<T>(value: T | T[] | null | undefined): T | null {
+  return Array.isArray(value) ? value[0] ?? null : value ?? null;
+}
+
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { slug } = await params;
+  const supabase = await createClient();
+  const { data: test, error } = await supabase
+    .from("mock_tests")
+    .select("id, title, slug, description, subjects(name), exams(name)")
+    .eq("slug", slug)
+    .eq("is_published", true)
+    .eq("is_active", true)
+    .maybeSingle();
+  if (error) throw error;
+  if (!test) return { title: "Mock test not found", robots: { index: false, follow: false } };
+
+  const subject = firstRelation(test.subjects)?.name;
+  const exam = firstRelation(test.exams)?.name;
+  const context = [exam, subject].filter(Boolean).join(" · ");
+  const title = context ? `${test.title} — ${context}` : `${test.title} Mock Test`;
+  const description = getSeoDescription(
+    test.description,
+    `Practice ${context || test.title} with this ${APP_NAME} mock test.`,
+  );
+  const url = getAppUrl(`/test/${encodeURIComponent(test.slug)}`);
+  const image = getPublicSocialImage();
+  return {
+    title,
+    description,
+    alternates: { canonical: url },
+    openGraph: { type: "website", siteName: APP_NAME, url, title, description, images: [{ url: image, alt: `${test.title} mock test` }] },
+    twitter: { card: "summary_large_image", title, description, images: [image] },
+  };
+}
+
+export default async function TestDetailPage({ params, searchParams }: PageProps & {
+  searchParams: Promise<{ sourceEbookId?: string }>;
+}) {
+  const { slug } = await params;
+  const source = await searchParams;
   const supabase = await createClient();
   const { data: test } = await supabase
     .from("mock_tests")
     .select(
-      "title, slug, description, total_questions, total_marks, duration_minutes, passing_marks, negative_marking, negative_marks_ratio, max_attempts, instructions, subject_id, exam_id, test_types(name), subjects(name), chapters(name)"
+      "id, title, slug, description, total_questions, total_marks, duration_minutes, passing_marks, negative_marking, negative_marks_ratio, max_attempts, instructions, subject_id, exam_id, test_types(name), subjects(name), chapters(name)"
     )
     .eq("slug", slug)
     .eq("is_published", true)
@@ -34,7 +78,7 @@ export default async function TestDetailPage({ params }: PageProps) {
   const testType = (Array.isArray(test.test_types) ? test.test_types[0] : test.test_types)?.name;
   const subject = (Array.isArray(test.subjects) ? test.subjects[0] : test.subjects)?.name;
   const chapter = (Array.isArray(test.chapters) ? test.chapters[0] : test.chapters)?.name;
-  const relatedEbooks = await getRelatedPublishedEbooks({ subjectId: test.subject_id, examId: test.exam_id, search: subject || test.title });
+  const relatedEbooks = await getRelatedPublishedEbooks({ mockTestId: test.id, subjectId: test.subject_id, examId: test.exam_id });
   const validDuration = test.duration_minutes > 0;
   const available = test.total_questions > 0 && validDuration;
   const averageMinutes = test.total_questions > 0 ? test.duration_minutes / test.total_questions : 0;
@@ -47,6 +91,8 @@ export default async function TestDetailPage({ params }: PageProps) {
   ];
   return (
     <main className="min-h-screen bg-background pt-20">
+      <EbookTelemetry eventName="mock_test_view" mockTestId={test.id} source="mock_test_detail" />
+      <LearningDiscoveryTracker />
       <section className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6 lg:py-12">
         <Link
           href="/mock-tests"
@@ -97,7 +143,7 @@ export default async function TestDetailPage({ params }: PageProps) {
 
             {available ? (
               <Link
-                href={`/test/${test.slug}/attempt`}
+                href={`/test/${test.slug}/attempt${source.sourceEbookId ? `?sourceEbookId=${encodeURIComponent(source.sourceEbookId)}` : ""}`}
                 className="exam-cta mt-6 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               >
                 Start test
@@ -184,17 +230,26 @@ export default async function TestDetailPage({ params }: PageProps) {
         {relatedEbooks.length ? (
           <section aria-labelledby="related-ebooks-heading" className="mt-8">
             <div className="border-b border-border pb-3">
-              <h2 id="related-ebooks-heading" className="text-xl font-bold text-foreground">Need more study material?</h2>
-              <p className="mt-1 text-sm text-muted-foreground">Explore eBooks related to this mock test.</p>
+              <h2 id="related-ebooks-heading" className="text-xl font-bold text-foreground">Recommended Study Resources</h2>
+              <p className="mt-1 text-sm text-muted-foreground">Want to strengthen your preparation? Explore related eBooks and study resources.</p>
             </div>
             <div className="mt-3 grid gap-x-8 md:grid-cols-2">
-              {(relatedEbooks as EbookCardData[]).map((book) => <EbookCard key={book.id} book={book} />)}
+              {(relatedEbooks as EbookCardData[]).map((book) => <EbookCard key={book.id} book={book} sourceMockTestId={test.id} />)}
             </div>
-            <Link href={`/ebooks?search=${encodeURIComponent(subject || test.title)}`} className="mt-3 inline-flex min-h-10 items-center text-sm font-semibold text-primary hover:underline">
-              Explore eBooks
+            <Link href={`/ebooks?q=${encodeURIComponent(subject || test.title)}`} className="mt-3 inline-flex min-h-10 items-center text-sm font-semibold text-primary hover:underline">
+              Explore all eBooks
             </Link>
           </section>
-        ) : null}
+        ) : (
+          <section aria-labelledby="related-ebooks-heading" className="mt-8 border-t border-border pt-5">
+            <h2 id="related-ebooks-heading" className="text-xl font-bold text-foreground">Recommended Study Resources</h2>
+            <p className="mt-1 text-sm text-muted-foreground">Want to strengthen your preparation? Explore related eBooks and study resources.</p>
+            <p className="mt-3 text-sm text-muted-foreground">No related eBooks available yet.</p>
+            <Link href="/ebooks" className="mt-3 inline-flex min-h-10 items-center text-sm font-semibold text-primary hover:underline">
+              Explore all eBooks
+            </Link>
+          </section>
+        )}
       </section>
     </main>
   );

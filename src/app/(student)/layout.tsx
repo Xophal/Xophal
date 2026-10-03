@@ -77,6 +77,7 @@ export default async function StudentLayout({ children }: { children: React.Reac
             items={topNavItems}
             fullName={session.profile?.full_name ?? null}
             email={session.profile?.email ?? null}
+            avatarUrl={session.profile?.avatar_url ?? null}
             firstName={firstName}
             totalXp={session.profile?.total_xp ?? 0}
             currentStreak={session.profile?.current_streak ?? 0}

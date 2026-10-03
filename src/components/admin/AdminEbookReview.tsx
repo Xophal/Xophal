@@ -31,7 +31,9 @@ import {
   type AdminChipTone,
 } from "@/components/admin/ui";
 import { formatEbookPrice } from "@/components/ebooks/EbookCard";
+import LearningRelationManager from "@/components/admin/LearningRelationManager";
 import { REJECTION_REASONS, type EbookStatus, type ModerationAction } from "@/lib/ebooks/moderation";
+import { getAppUrl, getPublicImageUrl } from "@/lib/ebooks/seo";
 
 type Relation<T> = T | T[] | null | undefined;
 
@@ -53,6 +55,8 @@ type Book = {
   preview_url?: string | null;
   subject?: string | null;
   exam?: string | null;
+  subject_id?: string | null;
+  exam_id?: string | null;
   rights_confirmed?: boolean | null;
   rights_confirmed_at?: string | null;
   rejection_reason?: string | null;
@@ -280,6 +284,16 @@ export default function AdminEbookReview({ ebookId }: { ebookId: string }) {
   const canPublishActions = status === "PUBLISHED";
   const canRestore = status === "SUSPENDED" || status === "UNPUBLISHED";
   const rightsOk = Boolean(book.rights_confirmed);
+  const seoChecks = [
+    { label: "SEO title", valid: Boolean(book.title.trim()) },
+    { label: "Meta description", valid: Boolean(book.short_description?.trim()) },
+    { label: "Canonical URL", valid: /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(book.slug) && Boolean(getAppUrl(`/ebooks/${encodeURIComponent(book.slug)}`)) },
+    { label: "Cover image", valid: Boolean(getPublicImageUrl(book.cover_image_url)) },
+    { label: "Author", valid: Boolean(book.author_name?.trim()) },
+    { label: "Exam reference", valid: !book.exam || Boolean(book.exam_id) },
+    { label: "Subject reference", valid: !book.subject || Boolean(book.subject_id) },
+    { label: "Slug format", valid: /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(book.slug) },
+  ];
 
   return (
     <AdminPage>
@@ -421,6 +435,34 @@ export default function AdminEbookReview({ ebookId }: { ebookId: string }) {
       </div>
 
       {/* Full listing (§6) */}
+      <div className="mt-6">
+        <AdminPanel eyebrow="Discovery" title="Related Mock Tests" icon={Link2}>
+          <p className="mb-4 text-sm text-slate-300">
+            Set related tests, priority, or hide an automatic recommendation. Only active published tests appear to students.
+          </p>
+          <LearningRelationManager ebookId={book.id} />
+        </AdminPanel>
+      </div>
+
+      <div className="mt-6">
+        <AdminPanel eyebrow="SEO" title="SEO health" icon={CheckCircle2}>
+          <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+            {seoChecks.map((check) => (
+              <li key={check.label} className="flex items-center gap-2 text-sm">
+                {check.valid ? (
+                  <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-400" aria-hidden />
+                ) : (
+                  <Flag className="h-4 w-4 shrink-0 text-amber-400" aria-hidden />
+                )}
+                <span className={check.valid ? "text-slate-200" : "text-amber-200"}>{check.label}</span>
+                <span className="sr-only">{check.valid ? "present" : "needs attention"}</span>
+              </li>
+            ))}
+          </ul>
+          <p className="mt-3 text-xs text-slate-400">Missing covers use the Xophol social-image fallback. Exam and subject links appear when valid references are attached.</p>
+        </AdminPanel>
+      </div>
+
       <div className="mt-6 grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
         <AdminPanel eyebrow="Listing" title="Book information" icon={BookOpen}>
           <div className="flex flex-col gap-5 sm:flex-row">
@@ -731,4 +773,3 @@ export default function AdminEbookReview({ ebookId }: { ebookId: string }) {
     </AdminPage>
   );
 }
-

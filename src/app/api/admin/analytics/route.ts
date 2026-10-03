@@ -51,19 +51,22 @@ export async function GET(request: NextRequest) {
     if (totalTestsResult.error) throw totalTestsResult.error;
     if (publishedTestsResult.error) throw publishedTestsResult.error;
 
-    const [attemptsResult, completedResult, metricsResult, topTestsResult, trendsResult] = await Promise.all([
+    const [attemptsResult, completedResult, metricsResult, topTestsResult, trendsResult, discoveryResult] = await Promise.all([
       attemptsQuery,
       completedQuery,
       admin.rpc("get_admin_assessment_metrics", { p_from: from, p_to: to, p_test_id: testId }),
       admin.rpc("get_test_popularity", { p_from: from, p_to: to, p_limit: 10 }),
       admin.rpc("get_daily_attempts_summary", { p_from: from, p_to: to }),
+      admin.rpc("get_learning_discovery_metrics", { p_from: from, p_to: to }),
     ]);
     if (attemptsResult.error) throw attemptsResult.error;
     if (completedResult.error) throw completedResult.error;
     if (metricsResult.error) throw metricsResult.error;
     if (topTestsResult.error) throw topTestsResult.error;
     if (trendsResult.error) throw trendsResult.error;
+    if (discoveryResult.error) throw discoveryResult.error;
     const metrics = Array.isArray(metricsResult.data) ? metricsResult.data[0] : null;
+    const discovery = Array.isArray(discoveryResult.data) ? discoveryResult.data[0] : null;
 
     return apiSuccess({
       users: { total: usersResult.count ?? 0, active: activeUsersResult.count ?? 0 },
@@ -77,6 +80,14 @@ export async function GET(request: NextRequest) {
       topTests: topTestsResult.data ?? [],
       subjectPerformance: null,
       trends: trendsResult.data ?? null,
+      discovery: {
+        ebookViewers: Number(discovery?.ebook_viewers ?? 0),
+        ebookToMockTestUsers: Number(discovery?.ebook_to_mock_test_users ?? 0),
+        ebookToMockTestConversion: Number(discovery?.ebook_to_mock_test_conversion ?? 0),
+        mockTestUsers: Number(discovery?.mock_test_users ?? 0),
+        mockTestToEbookUsers: Number(discovery?.mock_test_to_ebook_users ?? 0),
+        mockTestToEbookDiscovery: Number(discovery?.mock_test_to_ebook_discovery ?? 0),
+      },
     });
   } catch (err) {
     return handleApiError(err);

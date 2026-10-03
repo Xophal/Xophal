@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
+import LearningRelationManager from "@/components/admin/LearningRelationManager";
+import { clientErrorMessage, readApiData } from "@/lib/client-api";
 
 type MockTest = {
   id: string;
@@ -42,6 +44,7 @@ export default function AdminMockTestsPage() {
   const [selectedQuestionByTest, setSelectedQuestionByTest] = useState<Record<string, string>>({});
   const [sectionName, setSectionName] = useState("");
   const [sectionDuration, setSectionDuration] = useState("");
+  const [relationsTestId, setRelationsTestId] = useState<string | null>(null);
 
   useEffect(() => {
     loadTests();
@@ -73,11 +76,7 @@ export default function AdminMockTestsPage() {
           is_active: editingId ? undefined : true,
         }),
       });
-      const result = await response.json();
-
-      if (!response.ok || !result.success) {
-        throw new Error(result.error || "Could not create mock test");
-      }
+      await readApiData<MockTest>(response, "Could not save the mock test.");
 
       toast({ title: editingId ? "Mock test updated" : "Mock test created", description: `${form.title} has been saved.` });
       setForm(blankTest);
@@ -86,7 +85,7 @@ export default function AdminMockTestsPage() {
     } catch (error) {
       toast({
         title: "Creation failed",
-        description: error instanceof Error ? error.message : "Please try again.",
+        description: clientErrorMessage(error, "Please try again."),
         variant: "destructive",
       });
     } finally {
@@ -226,7 +225,8 @@ export default function AdminMockTestsPage() {
                   </div>
                   <p className="mt-1 text-sm text-muted-foreground">{item.duration_minutes} mins • /{item.slug}</p>
                   <p className="mt-1 text-xs text-muted-foreground">{item.total_questions} questions · {item.total_marks} marks · {item.is_published ? "Published" : "Draft"}</p>
-                  <div className="mt-3 flex flex-wrap gap-2"><Button type="button" size="sm" variant="outline" onClick={() => editTest(item)}>Edit</Button><Button type="button" size="sm" variant="outline" onClick={() => void archiveTest(item)}>Archive</Button><Button type="button" size="sm" variant="outline" asChild><a href={`/test/${item.slug}`} target="_blank" rel="noreferrer">Preview</a></Button><Button type="button" size="sm" variant="outline" onClick={() => void loadSections(item.id)}>Sections</Button><Button type="button" size="sm" variant="outline" onClick={() => void loadQuestions(item.id)}>Questions</Button></div>
+                  <div className="mt-3 flex flex-wrap gap-2"><Button type="button" size="sm" variant="outline" onClick={() => editTest(item)}>Edit</Button><Button type="button" size="sm" variant="outline" onClick={() => void archiveTest(item)}>Archive</Button><Button type="button" size="sm" variant="outline" asChild><a href={`/test/${item.slug}`} target="_blank" rel="noreferrer">Preview</a></Button><Button type="button" size="sm" variant="outline" onClick={() => void loadSections(item.id)}>Sections</Button><Button type="button" size="sm" variant="outline" onClick={() => void loadQuestions(item.id)}>Questions</Button><Button type="button" size="sm" variant="outline" aria-expanded={relationsTestId === item.id} onClick={() => setRelationsTestId((current) => current === item.id ? null : item.id)}>Related eBooks</Button></div>
+                  {relationsTestId === item.id && <div className="mt-3 rounded-lg bg-muted/40 p-3"><p className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Related eBooks</p><LearningRelationManager mockTestId={item.id} /></div>}
                   {sectionsTestId === item.id && <div className="mt-3 space-y-2 rounded-lg bg-muted/40 p-3"><p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Sections</p>{(sectionsByTest[item.id] ?? []).map((section) => <div key={section.id} className="flex items-center justify-between text-sm"><span>{section.name}{section.duration_minutes ? ` • ${section.duration_minutes} min` : ""}</span><Button type="button" size="sm" variant="ghost" onClick={() => void deleteSection(item.id, section.id)}>Remove</Button></div>)}<div className="grid gap-2 sm:grid-cols-[1fr_110px_auto]"><Input value={sectionName} onChange={(e) => setSectionName(e.target.value)} placeholder="Section name" /><Input type="number" min={1} value={sectionDuration} onChange={(e) => setSectionDuration(e.target.value)} placeholder="Minutes" /><Button type="button" size="sm" onClick={() => void addSection(item.id)}>Add section</Button></div></div>}
                   {questionsTestId === item.id && <div className="mt-3 space-y-3 rounded-lg bg-muted/40 p-3"><p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Test questions</p><div className="flex flex-col gap-2 sm:flex-row"><select className="glass-input min-h-10 min-w-0 flex-1 rounded-md px-3 text-sm" aria-label={`Question to add to ${item.title}`} value={selectedQuestionByTest[item.id] ?? ""} onChange={(event) => setSelectedQuestionByTest((current) => ({ ...current, [item.id]: event.target.value }))}><option value="">Select a published question</option>{(questionsByTest[item.id]?.available ?? []).map((question) => <option key={question.id} value={question.id}>{question.question_text} · {question.marks} marks</option>)}</select><Button type="button" size="sm" disabled={!selectedQuestionByTest[item.id]} onClick={() => void attachQuestion(item.id)}>Add question</Button></div>{(questionsByTest[item.id]?.attached ?? []).length ? <ol className="divide-y divide-border">{(questionsByTest[item.id]?.attached ?? []).map((link) => <li key={link.question_id} className="flex items-start justify-between gap-3 py-2 text-sm"><span className="min-w-0">{link.question?.question_text ?? "Question unavailable"}<span className="mt-1 block text-xs text-muted-foreground">{link.question?.engine_type ?? "Question"} · {link.marks_override ?? link.question?.marks ?? 0} marks</span></span><Button type="button" size="sm" variant="ghost" onClick={() => void detachQuestion(item.id, link.question_id)}>Remove</Button></li>)}</ol> : <p className="text-sm text-muted-foreground">No questions attached. Publish questions in the question bank first.</p>}</div>}
                 </div>

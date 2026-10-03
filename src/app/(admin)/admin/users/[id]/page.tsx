@@ -29,6 +29,13 @@ type Profile = {
   roles: { code: string; name: string } | null;
 };
 
+type PendingRoleInvitation = {
+  id: string;
+  role: Pick<Role, "code" | "name">;
+  created_at: string;
+  expires_at: string;
+};
+
 function formatDate(value: string | null) {
   if (!value) return "—";
   const parsed = new Date(value);
@@ -56,12 +63,22 @@ export default function AdminUserDetailPage() {
   const [loading, setLoading] = useState(true);
   const [savingRole, setSavingRole] = useState(false);
   const [savingActive, setSavingActive] = useState(false);
+  const [cancellingInvitation, setCancellingInvitation] = useState(false);
+  const [canManageAccounts, setCanManageAccounts] = useState(false);
+  const [pendingRoleInvitation, setPendingRoleInvitation] = useState<PendingRoleInvitation | null>(null);
 
-  const applyPayload = useCallback((json: { data?: { profile?: Profile | null; attemptsCount?: number } | null }) => {
+  const applyPayload = useCallback((json: { data?: {
+    profile?: Profile | null;
+    attemptsCount?: number;
+    canManageAccounts?: boolean;
+    pendingRoleInvitation?: PendingRoleInvitation | null;
+  } | null }) => {
     const next: Profile | null = json?.data?.profile ?? null;
     setProfile(next);
     setAttemptsCount(Number(json?.data?.attemptsCount ?? 0) || 0);
     setSelectedRole(normalizeRoleCode(next?.roles) ?? "");
+    setCanManageAccounts(json.data?.canManageAccounts === true);
+    setPendingRoleInvitation(json.data?.pendingRoleInvitation ?? null);
   }, []);
 
   const load = useCallback(async () => {
@@ -114,7 +131,7 @@ export default function AdminUserDetailPage() {
     })();
   }, []);
 
-  async function patch(body: { isActive?: boolean; role?: string }) {
+  async function patch(body: { isActive: boolean }) {
     const res = await fetch(`/api/admin/users/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -132,11 +149,15 @@ export default function AdminUserDetailPage() {
     setSavingActive(true);
     try {
       await patch({ isActive: next });
-      toast({ title: next ? "Account reactivated" : "Account deactivated" });
+      toast({
+        title: next ? "Account reactivated" : "Account deactivated",
+        description: "The user has been emailed about the account status change.",
+      });
       await load();
       router.refresh();
     } catch (err) {
       toast({ title: "Action failed", description: err instanceof Error ? err.message : String(err), variant: "destructive" });
+      await load();
     } finally {
       setSavingActive(false);
     }
@@ -144,16 +165,39 @@ export default function AdminUserDetailPage() {
 
   async function saveRole() {
     if (!profile || !selectedRole) return;
-    if (!confirm(`Change role for ${profile.email || "this user"}?`)) return;
+    if (!confirm(`Email a role invitation to ${profile.email || "this user"}? Their role changes only if they accept.`)) return;
     setSavingRole(true);
     try {
-      await patch({ role: selectedRole });
-      toast({ title: "Role updated" });
+      const res = await fetch(`/api/admin/users/${id}/role-invitation`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ role: selectedRole }),
+      });
+      const json = await res.json();
+      if (!res.ok || !json.success) throw new Error(json.error || "Could not send role invitation");
+      toast({ title: "Role invitation sent", description: "The user's current role stays unchanged until they accept." });
       await load();
     } catch (err) {
-      toast({ title: "Update failed", description: err instanceof Error ? err.message : String(err), variant: "destructive" });
+      toast({ title: "Invitation failed", description: err instanceof Error ? err.message : String(err), variant: "destructive" });
     } finally {
       setSavingRole(false);
+    }
+  }
+
+  async function cancelRoleInvitation() {
+    if (!profile || !pendingRoleInvitation) return;
+    if (!confirm(`Cancel the pending ${pendingRoleInvitation.role.name} invitation for ${profile.email || "this user"}?`)) return;
+    setCancellingInvitation(true);
+    try {
+      const res = await fetch(`/api/admin/users/${id}/role-invitation`, { method: "DELETE" });
+      const json = await res.json();
+      if (!res.ok || !json.success) throw new Error(json.error || "Could not cancel role invitation");
+      toast({ title: "Invitation cancelled" });
+      await load();
+    } catch (err) {
+      toast({ title: "Cancellation failed", description: err instanceof Error ? err.message : String(err), variant: "destructive" });
+    } finally {
+      setCancellingInvitation(false);
     }
   }
 
@@ -164,7 +208,7 @@ export default function AdminUserDetailPage() {
       <AdminPageHeader
         eyebrow="People"
         title={profile?.full_name || profile?.email || "User"}
-        description="Account status, role assignment and activity for this user."
+        description="Account status, role invitations and activity for this user."
         actions={
           <Button asChild variant="outline" size="sm">
             <Link href="/admin/users">
@@ -238,26 +282,41 @@ export default function AdminUserDetailPage() {
 
             <div className="grid gap-4">
               <AdminPanel eyebrow="Access" title="Role assignment" icon={ShieldCheck}>
-                <label className="admin-stat-label" htmlFor="user-role">
-                  Role
-                </label>
-                <select
-                  id="user-role"
-                  value={selectedRole}
-                  onChange={(e) => setSelectedRole(e.target.value)}
-                  className="mt-2 w-full rounded-xl border border-white/10 bg-slate-900/60 px-3 py-2.5 text-sm text-slate-100 outline-none focus:border-cyan-400/50"
-                >
-                  <option value="">(none)</option>
-                  {roles.map((r) => (
-                    <option key={r.code} value={r.code}>
-                      {r.name}
-                    </option>
-                  ))}
-                </select>
-                <p className="mt-2 text-xs text-slate-500">Only a super admin can change a role.</p>
-                <Button onClick={saveRole} disabled={savingRole || !selectedRole} className="mt-4 w-full">
-                  {savingRole ? "Saving…" : "Save role"}
-                </Button>
+                {canManageAccounts ? (
+                  <>
+                    <label className="admin-stat-label" htmlFor="user-role">
+                      Invite to role
+                    </label>
+                    <select
+                      id="user-role"
+                      value={selectedRole}
+                      onChange={(e) => setSelectedRole(e.target.value)}
+                      className="mt-2 w-full rounded-xl border border-white/10 bg-slate-900/60 px-3 py-2.5 text-sm text-slate-100 outline-none focus:border-cyan-400/50"
+                    >
+                      <option value="">Choose a role</option>
+                      {roles.filter((r) => r.code !== "super_admin").map((r) => (
+                        <option key={r.code} value={r.code}>
+                          {r.name}
+                        </option>
+                      ))}
+                    </select>
+                    <p className="mt-2 text-xs text-slate-500">The user will receive an email and must accept before their role changes. Invitations expire after 7 days.</p>
+                    <Button onClick={saveRole} disabled={savingRole || !selectedRole || (selectedRole === roleCode && !pendingRoleInvitation)} className="mt-4 w-full">
+                      {savingRole ? "Sending invitation…" : pendingRoleInvitation ? "Replace pending invitation" : "Send role invitation"}
+                    </Button>
+                    {pendingRoleInvitation ? (
+                      <div className="mt-4 rounded-lg border border-amber-400/20 bg-amber-400/5 p-3">
+                        <p className="text-sm font-semibold text-amber-200">Awaiting response: {pendingRoleInvitation.role.name}</p>
+                        <p className="mt-1 text-xs text-slate-400">Expires {formatDate(pendingRoleInvitation.expires_at)}</p>
+                        <Button type="button" variant="outline" disabled={cancellingInvitation} onClick={cancelRoleInvitation} className="mt-3 w-full">
+                          {cancellingInvitation ? "Cancelling…" : "Cancel invitation"}
+                        </Button>
+                      </div>
+                    ) : null}
+                  </>
+                ) : (
+                  <p className="text-sm text-slate-400">Only a super administrator can send role invitations.</p>
+                )}
               </AdminPanel>
 
               <AdminPanel eyebrow="Access" title="Account status">
@@ -266,14 +325,18 @@ export default function AdminUserDetailPage() {
                     ? "This account can sign in and use the platform. Deactivating blocks sign-in without deleting history."
                     : "This account is deactivated and cannot sign in."}
                 </p>
-                <Button
-                  onClick={toggleActive}
-                  disabled={savingActive}
-                  variant={isActive ? "destructive" : "default"}
-                  className="mt-4 w-full"
-                >
-                  {savingActive ? "Working…" : isActive ? "Deactivate account" : "Reactivate account"}
-                </Button>
+                {canManageAccounts ? (
+                  <Button
+                    onClick={toggleActive}
+                    disabled={savingActive}
+                    variant={isActive ? "destructive" : "default"}
+                    className="mt-4 w-full"
+                  >
+                    {savingActive ? "Working…" : isActive ? "Deactivate account" : "Reactivate account"}
+                  </Button>
+                ) : (
+                  <p className="mt-3 text-xs text-slate-500">Only a super administrator can change account status.</p>
+                )}
               </AdminPanel>
             </div>
           </div>

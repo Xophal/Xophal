@@ -3,24 +3,77 @@
 import { useState } from "react";
 import { Check, Copy, Facebook, Flag, MessageCircle, Share2, Twitter } from "lucide-react";
 
-export function EbookShare({ title, description }: { title: string; description: string }) {
+export function EbookShare({
+  ebookId,
+  title,
+  description,
+  canonicalUrl,
+}: {
+  ebookId: string;
+  title: string;
+  description: string;
+  canonicalUrl: string;
+}) {
   const [copied, setCopied] = useState(false);
-  const href = typeof window === "undefined" ? "" : window.location.href;
-  const shareText = `${title} | Xophol`;
+  const [error, setError] = useState("");
+  const shareText = `Check out this study resource on Xophol: ${title}`;
+
+  function trackShare(platform: string) {
+    void fetch("/api/ebooks/events", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      keepalive: true,
+      body: JSON.stringify({
+        eventName: "ebook_share_clicked",
+        ebookId,
+        source: "ebook_detail",
+        metadata: { sharePlatform: platform },
+      }),
+    }).then((response) => {
+      if (!response.ok) throw new Error(`Share tracking returned HTTP ${response.status}`);
+    }).catch((trackingError: unknown) => {
+      console.error("Could not record eBook share event", trackingError);
+    });
+  }
 
   async function copyLink() {
-    await navigator.clipboard.writeText(window.location.href);
-    setCopied(true);
-    window.setTimeout(() => setCopied(false), 1800);
+    setError("");
+    try {
+      await navigator.clipboard.writeText(canonicalUrl);
+      setCopied(true);
+      trackShare("copy_link");
+      window.setTimeout(() => setCopied(false), 1800);
+    } catch {
+      setError("Could not copy the link. Please try sharing it another way.");
+    }
+  }
+
+  async function shareNatively() {
+    setError("");
+    if (typeof navigator.share !== "function") {
+      setError("Device sharing is not available in this browser. Copy the link instead.");
+      return;
+    }
+    try {
+      await navigator.share({ title, text: shareText, url: canonicalUrl });
+      trackShare("web_share");
+    } catch (shareError) {
+      if (shareError instanceof DOMException && shareError.name === "AbortError") return;
+      setError("Could not open the share menu. Please try another share option.");
+    }
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-2" aria-label="Share this eBook">
-      <span className="mr-1 inline-flex items-center gap-1 text-sm font-medium text-muted-foreground"><Share2 className="h-4 w-4" />Share</span>
-      <a className="inline-flex h-10 w-10 items-center justify-center rounded-md border border-border hover:bg-muted" href={`https://wa.me/?text=${encodeURIComponent(`${shareText} ${href}`)}`} target="_blank" rel="noreferrer" aria-label="Share on WhatsApp" title="WhatsApp"><MessageCircle className="h-4 w-4" /></a>
-      <a className="inline-flex h-10 w-10 items-center justify-center rounded-md border border-border hover:bg-muted" href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(href)}`} target="_blank" rel="noreferrer" aria-label="Share on Facebook" title="Facebook"><Facebook className="h-4 w-4" /></a>
-      <a className="inline-flex h-10 w-10 items-center justify-center rounded-md border border-border hover:bg-muted" href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(href)}&description=${encodeURIComponent(description)}`} target="_blank" rel="noreferrer" aria-label="Share on X" title="X"><Twitter className="h-4 w-4" /></a>
-      <button type="button" onClick={copyLink} className="inline-flex h-10 items-center gap-2 rounded-md border border-border px-3 text-sm hover:bg-muted" aria-label="Copy eBook link"><Copy className="h-4 w-4" />{copied ? <><Check className="h-4 w-4" />Copied</> : "Copy link"}</button>
+    <div>
+      <div role="group" aria-label="Share this eBook" className="flex flex-wrap items-center gap-2">
+        <span className="mr-1 inline-flex items-center gap-1 text-sm font-medium text-muted-foreground"><Share2 className="h-4 w-4" />Share</span>
+        <a onClick={() => trackShare("whatsapp")} className="inline-flex h-10 w-10 items-center justify-center rounded-md border border-border hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" href={`https://wa.me/?text=${encodeURIComponent(`${shareText} ${canonicalUrl}`)}`} target="_blank" rel="noopener noreferrer nofollow" aria-label="Share on WhatsApp" title="WhatsApp"><MessageCircle className="h-4 w-4" /></a>
+        <a onClick={() => trackShare("facebook")} className="inline-flex h-10 w-10 items-center justify-center rounded-md border border-border hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(canonicalUrl)}`} target="_blank" rel="noopener noreferrer nofollow" aria-label="Share on Facebook" title="Facebook"><Facebook className="h-4 w-4" /></a>
+        <a onClick={() => trackShare("x")} className="inline-flex h-10 w-10 items-center justify-center rounded-md border border-border hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(canonicalUrl)}&description=${encodeURIComponent(description)}`} target="_blank" rel="noopener noreferrer nofollow" aria-label="Share on X" title="X"><Twitter className="h-4 w-4" /></a>
+        <button type="button" onClick={shareNatively} className="inline-flex h-10 w-10 items-center justify-center rounded-md border border-border hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" aria-label="Share using your device" title="Share"><Share2 className="h-4 w-4" /></button>
+        <button type="button" onClick={copyLink} className="inline-flex h-10 items-center gap-2 rounded-md border border-border px-3 text-sm hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" aria-label="Copy eBook link"><Copy className="h-4 w-4" />{copied ? <><Check className="h-4 w-4" /><span aria-live="polite">Copied</span></> : "Copy link"}</button>
+      </div>
+      {error ? <p role="alert" className="mt-2 text-sm text-destructive">{error}</p> : null}
     </div>
   );
 }

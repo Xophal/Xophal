@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
 import { AdminChip, AdminEmpty, AdminPage, AdminPageHeader, AdminPanel } from "@/components/admin/ui";
+import { clientErrorMessage, readApiData } from "@/lib/client-api";
 
 type Board = {
   id: string;
@@ -53,11 +54,7 @@ export default function AdminBoardsPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...form, sort_order: editingId ? undefined : boards.length }),
       });
-      const result = await response.json();
-
-      if (!response.ok || !result.success) {
-        throw new Error(result.error || "Could not create board");
-      }
+      await readApiData<Board>(response, "Could not save the board.");
 
       toast({ title: editingId ? "Board updated" : "Board created", description: `${form.name} has been saved.` });
       setForm(blankBoard);
@@ -66,7 +63,7 @@ export default function AdminBoardsPage() {
     } catch (error) {
       toast({
         title: "Creation failed",
-        description: error instanceof Error ? error.message : "Please try again.",
+        description: clientErrorMessage(error, "Please try again."),
         variant: "destructive",
       });
     } finally {

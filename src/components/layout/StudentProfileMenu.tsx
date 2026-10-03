@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { ChevronDown, CircleHelp, Languages, UserRound } from "lucide-react";
 import LogoutButton from "@/components/auth/LogoutButton";
@@ -8,7 +9,7 @@ import { createTranslator, LANGUAGE_OPTIONS } from "@/lib/i18n";
 
 const t = createTranslator("en");
 
-export default function StudentProfileMenu({ fullName, email }: { fullName: string | null; email: string | null }) {
+export default function StudentProfileMenu({ fullName, email, avatarUrl }: { fullName: string | null; email: string | null; avatarUrl: string | null }) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -46,7 +47,9 @@ export default function StudentProfileMenu({ fullName, email }: { fullName: stri
         onClick={() => setOpen((value) => !value)}
         className="flex h-10 items-center gap-1.5 rounded-full border border-slate-200 bg-white/70 px-1.5 text-slate-700 transition hover:border-emerald-300 dark:border-white/10 dark:bg-slate-900/60 dark:text-slate-200 sm:gap-2 sm:pl-2"
       >
-        <span className="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-200 text-xs font-bold text-emerald-950" aria-hidden="true">{initials}</span>
+        <span className="relative flex h-7 w-7 items-center justify-center overflow-hidden rounded-full bg-emerald-200 text-xs font-bold text-emerald-950" aria-hidden="true">
+          {avatarUrl ? <Image src={avatarUrl} alt="" fill sizes="28px" unoptimized className="object-cover" /> : initials}
+        </span>
         <span className="hidden max-w-28 truncate text-xs font-medium sm:block">{fullName || "Student"}</span>
         <ChevronDown className="mr-1 h-3.5 w-3.5" aria-hidden="true" />
       </button>

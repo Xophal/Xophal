@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
 import { AdminChip, AdminPage, AdminPageHeader, AdminPanel } from "@/components/admin/ui";
+import { clientErrorMessage, readApiData } from "@/lib/client-api";
 
 type Row = { id: string; code: string; name: string; slug: string; is_active: boolean; chapter_number?: number | null };
 type Board = { id: string; name: string };
@@ -75,15 +76,14 @@ export default function AdminChaptersPage() {
     setSaving(true);
     try {
       const response = await fetch(url, { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-      const result = await response.json();
-      if (!response.ok || !result.success) throw new Error(result.error || "Save failed");
+      await readApiData<unknown>(response, "Could not save this item.");
       toast({ title }); reset();
       setEditingChapterId(null);
       setEditingTopicId(null);
       if (subjectId) setChapters(await load<Row>(`/api/admin/chapters?subjectId=${subjectId}`));
       if (chapterId) setTopics(await load<Row>(`/api/admin/topics?chapterId=${chapterId}`));
     } catch (error) {
-      toast({ title: "Save failed", description: error instanceof Error ? error.message : "Please try again.", variant: "destructive" });
+      toast({ title: "Save failed", description: clientErrorMessage(error, "Please try again."), variant: "destructive" });
     } finally { setSaving(false); }
   }
 

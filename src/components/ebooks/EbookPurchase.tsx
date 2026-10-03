@@ -12,16 +12,19 @@ export function EbookPurchase({
   ebookId,
   price,
   owned,
+  sourceMockTestId,
 }: {
   ebookId: string;
   price: number | string;
   owned: boolean;
+  sourceMockTestId?: string;
 }) {
-  const accessUrl = owned ? `/api/ebooks/${ebookId}/external` : null;
+  const externalUrl = `/api/ebooks/${ebookId}/external${sourceMockTestId ? `?sourceMockTestId=${encodeURIComponent(sourceMockTestId)}` : ""}`;
+  const accessUrl = owned ? externalUrl : null;
   const isFree = Number(price) <= 0;
 
   function openBook() {
-    window.location.href = accessUrl ?? `/api/ebooks/${ebookId}/external`;
+    window.location.href = accessUrl ?? externalUrl;
   }
 
   return (

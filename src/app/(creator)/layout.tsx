@@ -37,6 +37,9 @@ export default async function CreatorLayout({ children }: { children: React.Reac
             <Link href="/ebooks" className="text-muted-foreground hover:text-foreground">
               Browse eBooks
             </Link>
+            <Link href="/account/security" className="text-muted-foreground hover:text-foreground">
+              Account security
+            </Link>
             <Link href="/dashboard" className="text-muted-foreground hover:text-foreground">
               Learning dashboard
             </Link>

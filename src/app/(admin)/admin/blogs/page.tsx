@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { AdminChip, AdminEmpty, AdminLoading, AdminPage, AdminPageHeader, AdminPanel, AdminPagination, AdminToolbar, readList } from "@/components/admin/ui";
 import { createBlogSlug } from "@/lib/blog-content";
+import { clientErrorMessage, readApiData } from "@/lib/client-api";
 
 type Blog = {
   id: string;
@@ -131,30 +132,32 @@ export default function AdminBlogsPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
-      const json = await res.json();
-      if (!res.ok || !json.success) throw new Error(json.error || "Could not save post");
+      await readApiData<Blog>(res, "Could not save the post.");
       toast({ title: editingId ? "Post updated" : "Post created", description: `${form.title} has been saved.` });
       setForm(blank);
       setEditingId(null);
       setSlugTouched(false);
       await load(page, query);
     } catch (error) {
-      toast({ title: "Save failed", description: error instanceof Error ? error.message : "Please try again.", variant: "destructive" });
+      toast({ title: "Save failed", description: clientErrorMessage(error, "Please try again."), variant: "destructive" });
     } finally {
       setSaving(false);
     }
   }
 
   async function togglePublished(blog: Blog) {
-    const res = await fetch(`/api/admin/blogs/${blog.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ is_published: !blog.is_published }),
-    });
-    const json = await res.json().catch(() => ({}));
-    if (!res.ok || !json.success) return toast({ title: "Update failed", description: json.error || "Could not update post", variant: "destructive" });
-    toast({ title: blog.is_published ? "Post unpublished" : "Post published", description: blog.title });
-    await load(page, query);
+    try {
+      const response = await fetch(`/api/admin/blogs/${blog.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ is_published: !blog.is_published }),
+      });
+      await readApiData<Blog>(response, "Could not update the post.");
+      toast({ title: blog.is_published ? "Post unpublished" : "Post published", description: blog.title });
+      await load(page, query);
+    } catch (error) {
+      toast({ title: "Publish update failed", description: clientErrorMessage(error, "Please try again."), variant: "destructive" });
+    }
   }
 
   async function deleteBlog(blog: Blog) {

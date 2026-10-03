@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { AdminChip, AdminEmpty, AdminLoading, AdminPage, AdminPageHeader, AdminPanel, AdminToolbar } from "@/components/admin/ui";
+import { clientErrorMessage, readApiData } from "@/lib/client-api";
 
 type Topic = {
   id: string;
@@ -72,14 +73,13 @@ export default function AdminTopicsPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...form, sort_order: editingId ? undefined : topics.length }),
       });
-      const result = await response.json();
-      if (!response.ok || !result.success) throw new Error(result.error || "Could not save topic");
+      await readApiData<Topic>(response, "Could not save the topic.");
       toast({ title: editingId ? "Topic updated" : "Topic created", description: `${form.name} has been saved.` });
       setForm(blank);
       setEditingId(null);
       await reload();
     } catch (error) {
-      toast({ title: "Save failed", description: error instanceof Error ? error.message : "Please try again.", variant: "destructive" });
+      toast({ title: "Save failed", description: clientErrorMessage(error, "Please try again."), variant: "destructive" });
     } finally {
       setSaving(false);
     }
