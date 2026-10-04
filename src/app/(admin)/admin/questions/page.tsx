@@ -31,12 +31,36 @@ const STATUS_BADGE: Record<EngineStatus, "default" | "secondary" | "outline" | "
   retired: "destructive",
 };
 
+const CSV_TEMPLATE_HEADER =
+  "type,stem,topic_slug,subtopic_slug,difficulty,skill,marks,neg_marks,est_time_sec,board_pattern,status,source,tags,options,answer_json,rubric_json,explanation";
+
 const CSV_TEMPLATE = [
-  "type,stem,topic_slug,difficulty,skill,marks,neg_marks,est_time_sec,board_pattern,tags,options,answer_json,rubric_json,explanation",
-  'mcq,"Which gas turns limewater milky?",corrosion-and-rancidity,1,recall,1,0.25,60,CBSE,"reactions|recall",',
-  '"[ {""label"":""A"",""body"":""Oxygen"",""is_correct"":false},{""label"":""B"",""body"":""Carbon dioxide"",""is_correct"":true},{""label"":""C"",""body"":""Hydrogen"",""is_correct"":false} ]",',
-  '"{""correct_option"":""B""}","", "Carbon dioxide reacts with limewater to form calcium carbonate."',
+  CSV_TEMPLATE_HEADER,
+  'mcq,"Which gas turns limewater milky?",chemical-equations-balancing,,1,recall,1,0.25,60,CBSE,draft,import,"reactions|recall","[{""label"":""A"",""body"":""Oxygen"",""is_correct"":false},{""label"":""B"",""body"":""Carbon dioxide"",""is_correct"":true},{""label"":""C"",""body"":""Hydrogen"",""is_correct"":false},{""label"":""D"",""body"":""Nitrogen"",""is_correct"":false}]","{""correct_option"":""B""}","","Carbon dioxide reacts with limewater to form calcium carbonate."',
 ].join("\n");
+
+const DEMO_CSV_URL = "/templates/questions-import-demo.csv";
+
+/** Column-by-column guide so users can match their own sheet to the importer. */
+const DEMO_COLUMN_GUIDE: Array<{ column: string; required: boolean; example: string; notes: string }> = [
+  { column: "type", required: true, example: "mcq", notes: "One of: mcq, assertion_reason, match, statement, case_based, fill_blank, equation, short, long" },
+  { column: "stem", required: true, example: "Which gas turns limewater milky?", notes: "The question text. Wrap in quotes if it contains commas." },
+  { column: "topic_slug", required: true, example: "chemical-equations-balancing", notes: "Must already exist in Topics. Copy slug from /api/admin/engine/vocab." },
+  { column: "subtopic_slug", required: false, example: "(blank)", notes: "Optional. Leave blank if unsure." },
+  { column: "difficulty", required: true, example: "1", notes: "1 = easy, 2 = medium, 3 = hard." },
+  { column: "skill", required: true, example: "recall", notes: "One of: recall, application, reasoning." },
+  { column: "marks", required: false, example: "1", notes: "Defaults to 1." },
+  { column: "neg_marks", required: false, example: "0.25", notes: "Defaults to 0." },
+  { column: "est_time_sec", required: false, example: "60", notes: "Seconds. Defaults to 60." },
+  { column: "board_pattern", required: false, example: "CBSE", notes: "One of: CBSE, SEBA, OTHER. Defaults to CBSE." },
+  { column: "status", required: false, example: "draft", notes: "Keep draft. Imports are never auto-published." },
+  { column: "source", required: false, example: "import", notes: "Keep import." },
+  { column: "tags", required: false, example: "reactions|recall", notes: "Pipe-separated (|), max 30." },
+  { column: "options", required: false, example: '[{"label":"A","body":"...","is_correct":false}]', notes: "MCQ needs 2-6 options, exactly 1 correct. Double the quotes inside CSV." },
+  { column: "answer_json", required: false, example: '{"correct_option":"B"}', notes: 'MCQ: {"correct_option":"B"}. Fill-blank/equation/short have their own shape.' },
+  { column: "rubric_json", required: false, example: '{"model_answer":"...","max_marks":2}', notes: "Only for short/long descriptive questions." },
+  { column: "explanation", required: false, example: "CO2 forms calcium carbonate.", notes: "Shown to students after the attempt." },
+];
 
 function questionListPayload(response: ListResponse) {
   if (!response.data || !Array.isArray(response.data.data)) {
@@ -641,7 +665,32 @@ function CsvImport({ onDone }: { onDone: () => void }) {
     }
   }
 
+  async function loadDemo() {
+    try {
+      const res = await fetch(DEMO_CSV_URL, { cache: "no-store" });
+      if (!res.ok) throw new Error("Demo file not found");
+      setCsv(await res.text());
+      toast({ title: "Demo template loaded", description: "5 sample rows: mcq, assertion_reason, fill_blank, equation, short." });
+    } catch (err) {
+      toast({
+        title: "Demo load failed",
+        description: err instanceof Error ? err.message : String(err),
+        variant: "destructive",
+      });
+    }
+  }
+
+  async function copyTemplate() {
+    try {
+      await navigator.clipboard.writeText(csv || CSV_TEMPLATE);
+      toast({ title: "Copied", description: "Template CSV copied to clipboard." });
+    } catch {
+      toast({ title: "Copy failed", description: "Select the text and copy manually.", variant: "destructive" });
+    }
+  }
+
   return (
+    <div className="space-y-4">
     <div className="grid gap-4 lg:grid-cols-2">
       <Card>
         <CardHeader>
@@ -675,24 +724,75 @@ function CsvImport({ onDone }: { onDone: () => void }) {
       </Card>
       <Card>
         <CardHeader>
-          <CardTitle>Template</CardTitle>
+          <CardTitle>Demo template — match your sheet to this</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3 text-sm">
           <p className="text-muted-foreground">
-            Required: <code>type</code>, <code>stem</code>, <code>topic_slug</code>, <code>difficulty</code>,{" "}
-            <code>skill</code>.
+            Download this 5-row demo (mcq, assertion_reason, fill_blank, equation, short), open it in Excel, then
+            reshape your 200 questions to the same columns. Required: <code>type</code>, <code>stem</code>,{" "}
+            <code>topic_slug</code>, <code>difficulty</code>, <code>skill</code>.
           </p>
-          <p className="text-muted-foreground">
-            Optional: <code>subtopic_slug</code>, <code>marks</code>, <code>neg_marks</code>,{" "}
-            <code>est_time_sec</code>, <code>board_pattern</code>, <code>tags</code> (pipe separated),{" "}
-            <code>options</code>, <code>answer_json</code>, <code>rubric_json</code>, <code>explanation</code>.
-          </p>
+          <div className="flex flex-wrap gap-2">
+            <a href={DEMO_CSV_URL} download="questions-import-demo.csv">
+              <Button variant="outline" type="button">Download demo CSV</Button>
+            </a>
+            <Button variant="outline" type="button" onClick={() => void loadDemo()}>
+              Load demo into editor
+            </Button>
+            <Button variant="ghost" type="button" onClick={() => void copyTemplate()}>
+              Copy
+            </Button>
+          </div>
           <pre className="overflow-x-auto rounded-md bg-muted/50 p-3 text-xs">{CSV_TEMPLATE}</pre>
           <Button variant="outline" onClick={() => setCsv(CSV_TEMPLATE)}>
-            Load template into editor
+            Load 1-row template into editor
           </Button>
+          <div className="overflow-x-auto rounded-md border">
+            <table className="w-full min-w-[640px] text-left text-xs">
+              <thead>
+                <tr className="border-b bg-muted/40">
+                  <th className="p-2">Column</th>
+                  <th className="p-2">Required</th>
+                  <th className="p-2">Example</th>
+                  <th className="p-2">How to match your bank</th>
+                </tr>
+              </thead>
+              <tbody>
+                {DEMO_COLUMN_GUIDE.map((c) => (
+                  <tr key={c.column} className="border-b last:border-0">
+                    <td className="p-2 font-mono font-semibold">{c.column}</td>
+                    <td className="p-2">{c.required ? <Badge>required</Badge> : <Badge variant="outline">optional</Badge>}</td>
+                    <td className="max-w-[220px] truncate p-2 font-mono" title={c.example}>{c.example}</td>
+                    <td className="p-2 text-muted-foreground">{c.notes}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Your old columns map like this: question_text → stem, question_type (MCQ) → type (mcq), option_a..d →
+            options JSON array with exactly 1 is_correct:true, correct_option → answer_json correct_option label,
+            marks → marks, negative_marks → neg_marks, explanation → explanation. topic_slug must be a real slug
+            (e.g. chemical-equations-balancing) — it cannot be blank.
+          </p>
         </CardContent>
       </Card>
+    </div>
+    <Card>
+      <CardHeader>
+        <CardTitle>Demo rows preview</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-2 text-xs text-muted-foreground">
+        <p>The downloadable demo contains these 5 rows — one per common type. After import they land as draft with an Imported badge in the Review queue.</p>
+        <ol className="list-decimal space-y-1 pl-5">
+          <li><span className="font-mono">mcq</span> — 4 options, B correct, tags reactions|recall.</li>
+          <li><span className="font-mono">assertion_reason</span> — 4 options, A correct.</li>
+          <li><span className="font-mono">fill_blank</span> — options holds the accepted blank text (Fe3O4), answer_json.blanks holds variants.</li>
+          <li><span className="font-mono">equation</span> — no options; balanced equation in answer_json.</li>
+          <li><span className="font-mono">short</span> — model answer in rubric_json + answer_json.value.</li>
+        </ol>
+      </CardContent>
+    </Card>
     </div>
   );
 }
