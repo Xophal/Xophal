@@ -2,7 +2,8 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { ApiError } from "@/lib/api-utils";
 import type { Profile } from "@/types";
-import { isAdminRole, normalizeRoleCode } from "@/lib/roles";
+import { isPrivilegedAdminRole, normalizeRoleCode } from "@/lib/roles";
+import { isUserEmailVerified } from "@/lib/auth-policy";
 import { isMainAdminEmail } from "@/lib/admin-approval";
 import type { User } from "@supabase/supabase-js";
 
@@ -40,38 +41,46 @@ export async function getSessionUser() {
 
   if (!user) return null;
 
-  if (user.email_confirmed_at) return user;
+  if (isUserEmailVerified(user)) return user;
 
   const profile = await getProfile(user.id);
-  if (profile?.email_verified) return user;
-
-  return null;
+  return isUserEmailVerified(user, profile) ? user : null;
 }
 
 export async function getProfile(userId: string): Promise<Profile | null> {
   const supabase = await createClient();
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("profiles")
     .select("*, roles(code, name)")
     .eq("id", userId)
-    .single();
+    .maybeSingle();
+  if (error) {
+    console.error("Failed to load user profile", error);
+    throw new ApiError(503, "Your account profile is temporarily unavailable.", "PROFILE_LOOKUP_FAILED");
+  }
   return data;
 }
 
-export async function ensureProfile(user: User): Promise<Profile | null> {
+export async function ensureProfile(user: User): Promise<Profile> {
   const profile = await getProfile(user.id);
   if (profile) {
     if (profile.role_id || normalizeRoleCode(profile)) return profile;
 
     const adminClient = createAdminClient();
     const roleCode = isMainAdminEmail(user.email ?? "") ? "super_admin" : "student";
-    const { data: role } = await adminClient
+    const { data: role, error: roleError } = await adminClient
       .from("roles")
       .select("id")
       .eq("code", roleCode)
       .maybeSingle();
 
-    if (!role?.id) return profile;
+    if (roleError) {
+      console.error("Failed to load default role for user profile", roleError);
+      throw new ApiError(503, "Your account role is temporarily unavailable.", "ROLE_LOOKUP_FAILED");
+    }
+    if (!role?.id) {
+      throw new ApiError(503, "Your account role is not configured.", "ROLE_NOT_CONFIGURED");
+    }
 
     const { error } = await adminClient
       .from("profiles")
@@ -79,21 +88,32 @@ export async function ensureProfile(user: User): Promise<Profile | null> {
       .eq("id", user.id);
     if (error) {
       console.error("Failed to repair missing user profile role", error);
-      return profile;
+      throw new ApiError(503, "Your account profile could not be repaired.", "PROFILE_REPAIR_FAILED");
     }
 
-    return getProfile(user.id);
+    const repairedProfile = await getProfile(user.id);
+    if (!repairedProfile) {
+      throw new ApiError(503, "Your account profile could not be repaired.", "PROFILE_REPAIR_FAILED");
+    }
+    return repairedProfile;
   }
 
   const adminClient = createAdminClient();
   // A configured main administrator must be provisioned with the highest role
   // even when the profile was created lazily here (e.g. via Google/OAuth).
   const isMainAdmin = isMainAdminEmail(user.email ?? "");
-  const { data: roleRows } = await adminClient
+  const { data: roleRows, error: roleError } = await adminClient
     .from("roles")
     .select("id, code")
     .in("code", isMainAdmin ? ["super_admin"] : ["student"]);
+  if (roleError) {
+    console.error("Failed to load default role for user profile", roleError);
+    throw new ApiError(503, "Your account role is temporarily unavailable.", "ROLE_LOOKUP_FAILED");
+  }
   const roleId = (roleRows ?? [])[0]?.id ?? null;
+  if (!roleId) {
+    throw new ApiError(503, "Your account role is temporarily unavailable.", "ROLE_NOT_CONFIGURED");
+  }
 
   const { error } = await adminClient.from("profiles").upsert({
     id: user.id,
@@ -107,10 +127,14 @@ export async function ensureProfile(user: User): Promise<Profile | null> {
 
   if (error) {
     console.error("Failed to repair missing user profile", error);
-    return null;
+    throw new ApiError(503, "Your account profile could not be repaired.", "PROFILE_REPAIR_FAILED");
   }
 
-  return getProfile(user.id);
+  const createdProfile = await getProfile(user.id);
+  if (!createdProfile) {
+    throw new ApiError(503, "Your account profile could not be repaired.", "PROFILE_REPAIR_FAILED");
+  }
+  return createdProfile;
 }
 
 /**
@@ -127,15 +151,21 @@ export async function promoteMainAdminProfile(input: {
 }): Promise<Profile | null> {
   const email = input.email?.trim().toLowerCase() ?? "";
   if (!email || !isMainAdminEmail(email)) return input.profile;
-  if (isAdminRole(input.profile)) return input.profile;
+  if (isPrivilegedAdminRole(input.profile)) return input.profile;
 
   const adminClient = createAdminClient();
-  const { data: superAdminRole } = await adminClient
+  const { data: superAdminRole, error: roleError } = await adminClient
     .from("roles")
     .select("id, code, name")
     .eq("code", "super_admin")
     .maybeSingle();
-  if (!superAdminRole?.id) return input.profile;
+  if (roleError) {
+    console.error("Failed to load super administrator role", roleError);
+    throw new ApiError(503, "Administrator access is temporarily unavailable.", "ROLE_LOOKUP_FAILED");
+  }
+  if (!superAdminRole?.id) {
+    throw new ApiError(503, "The super administrator role is not configured.", "ROLE_NOT_CONFIGURED");
+  }
 
   const { error } = await adminClient
     .from("profiles")
@@ -143,7 +173,7 @@ export async function promoteMainAdminProfile(input: {
     .eq("id", input.userId);
   if (error) {
     console.error("Failed to promote main administrator profile", error);
-    return input.profile;
+    throw new ApiError(503, "Administrator access could not be updated.", "ROLE_UPDATE_FAILED");
   }
 
   const role = { code: "super_admin", name: superAdminRole.name ?? "Super Admin" };
@@ -177,18 +207,12 @@ export async function promoteMainAdminProfile(input: {
 }
 
 export async function getProfileWithRole(userId: string) {
-  const supabase = await createClient();
-  const { data } = await supabase
-    .from("profiles")
-    .select("*, roles(code, name)")
-    .eq("id", userId)
-    .single();
-  return data;
+  return getProfile(userId);
 }
 
 export async function isAdmin(userId: string): Promise<boolean> {
   const profile = await getProfileWithRole(userId);
-  return isAdminRole(profile);
+  return isPrivilegedAdminRole(profile);
 }
 
 function isSupabaseAuthConfigured() {
@@ -214,7 +238,7 @@ function getDevBypassSession(): { user: User; profile: Profile } | null {
   if (!(explicitBypass || missingSupabaseConfig)) return null;
 
   const role = (process.env.LOCAL_DEV_AUTH_ROLE ?? "student").trim().toLowerCase();
-  const allowedRoles = new Set(["student", "admin", "super_admin", "content_manager"]);
+  const allowedRoles = new Set(["student", "admin", "super_admin", "content_manager", "reviewer"]);
   const resolvedRole = allowedRoles.has(role) ? role : "student";
 
   const userId = process.env.LOCAL_DEV_AUTH_USER_ID ?? "local-dev-user";
@@ -262,40 +286,32 @@ export async function requireAuth() {
   const user = await getSessionUser();
   if (!user) return null;
   const profile = await ensureProfile(user);
-  if (profile && profile.is_active === false) {
+  if (profile.is_active !== true) {
     throw new ApiError(403, "Account deactivated", "ACCOUNT_DEACTIVATED");
   }
   return { user, profile };
 }
 
 export async function requireAdminAuth() {
-  const devSession = getDevBypassSession();
-  if (devSession) {
-    if (!isAdminRole(devSession.profile)) {
-      throw new ApiError(403, "Forbidden", "FORBIDDEN");
-    }
-    return devSession;
-  }
-
-  const user = await getSessionUser();
-  if (!user) {
+  const session = await requireAuth();
+  if (!session) {
     throw new ApiError(401, "Authentication required", "UNAUTHORIZED");
   }
 
-  const profile = await getProfileWithRole(user.id);
-  if (!profile || profile.is_active === false) {
-    throw new ApiError(403, "Account deactivated", "ACCOUNT_DEACTIVATED");
-  }
-
-  if (!isAdminRole(profile)) {
+  const roleCode = normalizeRoleCode(session.profile);
+  if (!roleCode || !isPrivilegedAdminRole(roleCode)) {
     throw new ApiError(403, "Forbidden", "FORBIDDEN");
   }
 
-  return { user, profile };
+  return session;
 }
 
 export async function requireAdminRole(allowedRoles: string[]) {
-  const session = await requireAdminAuth();
+  const session = await requireAuth();
+  if (!session) {
+    throw new ApiError(401, "Authentication required", "UNAUTHORIZED");
+  }
+
   const roleCode = normalizeRoleCode(session.profile);
   if (!roleCode || !allowedRoles.includes(roleCode)) {
     throw new ApiError(403, "Forbidden", "FORBIDDEN");

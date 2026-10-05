@@ -3,7 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import Sidenav from "@/components/layout/sidenav";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
-import { requireAdminAuth } from "@/lib/auth";
+import { requireAdminRole } from "@/lib/auth";
 import { assertAccess } from "@/lib/auth-policy";
 
 const adminNavItems = [
@@ -53,7 +53,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
   let session;
 
   try {
-    session = await requireAdminAuth();
+    session = await requireAdminRole(["super_admin", "admin", "content_manager", "reviewer"]);
   } catch {
     redirect("/admin/login");
   }

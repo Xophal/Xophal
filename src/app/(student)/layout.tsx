@@ -2,7 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import Sidenav from "@/components/layout/sidenav";
 import StudentBottomNav from "@/components/layout/StudentBottomNav";
 import { requireAuth } from "@/lib/auth";
-import { assertAccess } from "@/lib/auth-policy";
+import { assertAccess, isUserEmailVerified } from "@/lib/auth-policy";
 import { getDashboardRoute } from "@/lib/roles";
 import { ROUTES } from "@/constants";
 import StudentCommandBar from "@/components/layout/StudentCommandBar";
@@ -45,7 +45,7 @@ export default async function StudentLayout({ children }: { children: React.Reac
   const dashboardRoute = getDashboardRoute(session.profile);
   if (dashboardRoute === "/admin") redirect(dashboardRoute);
 
-  if (!session.profile.email_verified && !session.user.email_confirmed_at) {
+  if (!isUserEmailVerified(session.user, session.profile)) {
     redirect("/verify-email");
   }
 

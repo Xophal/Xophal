@@ -71,6 +71,9 @@ export function isAllowedEngineTransition(from: EngineStatus, to: EngineStatus):
   return (TRANSITIONS[from] ?? []).includes(to);
 }
 
+export function isAllowedReviewerTransition(from: EngineStatus, to: EngineStatus): boolean {
+  return (from === "draft" && to === "reviewed") || (from === "reviewed" && to === "draft");
+}
+
 export const engineTypeSchema = z.enum(ENGINE_TYPES);
 export const engineStatusSchema = z.enum(ENGINE_STATUSES);
-

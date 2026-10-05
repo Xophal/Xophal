@@ -1,5 +1,21 @@
 import { isAdminRole, normalizeRoleCode } from "@/lib/roles";
 
+export function isUserEmailVerified(user: unknown, profile?: unknown) {
+  const userRecord = user && typeof user === "object" ? user as Record<string, unknown> : {};
+  const profileRecord = profile && typeof profile === "object" ? profile as Record<string, unknown> : {};
+  const appMetadata = userRecord.app_metadata && typeof userRecord.app_metadata === "object"
+    ? userRecord.app_metadata as Record<string, unknown>
+    : {};
+  const identities = Array.isArray(userRecord.identities) ? userRecord.identities : [];
+  const firstIdentity = identities[0] && typeof identities[0] === "object"
+    ? identities[0] as Record<string, unknown>
+    : {};
+  const provider = appMetadata.provider ?? firstIdentity.provider;
+  const hasVerifiedSocialLogin = typeof provider === "string" &&
+    ["google", "github", "apple", "azure"].includes(provider);
+  return Boolean(userRecord.email_confirmed_at || profileRecord.email_verified || hasVerifiedSocialLogin);
+}
+
 export type AuthAccessOptions = {
   requireAuth?: boolean;
   requireEmailVerified?: boolean;
@@ -36,9 +52,8 @@ export function getAccessState(profile: unknown, session: unknown, options: Auth
   const hasSession = Boolean(session && typeof session === "object");
   const isAuthenticated = hasSession && Boolean(profile);
   const profileRecord = (profile ?? {}) as Record<string, unknown>;
-  const sessionRecord = (session ?? {}) as Record<string, unknown>;
-  const isActive = Boolean(profileRecord.is_active !== false);
-  const isVerified = Boolean(profileRecord.email_verified || sessionRecord.email_confirmed_at);
+  const isActive = profileRecord.is_active === true;
+  const isVerified = isUserEmailVerified(session, profile);
   const isAdmin = isAdminRole(profile) || (roleCode ? ["admin", "super_admin", "content_manager", "reviewer"].includes(roleCode) : false);
 
   let reason: string | undefined;
@@ -88,8 +103,8 @@ export function requireVerifiedSession(profile: unknown, session: unknown, optio
 }
 
 export function canAccessPremiumContent(
-  profile: any,
-  session: any,
+  profile: unknown,
+  session: unknown,
   subscriptionState?: { status?: string; expires_at?: string | null; is_active?: boolean } | null
 ): { allowed: boolean; reason?: string } {
   // Use getAccessState (non-throwing) rather than assertAccess: this function is

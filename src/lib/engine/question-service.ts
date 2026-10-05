@@ -1,6 +1,12 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { ApiError } from "@/lib/api-utils";
-import { ENGINE_STATUS_TO_LEGACY, LEGACY_DIFF_FOR_LEVEL, LEGACY_QTYPE_FOR_ENGINE, isAllowedEngineTransition } from "./vocab";
+import {
+  ENGINE_STATUS_TO_LEGACY,
+  LEGACY_DIFF_FOR_LEVEL,
+  LEGACY_QTYPE_FOR_ENGINE,
+  isAllowedEngineTransition,
+  isAllowedReviewerTransition,
+} from "./vocab";
 import type { EngineStatus, EngineType } from "./vocab";
 import type {
   BulkEngineQuestionRow,
@@ -393,7 +399,8 @@ export async function transitionEngineQuestion(
   id: string,
   to: EngineStatus,
   reviewerId: string,
-  reviewNotes: string
+  reviewNotes: string,
+  reviewerOnly = false
 ) {
   const { data: cur, error } = await admin.from("questions").select("engine_status").eq("id", id).maybeSingle();
   if (error) throw error;
@@ -401,6 +408,9 @@ export async function transitionEngineQuestion(
   const from = (cur.engine_status ?? "draft") as EngineStatus;
   if (!isAllowedEngineTransition(from, to)) {
     throw new ApiError(400, `Cannot move status from ${from} to ${to}.`, "INVALID_TRANSITION");
+  }
+  if (reviewerOnly && !isAllowedReviewerTransition(from, to)) {
+    throw new ApiError(403, "Reviewers may only submit draft questions for review or return reviewed questions to draft.", "FORBIDDEN");
   }
   const { error: ue } = await admin
     .from("questions")

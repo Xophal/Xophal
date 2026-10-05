@@ -37,27 +37,42 @@ export async function POST(request: NextRequest) {
       throw new ApiError(401, "That code is invalid or expired. Request a new code and try again.", "OTP_INVALID");
     }
 
-    const profile = await ensureProfile(authData.user);
-    if (!profile) {
-      await supabase.auth.signOut();
-      throw new ApiError(500, "Your account could not be set up. Please try again or contact support.", "PROFILE_SETUP_FAILED");
+    let profile: Awaited<ReturnType<typeof ensureProfile>>;
+    try {
+      profile = await ensureProfile(authData.user);
+    } catch (profileError) {
+      const { error: signOutError } = await supabase.auth.signOut();
+      if (signOutError) console.error("Failed to clear session after OTP profile setup failure", signOutError);
+      throw profileError;
+    }
+
+    if (profile.is_active !== true) {
+      const { error: signOutError } = await supabase.auth.signOut();
+      if (signOutError) console.error("Failed to clear session for deactivated account", signOutError);
+      throw new ApiError(403, "Account deactivated", "ACCOUNT_DEACTIVATED");
     }
 
     // If the verified identity is a configured main administrator, raise its
     // profile to super_admin so /admin access is not blocked by a student role
     // (e.g. when the account was originally created via OTP signup or Google).
-    const resolvedProfile = isMainAdminEmail(data.email)
-      ? await promoteMainAdminProfile({ userId: authData.user.id, email: data.email, profile })
-      : profile;
+    let resolvedProfile: Awaited<ReturnType<typeof ensureProfile>> = profile;
+    if (isMainAdminEmail(data.email)) {
+      try {
+        resolvedProfile = (await promoteMainAdminProfile({
+          userId: authData.user.id,
+          email: data.email,
+          profile,
+        })) ?? profile;
+      } catch (roleError) {
+        const { error: signOutError } = await supabase.auth.signOut();
+        if (signOutError) console.error("Failed to clear session after OTP role update failure", signOutError);
+        throw roleError;
+      }
+    }
 
     if (data.intent === "admin-login" && !isAdminRole(resolvedProfile)) {
       await supabase.auth.signOut();
       throw new ApiError(403, "Admin access is required for this sign-in.", "FORBIDDEN");
-    }
-
-    if (resolvedProfile?.is_active === false) {
-      await supabase.auth.signOut();
-      throw new ApiError(403, "Account deactivated", "ACCOUNT_DEACTIVATED");
     }
 
     const adminClient = createAdminClient();

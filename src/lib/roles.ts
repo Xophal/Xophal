@@ -1,5 +1,7 @@
 import { ADMIN_ROLES } from "@/constants";
 
+export const PRIVILEGED_ADMIN_ROLES = ["super_admin", "admin", "content_manager"] as const;
+
 export function normalizeRoleCode(role: unknown): string | null {
   if (!role) return null;
 
@@ -30,6 +32,11 @@ export function normalizeRoleCode(role: unknown): string | null {
 export function isAdminRole(role: unknown): boolean {
   const roleCode = normalizeRoleCode(role);
   return !!roleCode && ADMIN_ROLES.includes(roleCode as (typeof ADMIN_ROLES)[number]);
+}
+
+export function isPrivilegedAdminRole(role: unknown): boolean {
+  const roleCode = normalizeRoleCode(role);
+  return !!roleCode && PRIVILEGED_ADMIN_ROLES.includes(roleCode as (typeof PRIVILEGED_ADMIN_ROLES)[number]);
 }
 
 export function isStudentRole(role: unknown): boolean {

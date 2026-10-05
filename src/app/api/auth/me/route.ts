@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { ensureProfile } from "@/lib/auth";
-import { ADMIN_ROLES } from "@/constants";
+import { isUserEmailVerified } from "@/lib/auth-policy";
+import { isAdminRole } from "@/lib/roles";
 import { apiSuccess, handleApiError } from "@/lib/api-utils";
 
 export async function GET() {
@@ -16,15 +17,13 @@ export async function GET() {
     }
 
     const profile = await ensureProfile(user);
-    const provider = user.app_metadata?.provider ?? user.identities?.[0]?.provider ?? null;
-    const hasSocialLogin = provider === "google" || provider === "github" || provider === "apple" || provider === "azure";
-    const isVerified = Boolean(user.email_confirmed_at || profile?.email_verified || hasSocialLogin);
-
-    if (!isVerified) {
+    if (profile.is_active !== true) {
       return apiSuccess({ user: null, profile: null, isAdmin: false });
     }
 
-    const roleCode = (profile as { roles?: { code?: string } } | null)?.roles?.code;
+    if (!isUserEmailVerified(user, profile)) {
+      return apiSuccess({ user: null, profile: null, isAdmin: false });
+    }
 
     return apiSuccess({
       user: {
@@ -33,7 +32,7 @@ export async function GET() {
         full_name: user.user_metadata?.full_name || user.email,
       },
       profile,
-      isAdmin: !!roleCode && ADMIN_ROLES.includes(roleCode as (typeof ADMIN_ROLES)[number]),
+      isAdmin: isAdminRole(profile),
     });
   } catch (error) {
     return handleApiError(error);

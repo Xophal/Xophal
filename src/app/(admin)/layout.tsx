@@ -1,12 +1,12 @@
 import type { ReactNode } from "react";
 import { redirect } from "next/navigation";
-import { requireAdminAuth } from "@/lib/auth";
+import { requireAdminRole } from "@/lib/auth";
 
 export default async function AdminRootLayout({ children }: { children: ReactNode }) {
   let authorized = false;
 
   try {
-    await requireAdminAuth();
+    await requireAdminRole(["super_admin", "admin", "content_manager", "reviewer"]);
     authorized = true;
   } catch {
     redirect("/admin/login");

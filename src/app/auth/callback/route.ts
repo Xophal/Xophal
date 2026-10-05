@@ -21,6 +21,14 @@ function clearNextCookie(response: NextResponse) {
   return response;
 }
 
+function applyRefreshedCookies(
+  response: NextResponse,
+  cookiesToSet: Array<{ name: string; value: string; options: CookieOptions }>
+) {
+  cookiesToSet.forEach(({ name, value, options }) => response.cookies.set(name, value, options));
+  return response;
+}
+
 /** Decode the stored OAuth destination, tolerating malformed values. */
 function readNextCookie(raw: string | undefined) {
   if (!raw) return null;
@@ -98,31 +106,41 @@ export async function GET(request: NextRequest) {
     return redirectWithError(requestUrl.origin, "verification_failed", error?.message || "Sign-in could not be completed. Please try again.", next);
   }
 
-  const { data: profileRow } = await supabase
-    .from("profiles")
-    .select("role_id, roles(code)")
-    .eq("id", data.user.id)
-    .maybeSingle();
-  let profile: unknown = profileRow;
-
-  if (!profile) {
+  let profile: Profile;
+  try {
     profile = await ensureProfile(data.user);
-  }
+    if (profile.is_active !== true) {
+      await supabase.auth.signOut();
+      return applyRefreshedCookies(
+        redirectWithError(requestUrl.origin, "account_deactivated", "This account has been deactivated.", next),
+        refreshedCookies
+      );
+    }
 
-  // A configured main administrator must be able to reach /admin even when
-  // their account was previously created as a student (e.g. via Google/OAuth).
-  if (data.user.email) {
-    profile = await promoteMainAdminProfile({
-      userId: data.user.id,
-      email: data.user.email,
-      profile: profile as Profile | null,
-    });
+    // A configured main administrator must be able to reach /admin even when
+    // their account was previously created as a student (e.g. via Google/OAuth).
+    if (data.user.email) {
+      profile = (await promoteMainAdminProfile({
+        userId: data.user.id,
+        email: data.user.email,
+        profile,
+      })) ?? profile;
+    }
+  } catch (profileError) {
+    const { error: signOutError } = await supabase.auth.signOut();
+    if (signOutError) console.error("[auth/callback] failed to clear incomplete session", signOutError);
+    console.error("[auth/callback] account profile setup failed", profileError);
+    return applyRefreshedCookies(
+      redirectWithError(requestUrl.origin, "profile_setup_failed", "We couldn't finish setting up your account. Please try again.", next),
+      refreshedCookies
+    );
   }
 
   const destination = next === "/admin" && !isAdminRole(profile)
     ? "/dashboard"
     : next || (isAdminRole(profile) ? "/admin" : "/dashboard");
-  const response = clearNextCookie(NextResponse.redirect(new URL(destination, requestUrl.origin)));
-  refreshedCookies.forEach(({ name, value, options }) => response.cookies.set(name, value, options));
-  return response;
+  return applyRefreshedCookies(
+    clearNextCookie(NextResponse.redirect(new URL(destination, requestUrl.origin))),
+    refreshedCookies
+  );
 }

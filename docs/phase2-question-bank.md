@@ -1,9 +1,10 @@
 # Phase 2 — Question Bank Admin
 
 CRUD for all nine engine question types, filters, bulk CSV import, and an auditable
-review queue (`draft → reviewed → published`). Every endpoint is admin-gated, every
-payload Zod-validated, and no answer key is ever exposed to students (the admin API is
-reviewer-scoped by RLS; the student-facing path arrives in Phase 4).
+review queue (`draft → reviewed → published`). Every endpoint is role-gated and
+payloads are Zod-validated. Reviewers can read the question queue and mark questions
+reviewed or return them to draft; only privileged admins can create, edit, archive, or
+publish questions. No answer key is exposed to students.
 
 ---
 
@@ -26,8 +27,9 @@ reviewer-scoped by RLS; the student-facing path arrives in Phase 4).
 
 ## API
 
-All routes require an admin session (`requireAdminAuth`); the service runs on the
-service-role client, so the auth check — not RLS — is the primary gate.
+The service runs on the service-role client, so these route role checks — not RLS —
+are the primary authorization gate. Reviewer access is limited to queue reads and
+review transitions; all content-management writes require a privileged admin.
 
 ### `GET /api/admin/engine/questions`
 
@@ -67,6 +69,8 @@ The response says which happened: `{ "mode": "retired" }` or `{ "mode": "deleted
 Body: `{ "status": EngineStatus, "reviewNotes": string }`. Validates the transition
 against the state machine in `vocab.ts`, records reviewer id/time/notes, dual-writes
 the legacy `status`, and flips `is_verified`.
+Reviewers may only set `reviewed` or return a question to `draft`; privileged admins
+may use the full transition state machine, including publication.
 
 ### `PUT /api/admin/engine/questions` (CSV import)
 

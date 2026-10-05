@@ -19,6 +19,7 @@ import {
   ENGINE_STATUS_TO_LEGACY,
   ENGINE_TYPES,
   isAllowedEngineTransition,
+  isAllowedReviewerTransition,
   LEGACY_QTYPE_FOR_ENGINE,
 } from "@/lib/engine/vocab";
 
@@ -248,6 +249,14 @@ describe("engine review state machine", () => {
 
   it("treats a same-state transition as a no-op success", () => {
     expect(isAllowedEngineTransition("draft", "draft")).toBe(true);
+  });
+
+  it("limits reviewer transitions to submitting or returning a review", () => {
+    expect(isAllowedReviewerTransition("draft", "reviewed")).toBe(true);
+    expect(isAllowedReviewerTransition("reviewed", "draft")).toBe(true);
+    expect(isAllowedReviewerTransition("reviewed", "published")).toBe(false);
+    expect(isAllowedReviewerTransition("published", "draft")).toBe(false);
+    expect(isAllowedReviewerTransition("draft", "draft")).toBe(false);
   });
 
   it("keeps the legacy status in lock-step for every engine status", () => {

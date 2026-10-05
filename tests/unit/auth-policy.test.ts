@@ -1,11 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { assertAccess, canAccessPremiumContent, getAccessState } from "@/lib/auth-policy";
-import { getDashboardRoute, normalizeRoleCode } from "@/lib/roles";
+import { getDashboardRoute, isPrivilegedAdminRole, normalizeRoleCode } from "@/lib/roles";
 
 describe("auth policy", () => {
   it("normalizes role codes for consistent authorization", () => {
     expect(normalizeRoleCode(" Reviewer ")).toBe("reviewer");
     expect(normalizeRoleCode({ code: "CONTENT_MANAGER" })).toBe("content_manager");
+    expect(isPrivilegedAdminRole("content_manager")).toBe(true);
+    expect(isPrivilegedAdminRole("reviewer")).toBe(false);
   });
 
   it("routes each supported account role to its existing dashboard", () => {
@@ -58,6 +60,19 @@ describe("auth policy", () => {
         { requireAuth: true, requireEmailVerified: true }
       )
     ).toThrow("Email verification required");
+  });
+
+  it("fails closed when active-account status is missing", () => {
+    expect(() =>
+      assertAccess(
+        {
+          email_verified: true,
+          roles: [{ code: "student" }],
+        },
+        { email_confirmed_at: "2024-01-01T00:00:00Z" },
+        { requireAuth: true, requireActive: true }
+      )
+    ).toThrow("Account inactive");
   });
 
   it("rejects non-admin users on admin routes", () => {

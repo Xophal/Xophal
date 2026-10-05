@@ -1,29 +1,28 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { requireAuth } from "@/lib/auth";
-import { assertAccess } from "@/lib/auth-policy";
+import { assertAccess, isUserEmailVerified } from "@/lib/auth-policy";
 import { isAdminRole } from "@/lib/roles";
 
 export default async function CreatorLayout({ children }: { children: React.ReactNode }) {
   const session = await requireAuth();
+  if (!session) redirect("/login");
 
-  if (session) {
-    if (!session.profile) redirect("/verify-email");
-    if (isAdminRole(session.profile)) redirect("/admin");
-    if (!session.profile.email_verified && !session.user.email_confirmed_at) {
-      redirect("/verify-email");
-    }
+  if (!session.profile) redirect("/verify-email");
+  if (isAdminRole(session.profile)) redirect("/admin");
+  if (!isUserEmailVerified(session.user, session.profile)) {
+    redirect("/verify-email");
+  }
 
-    try {
-      assertAccess(session.profile, session.user, {
-        requireAuth: true,
-        requireActive: true,
-        requireEmailVerified: true,
-        allowRoles: ["student", "author"],
-      });
-    } catch {
-      notFound();
-    }
+  try {
+    assertAccess(session.profile, session.user, {
+      requireAuth: true,
+      requireActive: true,
+      requireEmailVerified: true,
+      allowRoles: ["student", "author"],
+    });
+  } catch {
+    notFound();
   }
 
   return (

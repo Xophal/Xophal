@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { requireAdminAuth } from "@/lib/auth";
+import { requireAdminAuth, requireAdminRole } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { ApiError, apiSuccess, handleApiError, paginatedResponse, validateBody } from "@/lib/api-utils";
 import {
@@ -22,7 +22,7 @@ import {
 
 export async function GET(request: NextRequest) {
   try {
-    await requireAdminAuth();
+    await requireAdminRole(["super_admin", "admin", "content_manager", "reviewer"]);
     const query = engineQuestionQuerySchema.parse(Object.fromEntries(request.nextUrl.searchParams.entries()));
     const admin = createAdminClient();
     const { rows, total, page, limit } = await listEngineQuestions(admin, query);

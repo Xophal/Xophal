@@ -2,13 +2,16 @@ import { NextRequest } from "next/server";
 import { apiSuccess, ApiError, handleApiError, assertTrustedOrigin } from "@/lib/api-utils";
 import { createRouteHandlerClient } from "@/lib/supabase/route-handler";
 import { authRateLimit } from "@/lib/redis";
-import { promoteMainAdminProfile } from "@/lib/auth";
+import { ensureProfile, promoteMainAdminProfile } from "@/lib/auth";
 import { z } from "zod";
 
 const loginSchema = z.object({
   email: z.string().trim().email(),
   password: z.string().min(1),
 });
+
+const LOGIN_FAILED_MESSAGE =
+  "Invalid email or password, or account unavailable. If you have not verified your email, use the email-code option.";
 
 export async function POST(request: NextRequest) {
   try {
@@ -46,33 +49,46 @@ export async function POST(request: NextRequest) {
       password: parsed.data.password,
     });
 
-    if (error || !data?.session) {
-      const providerCode = (error?.code ?? "").toLowerCase();
-      const providerMessage = (error?.message ?? "").toLowerCase();
-      const isUnconfirmed =
-        ["user_requires_confirm", "email_not_confirmed", "user_not_confirmed"].includes(providerCode) ||
-        /email.*not confirmed|confirm.*email/.test(providerMessage);
+    if (error || !data?.session || !data.user) {
+      throw new ApiError(401, LOGIN_FAILED_MESSAGE, "UNAUTHORIZED");
+    }
 
-      if (isUnconfirmed) {
-        throw new ApiError(
-          403,
-          "Your email address is not verified yet. Use the email code option to verify it, or request a new code from the verification page.",
-          "EMAIL_NOT_VERIFIED"
-        );
-      }
+    let profile: Awaited<ReturnType<typeof ensureProfile>>;
+    try {
+      profile = await ensureProfile(data.user);
+    } catch (profileError) {
+      const { error: signOutError } = await supabase.auth.signOut();
+      if (signOutError) console.error("Failed to clear session after profile lookup failure", signOutError);
+      throw profileError;
+    }
 
-      throw new ApiError(401, "Invalid email or password.", "UNAUTHORIZED");
+    if (profile.is_active !== true) {
+      const { error: signOutError } = await supabase.auth.signOut();
+      if (signOutError) console.error("Failed to clear session for deactivated account", signOutError);
+      throw new ApiError(401, LOGIN_FAILED_MESSAGE, "UNAUTHORIZED");
+    }
+
+    if (!data.user.email_confirmed_at && !profile.email_verified) {
+      const { error: signOutError } = await supabase.auth.signOut();
+      if (signOutError) console.error("Failed to clear session for unverified account", signOutError);
+      throw new ApiError(401, LOGIN_FAILED_MESSAGE, "UNAUTHORIZED");
     }
 
     // Ensure a configured main administrator is raised to super_admin even if
     // their existing profile still carries a student role. No-op for everyone
     // else (no database work is performed for non-main-admin emails).
-    if (data.user?.email) {
-      await promoteMainAdminProfile({
-        userId: data.user.id,
-        email: data.user.email,
-        profile: null,
-      });
+    if (data.user.email) {
+      try {
+        await promoteMainAdminProfile({
+          userId: data.user.id,
+          email: data.user.email,
+          profile,
+        });
+      } catch (profileError) {
+        const { error: signOutError } = await supabase.auth.signOut();
+        if (signOutError) console.error("Failed to clear session after admin role lookup failure", signOutError);
+        throw profileError;
+      }
     }
 
     return apiSuccess({ message: "Signed in" });
