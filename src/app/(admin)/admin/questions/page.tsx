@@ -18,7 +18,24 @@ import type { EngineStatus } from "@/lib/engine/vocab";
 import { ENGINE_STATUSES, ENGINE_TYPES } from "@/lib/engine/vocab";
 
 type Pagination = { page: number; limit: number; total: number; totalPages: number; hasMore: boolean };
-type ListResponse = { data: EngineQuestionRow[]; pagination: Pagination };
+type ListResponse = { success: boolean; data?: unknown; pagination?: Pagination; error?: string };
+
+function questionListPayload(response: ListResponse) {
+  const payload = response.data;
+  if (Array.isArray(payload)) {
+    return { rows: payload as EngineQuestionRow[], pagination: response.pagination ?? null };
+  }
+
+  if (payload && typeof payload === "object") {
+    const envelope = payload as { data?: unknown; pagination?: Pagination };
+    return {
+      rows: Array.isArray(envelope.data) ? (envelope.data as EngineQuestionRow[]) : [],
+      pagination: envelope.pagination ?? response.pagination ?? null,
+    };
+  }
+
+  return { rows: [], pagination: response.pagination ?? null };
+}
 
 const STATUS_BADGE: Record<EngineStatus, "default" | "secondary" | "outline" | "destructive"> = {
   draft: "secondary",
@@ -39,6 +56,7 @@ export default function EngineQuestionsPage() {
   const [rows, setRows] = useState<EngineQuestionRow[]>([]);
   const [pagination, setPagination] = useState<Pagination | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("");
@@ -68,6 +86,7 @@ export default function EngineQuestionsPage() {
 
   const load = useCallback(async () => {
     setLoading(true);
+    setLoadError(null);
     try {
       const params = new URLSearchParams({ page: String(page), limit: "20" });
       if (search) params.set("search", search);
@@ -76,11 +95,13 @@ export default function EngineQuestionsPage() {
       if (topicFilter) params.set("topicId", topicFilter);
       if (difficultyFilter) params.set("difficulty", difficultyFilter);
       const res = await fetch(`/api/admin/engine/questions?${params.toString()}`, { cache: "no-store" });
-      const json = (await res.json()) as ListResponse & { success: boolean; error?: string };
+      const json = (await res.json()) as ListResponse;
       if (!res.ok || !json.success) throw new Error(json.error ?? "Failed to load questions");
-      setRows(json.data ?? []);
-      setPagination(json.pagination ?? null);
+      const result = questionListPayload(json);
+      setRows(result.rows);
+      setPagination(result.pagination);
     } catch (err) {
+      setLoadError(err instanceof Error ? err.message : String(err));
       toast({
         title: "Load failed",
         description: err instanceof Error ? err.message : String(err),
@@ -318,6 +339,12 @@ export default function EngineQuestionsPage() {
                 <Skeleton key={i} className="h-20 w-full" />
               ))}
             </div>
+          ) : loadError ? (
+            <Card>
+              <CardContent className="p-8 text-center text-sm text-destructive">
+                Could not load questions: {loadError}
+              </CardContent>
+            </Card>
           ) : rows.length === 0 ? (
             <Card>
               <CardContent className="p-8 text-center text-sm text-muted-foreground">
@@ -447,10 +474,16 @@ function ReviewQueue({ onDone, onEdit }: { onDone: () => void; onEdit: (id: stri
     setLoading(true);
     try {
       const res = await fetch("/api/admin/engine/questions?status=draft&limit=50", { cache: "no-store" });
-      const json = (await res.json()) as ListResponse & { success: boolean };
-      setItems(json.success ? (json.data ?? []) : []);
-    } catch {
+      const json = (await res.json()) as ListResponse;
+      if (!res.ok || !json.success) throw new Error(json.error ?? "Failed to load review queue");
+      setItems(questionListPayload(json).rows);
+    } catch (err) {
       setItems([]);
+      toast({
+        title: "Review queue load failed",
+        description: err instanceof Error ? err.message : String(err),
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
