@@ -1,5 +1,4 @@
 import { NextRequest } from "next/server";
-import { createHmac, timingSafeEqual } from "node:crypto";
 import { z } from "zod";
 import { apiError, apiSuccess, handleApiError, validateBody } from "@/lib/api-utils";
 import { requireAuth } from "@/lib/auth";
@@ -7,6 +6,7 @@ import { requireVerifiedSession } from "@/lib/auth-policy";
 import { serverEnv } from "@/lib/env.server";
 import { unlockTestForUser } from "@/lib/test-access";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { isCapturedRazorpayPayment, isValidRazorpaySignature } from "@/lib/ebooks/payments";
 
 const verifyPaymentSchema = z.object({
   razorpay_order_id: z.string().min(1),
@@ -14,13 +14,6 @@ const verifyPaymentSchema = z.object({
   razorpay_signature: z.string().min(1),
   testId: z.string().uuid(),
 });
-
-function isValidSignature(orderId: string, paymentId: string, signature: string, secret: string) {
-  const expected = createHmac("sha256", secret).update(`${orderId}|${paymentId}`).digest("hex");
-  const expectedBuffer = Buffer.from(expected, "utf8");
-  const receivedBuffer = Buffer.from(signature, "utf8");
-  return receivedBuffer.length === expectedBuffer.length && timingSafeEqual(receivedBuffer, expectedBuffer);
-}
 
 export async function POST(request: NextRequest) {
   try {
@@ -60,8 +53,18 @@ export async function POST(request: NextRequest) {
       return apiError("Payment amount mismatch", 400, "PAYMENT_AMOUNT_MISMATCH");
     }
 
-    if (!isValidSignature(payload.razorpay_order_id, payload.razorpay_payment_id, payload.razorpay_signature, serverEnv.RAZORPAY_KEY_SECRET)) {
+    if (!isValidRazorpaySignature(payload.razorpay_order_id, payload.razorpay_payment_id, payload.razorpay_signature, serverEnv.RAZORPAY_KEY_SECRET)) {
       return apiSuccess({ success: false, message: "Payment verification failed." });
+    }
+
+    const providerPayment = await razorpay.payments.fetch(payload.razorpay_payment_id);
+    if (!isCapturedRazorpayPayment(providerPayment, {
+      paymentId: payload.razorpay_payment_id,
+      orderId: payload.razorpay_order_id,
+      amountMinor: Math.round(Number(payment.amount) * 100),
+      currency: payment.currency,
+    })) {
+      return apiError("Payment has not been captured for the expected amount and currency.", 400, "PAYMENT_NOT_CAPTURED");
     }
 
     const unlock = await unlockTestForUser(session.user.id, payload.testId);

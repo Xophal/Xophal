@@ -21,8 +21,8 @@ Follow this runbook for a full-feature production launch. Production credentials
    - Create a production Supabase project separate from development and staging.
    - Review and back up the production database before applying migrations.
    - Link the Supabase CLI to the intended project and apply all pending repository migrations with `supabase db push`.
-   - Confirm the latest migration is applied, including the question/test access, exam-integrity, and ebook marketplace migrations (`026`–`029`: marketplace schema, commerce, fulfillment/privacy, Razorpay routes).
-   - Verify RLS policies with an anon/user client and confirm privileged operations use only the server-side service-role client.
+   - Confirm the latest migration is applied, including question/test access, exam integrity, ebook marketplace, and security hardening migration `040`. Migration `040` enforces active-account checks in role/entitlement helpers and restricts attempt RPC access.
+   - Verify RLS policies with anon, active-user, and deactivated-user clients; confirm disabled accounts lose admin/reviewer privileges and premium entitlements, and attempt RPCs reject anonymous and non-owner callers.
    - Seed production only with approved, non-test content; do not copy local test users or payment data.
 
 4. Email & OAuth
@@ -60,7 +60,7 @@ Follow this runbook for a full-feature production launch. Production credentials
    - Run `npm run deploy:check`, `npm run typecheck`, `npm test`, and `npm run build` against the release configuration.
    - Verify student registration, OTP delivery/verification, login, logout, password reset, and protected-route behavior using non-production test accounts first.
     - Verify admin approval emails go only to the two configured main administrators and that unapproved users cannot access admin routes.
-    - Verify a Razorpay test transaction end-to-end in staging, including signature verification and subscription fulfillment, before switching production to live keys.
+    - Verify a Razorpay test transaction end-to-end in staging, including signature verification, provider-confirmed capture, and subscription fulfillment, before switching production to live keys.
     - Confirm database reads/writes, RLS behavior, admin operations, and content access in production with least-privilege test accounts.
     - Confirm both Upstash credentials are set together; production auth endpoints intentionally fail closed with `503 RATE_LIMIT_NOT_CONFIGURED` otherwise.
 

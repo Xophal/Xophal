@@ -71,7 +71,7 @@ export const en = {
   "kpi.currentStreak": "Current Streak",
   "kpi.noData": "Complete your first test to see this metric.",
   "kpi.streakNoData": "Finish a test or record a study session to start a streak.",
-  "kpi.fromAttempts": "Calculated from your completed attempts.",
+  "kpi.fromAttempts": "Based on up to your 50 most recent completed tests.",
 
   // --- Today's goal -------------------------------------------------------
   "goal.title": "Today's Goal",
@@ -122,7 +122,7 @@ export const en = {
 
   // --- Performance overview ----------------------------------------------
   "performance.title": "Your Performance",
-  "performance.subtitle": "Score and accuracy across your latest attempts.",
+  "performance.subtitle": "Trend shows your latest 12 test scores; per-test accuracy covers up to 10. Summary metrics use up to 50 completed tests.",
   "performance.scoreLegend": "Score",
   "performance.accuracyLegend": "Accuracy",
   "performance.testsCompleted": "Tests completed",

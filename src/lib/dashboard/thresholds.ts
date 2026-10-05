@@ -78,10 +78,10 @@ export const STREAK_MIN_QUALIFYING_MINUTES = 5;
 /** Days shown in the study calendar heatmap (5 full weeks + the current one). */
 export const CALENDAR_WEEKS = 5;
 
-/** How many recent attempts are used for per-question analytics. */
+/** How many recent completed attempts are used for dashboard analytics. */
 export const RESPONSE_ANALYSIS_ATTEMPTS = 10;
 
-/** Points after which the dashboard stops pulling more history. */
+/** Completed-attempt history window used by dashboard metrics. */
 export const ATTEMPT_HISTORY_LIMIT = 50;
 
 export const SCORE_TREND_POINTS = 12;

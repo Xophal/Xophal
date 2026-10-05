@@ -184,11 +184,12 @@ export function buildPerformance(attempts: RawAttempt[], responses: RawResponse[
   const accuracyFromResponses = analysed.length
     ? round1((analysed.filter((response) => response.is_correct === true).length / analysed.length) * 100)
     : null;
-  // Falls back to the attempt aggregates written by the submission RPC when
-  // per-question rows were not loaded for the analysed window.
-  const accuracy =
-    accuracyFromResponses ??
-    (answeredEverywhere > 0 ? round1((correctEverywhere / answeredEverywhere) * 100) : null);
+  // Attempt aggregates cover the full bounded history. Per-question rows are
+  // loaded only for the most recent analysis window, so using them first would
+  // make the overall KPI silently describe a smaller sample.
+  const accuracy = answeredEverywhere > 0
+    ? round1((correctEverywhere / answeredEverywhere) * 100)
+    : accuracyFromResponses;
 
   const series: PerformancePoint[] = [...completed]
     .reverse()
@@ -1215,7 +1216,6 @@ export function buildDashboardData(input: DashboardBuildInput): DashboardData {
     onboarding,
   };
 }
-
 
 
 

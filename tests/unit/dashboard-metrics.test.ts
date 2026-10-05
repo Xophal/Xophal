@@ -120,9 +120,20 @@ describe("buildPerformance", () => {
     expect(buildPerformance(attempts).accuracy).toBe(70);
   });
 
-  it("prefers per-question accuracy when responses are supplied", () => {
+  it("uses attempt aggregates for overall accuracy when response rows cover only a subset", () => {
     const summary = buildPerformance(
       [attempts[0]],
+      [
+        response({ attempt_id: "a2", question_id: "q1", is_correct: true }),
+        response({ attempt_id: "a2", question_id: "q2", is_correct: false }),
+      ]
+    );
+    expect(summary.accuracy).toBe(80);
+  });
+
+  it("falls back to response accuracy when attempt aggregates are unavailable", () => {
+    const summary = buildPerformance(
+      [attempt({ id: "a2", answered_count: 0, correct_count: 0 })],
       [
         response({ attempt_id: "a2", question_id: "q1", is_correct: true }),
         response({ attempt_id: "a2", question_id: "q2", is_correct: false }),
@@ -793,8 +804,6 @@ describe("buildDashboardData", () => {
     expect(data.topics[0].attempted).toBe(1);
   });
 });
-
-
 
 
 

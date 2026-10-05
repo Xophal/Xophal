@@ -6,7 +6,8 @@
  * imported from a client component: it reads with the service-role client.
  *
  * Performance rules followed here:
- *   - One bounded attempt window (`ATTEMPT_HISTORY_LIMIT`), never a full scan.
+ *   - A bounded window of completed attempts plus at most one in-progress
+ *     attempt, never a full history scan.
  *   - Per-question analytics only for the most recent `RESPONSE_ANALYSIS_ATTEMPTS`
  *     attempts, so a student with 500 attempts does not pull 25 000 answers.
  *   - Column lists are explicit; nothing sensitive leaves the server.
@@ -40,7 +41,8 @@ import type {
  * Server-only dashboard data loading.
  *
  * Performance rules followed here:
- *   - One bounded attempt window (`ATTEMPT_HISTORY_LIMIT`), never a full scan.
+ *   - A bounded window of completed attempts plus at most one in-progress
+ *     attempt, never a full history scan.
  *   - Per-question analytics only for the most recent `RESPONSE_ANALYSIS_ATTEMPTS`
  *     attempts, so a student with 500 attempts does not pull 25 000 answers.
  *   - Column lists are explicit; nothing sensitive leaves the server.
@@ -146,18 +148,33 @@ function mapAttempt(row: AttemptQueryRow): RawAttempt {
 // --- Individual datasets ---------------------------------------------------
 
 async function loadAttempts(supabase: SupabaseClient, userId: string): Promise<RawAttempt[]> {
-  const { data, error } = await supabase
-    .from("test_attempts")
-    .select(
-      "id, mock_test_id, status, started_at, updated_at, submitted_at, percentage, answered_count, correct_count, wrong_count, skipped_count, total_questions, time_spent_seconds, mock_tests(id, title, slug)"
-    )
-    .eq("user_id", userId)
-    .in("status", ["in_progress", "submitted", "expired"])
-    .order("started_at", { ascending: false })
-    .limit(ATTEMPT_HISTORY_LIMIT);
+  const columns =
+    "id, mock_test_id, status, started_at, updated_at, submitted_at, percentage, answered_count, correct_count, wrong_count, skipped_count, total_questions, time_spent_seconds, mock_tests(id, title, slug)";
+  const [completedResult, inProgressResult] = await Promise.all([
+    supabase
+      .from("test_attempts")
+      .select(columns)
+      .eq("user_id", userId)
+      .in("status", ["submitted", "expired"])
+      .order("submitted_at", { ascending: false, nullsFirst: false })
+      .order("started_at", { ascending: false })
+      .limit(ATTEMPT_HISTORY_LIMIT),
+    supabase
+      .from("test_attempts")
+      .select(columns)
+      .eq("user_id", userId)
+      .eq("status", "in_progress")
+      .order("updated_at", { ascending: false })
+      .limit(1),
+  ]);
 
-  if (error) throw error;
-  return ((data ?? []) as unknown as AttemptQueryRow[]).map(mapAttempt);
+  if (completedResult.error) throw completedResult.error;
+  if (inProgressResult.error) throw inProgressResult.error;
+
+  return [
+    ...((completedResult.data ?? []) as unknown as AttemptQueryRow[]),
+    ...((inProgressResult.data ?? []) as unknown as AttemptQueryRow[]),
+  ].map(mapAttempt);
 }
 
 async function loadActivity(supabase: SupabaseClient, userId: string, today: string): Promise<RawActivity[]> {
@@ -452,13 +469,12 @@ export async function loadDashboardData(
 
   const supabase = await createClient();
 
-  const [attempts, activity, achievements, leaderboard, studyPlan, difficultyNames] = await Promise.all([
+  const [attempts, activity, achievements, leaderboard, studyPlan] = await Promise.all([
     loadAttempts(supabase, profile.id),
     loadActivity(supabase, profile.id, today),
     loadAchievements(supabase, profile.id),
     loadLeaderboard(supabase, profile.id, period, profile),
     loadStudyPlan(supabase, profile.id, today),
-    loadDifficultyNamesSafely(),
   ]);
 
   const completedIds = attempts
@@ -470,7 +486,8 @@ export async function loadDashboardData(
   const responses = await loadResponseRows(supabase, completedIds);
 
   const questionIds = [...new Set(responses.map((response) => response.question_id))];
-  const questionMetaRows = await loadQuestionMetaSafely(questionIds, difficultyNames);
+  const difficultyNames = questionIds.length ? await loadDifficultyNamesForDashboard() : new Map<string, string>();
+  const questionMetaRows = await loadQuestionMetaForDashboard(questionIds, difficultyNames);
   const questionMeta = new Map(questionMetaRows.map((row) => [row.id, row]));
 
   const topicIds = [...new Set(questionMetaRows.map((row) => row.topic_id).filter((id): id is string => Boolean(id)))];
@@ -502,31 +519,19 @@ export async function loadDashboardData(
 }
 
 /**
- * Question metadata lives behind an admin-only RLS policy. If the service-role
- * key is not configured, the dashboard degrades to "performance without topic
- * breakdown" instead of failing the whole page.
+ * Question metadata lives behind an admin-only RLS policy, so failures must
+ * reach the dashboard error boundary rather than look like missing analytics.
  */
-async function loadQuestionMetaSafely(
+async function loadQuestionMetaForDashboard(
   questionIds: string[],
   difficultyNames: Map<string, string>
 ): Promise<QuestionMeta[]> {
   if (!questionIds.length) return [];
-  try {
-    const admin = createAdminClient();
-    return await loadQuestionMeta(admin, questionIds, difficultyNames);
-  } catch (error) {
-    console.warn("[dashboard] question metadata unavailable", error instanceof Error ? error.message : error);
-    return [];
-  }
+  const admin = createAdminClient();
+  return loadQuestionMeta(admin, questionIds, difficultyNames);
 }
 
-async function loadDifficultyNamesSafely(): Promise<Map<string, string>> {
-  try {
-    const admin = createAdminClient();
-    return await loadDifficultyNames(admin);
-  } catch {
-    return new Map();
-  }
+async function loadDifficultyNamesForDashboard(): Promise<Map<string, string>> {
+  const admin = createAdminClient();
+  return loadDifficultyNames(admin);
 }
-
-
