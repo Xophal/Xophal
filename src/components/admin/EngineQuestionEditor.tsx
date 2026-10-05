@@ -393,16 +393,20 @@ export default function EngineQuestionEditor({
 
   if (loading) {
     return (
-      <Card>
+      <Card className="glass-panel rounded-2xl">
         <CardContent className="p-6 text-sm text-muted-foreground">Loading question…</CardContent>
       </Card>
     );
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{questionId ? "Edit question" : "New question"}</CardTitle>
+    <Card className="glass-panel rounded-2xl">
+      <CardHeader className="border-b border-white/10 pb-5">
+        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-cyan-300">Xophol question studio</p>
+        <CardTitle className="mt-1 text-xl text-white">{questionId ? "Refine your question" : "Create a question"}</CardTitle>
+        <p className="max-w-2xl text-sm leading-6 text-slate-400">
+          Add the learning context, answer details and assessment settings. You can update these later.
+        </p>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="grid gap-4 sm:grid-cols-2">
@@ -677,11 +681,11 @@ export default function EngineQuestionEditor({
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <Button onClick={() => void save()} disabled={saving || !stem.trim() || !topicId}>
+          <Button className="bg-xophol-orange font-semibold text-xophol-ink hover:bg-xophol-orange/90" onClick={() => void save()} disabled={saving || !stem.trim() || !topicId}>
             {saving ? "Saving…" : questionId ? "Save changes" : "Create question"}
           </Button>
           {onCancel && (
-            <Button variant="outline" onClick={onCancel}>
+            <Button variant="outline" className="border-white/15 bg-white/[0.03] text-slate-200 hover:bg-white/10 hover:text-white" onClick={onCancel}>
               Cancel
             </Button>
           )}
