@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { randomUUID } from "node:crypto";
 import type { ZodSchema } from "zod";
 
 export class ApiError extends Error {
@@ -24,6 +25,52 @@ export function apiError(message: string, status = 400, code?: string, extra?: R
   );
 }
 
+type DatabaseError = { code?: unknown };
+
+function databaseErrorResponse(error: unknown) {
+  if (!error || typeof error !== "object") return null;
+  const code = (error as DatabaseError).code;
+  if (typeof code !== "string") return null;
+
+  switch (code) {
+    case "23505":
+      return apiError("A record with that code or slug already exists. Choose a unique value.", 409, "DUPLICATE_VALUE");
+    case "23503":
+      return apiError(
+        "A selected related record does not exist, or this record is still in use. Refresh the form and check its selections.",
+        400,
+        "RELATED_RECORD_INVALID"
+      );
+    case "23502":
+      return apiError("A required field is missing. Check the form and try again.", 400, "REQUIRED_FIELD_MISSING");
+    case "22P02":
+      return apiError("One of the submitted IDs or values is invalid. Refresh the form and reselect related records.", 400, "INVALID_VALUE");
+    case "22001":
+      return apiError("One of the submitted fields is longer than allowed.", 400, "FIELD_TOO_LONG");
+    case "23514":
+      return apiError("One of the submitted values is not allowed. Check the form values and try again.", 400, "VALUE_NOT_ALLOWED");
+    case "42501":
+      return apiError(
+        "The database rejected this operation because of its server permissions. Check the Supabase server configuration.",
+        503,
+        "DATABASE_PERMISSION_DENIED"
+      );
+    case "42703":
+    case "42P01":
+    case "42883":
+    case "PGRST202":
+    case "PGRST204":
+    case "PGRST205":
+      return apiError(
+        "The server database schema is incomplete or out of date. Apply the latest migrations and refresh the Supabase schema cache.",
+        503,
+        "DATABASE_SCHEMA_MISMATCH"
+      );
+    default:
+      return null;
+  }
+}
+
 export function handleApiError(error: unknown) {
   if (error instanceof ApiError) {
     return apiError(
@@ -33,12 +80,23 @@ export function handleApiError(error: unknown) {
       error.retryAfterSeconds ? { retryAfterSeconds: error.retryAfterSeconds } : undefined
     );
   }
-  try {
-    console.error("API Error:", error, error instanceof Error ? error.stack : undefined);
-  } catch {
-    // ignore logging failures
+  const databaseResponse = databaseErrorResponse(error);
+  if (databaseResponse) {
+    console.error("API database error:", error);
+    return databaseResponse;
   }
-  return apiError("Internal server error", 500, "INTERNAL_ERROR");
+  try {
+    const requestId = randomUUID();
+    console.error(`API Error [${requestId}]:`, error, error instanceof Error ? error.stack : undefined);
+    return apiError(
+      "Internal server error. Please contact support with the reference ID.",
+      500,
+      "INTERNAL_ERROR",
+      { requestId }
+    );
+  } catch {
+    return apiError("Internal server error", 500, "INTERNAL_ERROR");
+  }
 }
 
 export async function validateBody<T>(schema: ZodSchema<T>, body: unknown): Promise<T> {

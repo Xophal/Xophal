@@ -2,6 +2,7 @@ type ApiEnvelope = {
   success?: unknown;
   error?: unknown;
   code?: unknown;
+  requestId?: unknown;
   data?: unknown;
 };
 
@@ -13,8 +14,11 @@ function responseError(response: Response, envelope: ApiEnvelope, fallback: stri
   const code = typeof envelope.code === "string" ? envelope.code : "";
   const message = typeof envelope.error === "string" ? envelope.error : "";
 
-  if (code === "INTERNAL_ERROR" || response.status >= 500) {
-    return "The server could not complete this request. Please try again. If the problem continues, contact support.";
+  if (code === "INTERNAL_ERROR") {
+    const requestId = typeof envelope.requestId === "string" ? envelope.requestId : "";
+    return requestId
+      ? `The server could not complete this request. Contact support with reference ID ${requestId}.`
+      : "The server could not complete this request. Please try again. If the problem continues, contact support.";
   }
   if (response.status === 401) {
     return "Your session may have expired. Sign in again, then retry.";
@@ -24,6 +28,9 @@ function responseError(response: Response, envelope: ApiEnvelope, fallback: stri
   }
   if (message && message.toLowerCase() !== "internal server error") {
     return message;
+  }
+  if (response.status >= 500) {
+    return "The server could not complete this request. Please try again. If the problem continues, contact support.";
   }
   return fallback;
 }

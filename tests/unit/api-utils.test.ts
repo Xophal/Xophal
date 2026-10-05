@@ -27,4 +27,36 @@ describe("API utilities", () => {
     expect(response.status).toBe(404);
     await expect(response.json()).resolves.toEqual({ success: false, error: "Not found", code: "NOT_FOUND" });
   });
+
+  it("returns a safe, actionable error for database uniqueness conflicts", async () => {
+    const response = handleApiError({ code: "23505", message: "private database detail" });
+    expect(response.status).toBe(409);
+    await expect(response.json()).resolves.toEqual({
+      success: false,
+      error: "A record with that code or slug already exists. Choose a unique value.",
+      code: "DUPLICATE_VALUE",
+    });
+  });
+
+  it("identifies database schema errors without exposing raw database details", async () => {
+    const response = handleApiError({ code: "PGRST204", message: "private database detail" });
+    expect(response.status).toBe(503);
+    await expect(response.json()).resolves.toEqual({
+      success: false,
+      error: "The server database schema is incomplete or out of date. Apply the latest migrations and refresh the Supabase schema cache.",
+      code: "DATABASE_SCHEMA_MISMATCH",
+    });
+  });
+
+  it("returns a reference ID for unexpected server errors", async () => {
+    const response = handleApiError(new Error("private server detail"));
+    expect(response.status).toBe(500);
+    const body = await response.json();
+    expect(body).toMatchObject({
+      success: false,
+      error: "Internal server error. Please contact support with the reference ID.",
+      code: "INTERNAL_ERROR",
+    });
+    expect(body.requestId).toMatch(/^[0-9a-f-]{36}$/i);
+  });
 });
