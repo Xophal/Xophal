@@ -77,6 +77,30 @@ export type EngineVocab = {
   reviewCounts: Record<string, number>;
 };
 
+export function parseEngineVocab(value: unknown): EngineVocab {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error("Invalid question vocabulary response.");
+  }
+
+  const payload = value as Record<string, unknown>;
+  for (const key of ["topics", "subtopics", "types", "statuses"] as const) {
+    if (!Array.isArray(payload[key])) {
+      throw new Error(`Invalid question vocabulary response: ${key} must be an array.`);
+    }
+  }
+  if (!payload.reviewCounts || typeof payload.reviewCounts !== "object" || Array.isArray(payload.reviewCounts)) {
+    throw new Error("Invalid question vocabulary response: reviewCounts must be an object.");
+  }
+
+  return {
+    topics: payload.topics as VocabTopic[],
+    subtopics: payload.subtopics as VocabSubtopic[],
+    types: payload.types as string[],
+    statuses: payload.statuses as string[],
+    reviewCounts: payload.reviewCounts as Record<string, number>,
+  };
+}
+
 type EditableOption = { label: string; body: string; is_correct: boolean };
 
 /** Types that present an option list to the student. */
@@ -205,8 +229,12 @@ export default function EngineQuestionEditor({
     void (async () => {
       try {
         const res = await fetch("/api/admin/engine/vocab", { cache: "no-store" });
-        const json = (await res.json()) as { success: boolean; data?: EngineVocab };
-        if (!cancelled && res.ok && json.success && json.data) setVocab(json.data);
+        const json = (await res.json()) as { success: boolean; data?: unknown; error?: string };
+        if (!res.ok || !json.success || !json.data) {
+          throw new Error(json.error ?? "Could not load question vocabulary.");
+        }
+        const parsed = parseEngineVocab(json.data);
+        if (!cancelled) setVocab(parsed);
         if (!questionId) return;
         const qres = await fetch(`/api/admin/engine/questions/${questionId}`, { cache: "no-store" });
         const qjson = (await qres.json()) as { success: boolean; data?: EngineQuestionRow };

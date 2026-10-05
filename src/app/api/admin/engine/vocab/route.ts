@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { requireAdminAuth } from "@/lib/auth";
+import { requireAdminRole } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { ApiError, apiSuccess, handleApiError } from "@/lib/api-utils";
 import { ENGINE_STATUSES, ENGINE_TYPES } from "@/lib/engine/vocab";
@@ -10,7 +10,7 @@ import { ENGINE_STATUSES, ENGINE_TYPES } from "@/lib/engine/vocab";
  */
 export async function GET(request: NextRequest) {
   try {
-    await requireAdminAuth();
+    await requireAdminRole(["super_admin", "admin", "content_manager", "reviewer"]);
     const admin = createAdminClient();
     const topicSearch = (request.nextUrl.searchParams.get("topicSearch") ?? "").trim();
 
@@ -53,7 +53,7 @@ export async function GET(request: NextRequest) {
 /** GET /api/admin/engine/vocab/subtopics?topicId= — subtopics for one topic. */
 export async function POST(request: NextRequest) {
   try {
-    await requireAdminAuth();
+    await requireAdminRole(["super_admin", "admin", "content_manager", "reviewer"]);
     const body = (await request.json()) as { topicId?: unknown };
     if (typeof body.topicId !== "string" || !body.topicId) {
       throw new ApiError(400, "topicId is required.", "VALIDATION_ERROR");

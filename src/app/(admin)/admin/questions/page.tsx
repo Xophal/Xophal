@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import EngineQuestionEditor, {
+  parseEngineVocab,
   type EngineQuestionRow,
   type EngineVocab,
 } from "@/components/admin/EngineQuestionEditor";
@@ -79,6 +80,7 @@ export default function EngineQuestionsPage() {
   const [rows, setRows] = useState<EngineQuestionRow[]>([]);
   const [pagination, setPagination] = useState<Pagination | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("");
@@ -93,12 +95,15 @@ export default function EngineQuestionsPage() {
     void (async () => {
       try {
         const res = await fetch("/api/admin/engine/vocab", { cache: "no-store" });
-        const json = (await res.json()) as { success: boolean; data?: EngineVocab };
-        if (res.ok && json.success && json.data) setVocab(json.data);
-      } catch {
+        const json = (await res.json()) as { success: boolean; data?: unknown; error?: string };
+        if (!res.ok || !json.success || !json.data) {
+          throw new Error(json.error ?? "Failed to load question topics.");
+        }
+        setVocab(parseEngineVocab(json.data));
+      } catch (error) {
         toast({
           title: "Vocab load failed",
-          description: "Topic dropdowns are unavailable.",
+          description: error instanceof Error ? error.message : "Topic dropdowns are unavailable.",
           variant: "destructive",
         });
       }
@@ -111,6 +116,7 @@ export default function EngineQuestionsPage() {
     void (async () => {
       try {
         setLoading(true);
+        setLoadError(null);
         const params = new URLSearchParams({ page: String(page), limit: "20" });
         if (search) params.set("search", search);
         if (typeFilter) params.set("type", typeFilter);
@@ -127,6 +133,7 @@ export default function EngineQuestionsPage() {
         }
       } catch (err) {
         if (active) {
+          setLoadError(err instanceof Error ? err.message : String(err));
           toast({
             title: "Load failed",
             description: err instanceof Error ? err.message : String(err),
@@ -206,7 +213,9 @@ export default function EngineQuestionsPage() {
       const result = questionListPayload(json);
       setRows(result.data);
       setPagination(result.pagination);
+      setLoadError(null);
     } catch (err) {
+      setLoadError(err instanceof Error ? err.message : String(err));
       toast({
         title: "Load failed",
         description: err instanceof Error ? err.message : String(err),
@@ -386,6 +395,12 @@ export default function EngineQuestionsPage() {
                 <Skeleton key={i} className="h-20 w-full" />
               ))}
             </div>
+          ) : loadError ? (
+            <Card>
+              <CardContent className="p-8 text-center text-sm text-destructive">
+                Could not load questions: {loadError}
+              </CardContent>
+            </Card>
           ) : rows.length === 0 ? (
             <Card>
               <CardContent className="p-8 text-center text-sm text-muted-foreground">
