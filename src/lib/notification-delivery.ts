@@ -113,12 +113,17 @@ async function sendEmails(
           subject: notification.title,
           html: renderNotificationEmail(recipient.full_name, notification),
         }))),
+        signal: AbortSignal.timeout(15000),
       });
       if (!response.ok) throw new Error(`Resend rejected the batch (${response.status}).`);
       result.accepted += batch.length;
     } catch (error) {
       result.failed += batch.length;
-      result.error = error instanceof Error ? error.message : "Email delivery failed.";
+      if (error instanceof Error && error.name === "AbortError") {
+        result.error = "Resend email delivery timed out.";
+      } else {
+        result.error = error instanceof Error ? error.message : "Email delivery failed.";
+      }
     }
   }
 }

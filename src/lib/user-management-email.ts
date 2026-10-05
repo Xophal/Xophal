@@ -62,10 +62,16 @@ async function sendEmail(input: { to: string; subject: string; html: string }) {
       method: "POST",
       headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({ from, to: [input.to], subject: input.subject, html: input.html }),
+      signal: AbortSignal.timeout(15000),
     });
   } catch (error) {
-    console.error("User management email delivery failed", error);
-    throw new ApiError(502, "Email delivery failed. Please try again.", "USER_EMAIL_FAILED");
+    const timeout = error instanceof Error && error.name === "AbortError";
+    console.error("User management email delivery failed", { error, timedOut: timeout });
+    throw new ApiError(
+      timeout ? 504 : 502,
+      timeout ? "Email delivery timed out. Please try again." : "Email delivery failed. Please try again.",
+      timeout ? "USER_EMAIL_TIMEOUT" : "USER_EMAIL_FAILED"
+    );
   }
 
   if (response.ok) return;

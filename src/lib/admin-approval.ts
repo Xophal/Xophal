@@ -35,16 +35,30 @@ export async function sendAdminApprovalRequest(input: { email: string; fullName:
   }
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-  const response = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-    body: JSON.stringify({
-      from,
-      to: recipients,
-      subject: "Xophol admin signup approval required",
-      html: `<p>A new admin signup request needs review.</p><p><strong>Name:</strong> ${escapeHtml(input.fullName)}<br/><strong>Email:</strong> ${escapeHtml(input.email)}<br/><strong>Requested role:</strong> ${escapeHtml(input.requestedRole)}</p><p><a href="${escapeHtml(appUrl)}/admin/admin-requests">Review admin request</a></p>`,
-    }),
-  });
+  let response: Response;
+  try {
+    response = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        from,
+        to: recipients,
+        subject: "Xophol admin signup approval required",
+        html: `<p>A new admin signup request needs review.</p><p><strong>Name:</strong> ${escapeHtml(input.fullName)}<br/><strong>Email:</strong> ${escapeHtml(input.email)}<br/><strong>Requested role:</strong> ${escapeHtml(input.requestedRole)}</p><p><a href="${escapeHtml(appUrl)}/admin/admin-requests">Review admin request</a></p>`,
+      }),
+      signal: AbortSignal.timeout(15000),
+    });
+  } catch (error) {
+    const timeout = error instanceof Error && error.name === "AbortError";
+    console.error("Admin approval email provider timed out", { error: timeout ? "Request timed out after 15s" : error });
+    throw new ApiError(
+      timeout ? 504 : 502,
+      timeout
+        ? "The admin approval request was created, but the notification email timed out. Please try again."
+        : "The admin approval request was created, but notification email could not be sent.",
+      timeout ? "ADMIN_EMAIL_TIMEOUT" : "ADMIN_EMAIL_FAILED"
+    );
+  }
 
   if (!response.ok) {
     let providerDetail = "";

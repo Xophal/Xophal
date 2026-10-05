@@ -31,12 +31,14 @@ function getRoleCode(profileOrRole: unknown): string | null {
   return null;
 }
 
-export function getAccessState(profile: any, session: any, options: AuthAccessOptions = {}): AccessState {
+export function getAccessState(profile: unknown, session: unknown, options: AuthAccessOptions = {}): AccessState {
   const roleCode = getRoleCode(profile);
   const hasSession = Boolean(session && typeof session === "object");
   const isAuthenticated = hasSession && Boolean(profile);
-  const isActive = Boolean(profile?.is_active !== false);
-  const isVerified = Boolean(profile?.email_verified || session?.email_confirmed_at);
+  const profileRecord = (profile ?? {}) as Record<string, unknown>;
+  const sessionRecord = (session ?? {}) as Record<string, unknown>;
+  const isActive = Boolean(profileRecord.is_active !== false);
+  const isVerified = Boolean(profileRecord.email_verified || sessionRecord.email_confirmed_at);
   const isAdmin = isAdminRole(profile) || (roleCode ? ["admin", "super_admin", "content_manager", "reviewer"].includes(roleCode) : false);
 
   let reason: string | undefined;
@@ -66,7 +68,7 @@ export function getAccessState(profile: any, session: any, options: AuthAccessOp
   };
 }
 
-export function assertAccess(profile: any, session: any, options: AuthAccessOptions = {}): AccessState {
+export function assertAccess(profile: unknown, session: unknown, options: AuthAccessOptions = {}): AccessState {
   const state = getAccessState(profile, session, options);
 
   if (state.reason) {
@@ -76,7 +78,7 @@ export function assertAccess(profile: any, session: any, options: AuthAccessOpti
   return state;
 }
 
-export function requireVerifiedSession(profile: any, session: any, options: AuthAccessOptions = {}) {
+export function requireVerifiedSession(profile: unknown, session: unknown, options: AuthAccessOptions = {}) {
   return assertAccess(profile, session, {
     requireAuth: true,
     requireActive: true,
