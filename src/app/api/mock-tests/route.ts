@@ -138,9 +138,22 @@ export async function POST(request: NextRequest) {
       throw new ApiError(409, "A mock test with this slug already exists.", "DUPLICATE_SLUG");
     }
 
-    const testTypeId = payload.test_type_id || (await adminClient.from("test_types").select("id").eq("code", "mock").maybeSingle())?.data?.id;
+    let testTypeId = payload.test_type_id;
     if (!testTypeId) {
-      throw new Error("No test type configured for mock tests.");
+      const { data: testType, error: testTypeError } = await adminClient
+        .from("test_types")
+        .select("id")
+        .eq("code", "full_mock")
+        .maybeSingle();
+      if (testTypeError) throw testTypeError;
+      testTypeId = testType?.id;
+    }
+    if (!testTypeId) {
+      throw new ApiError(
+        503,
+        "The 'full_mock' test type is not configured. Check the database seed data before creating mock tests.",
+        "TEST_TYPE_NOT_CONFIGURED"
+      );
     }
 
     const { data, error } = await adminClient
