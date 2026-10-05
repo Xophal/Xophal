@@ -77,6 +77,7 @@ describe("requireAdminAuth", () => {
   it("allows a local development bypass when explicitly enabled", async () => {
     vi.stubEnv("NODE_ENV", "development");
     vi.stubEnv("VITEST", "false");
+    vi.stubEnv("CI", "false");
     vi.stubEnv("LOCAL_DEV_SKIP_AUTH", "true");
     vi.stubEnv("LOCAL_DEV_AUTH_ROLE", "student");
 
