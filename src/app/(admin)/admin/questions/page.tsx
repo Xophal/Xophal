@@ -40,6 +40,7 @@ const CSV_TEMPLATE = [
 ].join("\n");
 
 const DEMO_CSV_URL = "/templates/questions-import-demo.csv";
+const CSV_TEMPLATE_URL = "/templates/questions-import-template.csv";
 
 /** Column-by-column guide so users can match their own sheet to the importer. */
 const DEMO_COLUMN_GUIDE: Array<{ column: string; required: boolean; example: string; notes: string }> = [
@@ -737,6 +738,9 @@ function CsvImport({ onDone }: { onDone: () => void }) {
             <code>topic_slug</code>, <code>difficulty</code>, <code>skill</code>.
           </p>
           <div className="flex flex-wrap gap-2">
+            <a href={CSV_TEMPLATE_URL} download="questions-import-template.csv">
+              <Button variant="outline" type="button">Download blank CSV template</Button>
+            </a>
             <a href={DEMO_CSV_URL} download="questions-import-demo.csv">
               <Button variant="outline" type="button">Download demo CSV</Button>
             </a>
