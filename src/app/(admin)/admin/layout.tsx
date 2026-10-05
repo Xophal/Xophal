@@ -3,8 +3,9 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import Sidenav from "@/components/layout/sidenav";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
-import { requireAdminAuth } from "@/lib/auth";
+import { normalizeRoleCode, requireAdminAuth } from "@/lib/auth";
 import { assertAccess } from "@/lib/auth-policy";
+import StudyContentDeleteControl from "@/components/admin/StudyContentDeleteControl";
 
 const adminNavItems = [
   // Command center
@@ -90,7 +91,10 @@ export default async function AdminLayout({ children }: { children: ReactNode })
           </div>
         </header>
 
-        <main className="flex-1">{children}</main>
+        <main className="relative flex-1">
+          <StudyContentDeleteControl canDelete={normalizeRoleCode(session.profile) === "super_admin"} />
+          {children}
+        </main>
       </div>
     </div>
   );
