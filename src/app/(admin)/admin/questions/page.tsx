@@ -62,11 +62,15 @@ const DEMO_COLUMN_GUIDE: Array<{ column: string; required: boolean; example: str
   { column: "explanation", required: false, example: "CO2 forms calcium carbonate.", notes: "Shown to students after the attempt." },
 ];
 
-function questionListPayload(response: ListResponse) {
-  if (!response.data || !Array.isArray(response.data.data)) {
-    throw new Error(response.error ?? "Invalid questions response.");
-  }
-  return response.data;
+function questionListPayload(response: ListResponse): { data: EngineQuestionRow[]; pagination: Pagination } {
+  const payload = response?.data;
+  const rows = Array.isArray(payload?.data) ? payload.data : [];
+  const pagination =
+    payload && typeof payload === "object" && payload.pagination
+      ? (payload.pagination as Pagination)
+      : { page: 1, limit: 20, total: 0, totalPages: 0, hasMore: false };
+
+  return { data: rows, pagination };
 }
 
 export default function EngineQuestionsPage() {
