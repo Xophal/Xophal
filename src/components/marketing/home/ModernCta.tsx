@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { ArrowRight, Sparkles } from "lucide-react";
 import { ROUTES } from "@/constants";
-import { SUPPORT_EMAIL, SUPER_ADMIN_PHONE, ADMIN_PHONE, phoneHref } from "@/lib/legal";
+import { SUPPORT_EMAIL } from "@/lib/legal";
 import { Reveal } from "./Reveal";
 
 export default function ModernCta() {
@@ -35,17 +35,9 @@ export default function ModernCta() {
             </div>
 
             <p className="mt-10 text-sm leading-relaxed text-white/70">
-              Need help? Super Admin{" "}
-              <a href={phoneHref(SUPER_ADMIN_PHONE)} className="hx-cta__link">
-                {SUPER_ADMIN_PHONE}
-              </a>{" "}
-              or{" "}
+              Need help? Reach us at{" "}
               <a href={`mailto:${SUPPORT_EMAIL}`} className="hx-cta__link">
                 {SUPPORT_EMAIL}
-              </a>
-              . Admin support:{" "}
-              <a href={phoneHref(ADMIN_PHONE)} className="hx-cta__link">
-                {ADMIN_PHONE}
               </a>
               .
             </p>
