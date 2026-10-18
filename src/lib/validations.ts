@@ -148,10 +148,10 @@ export const mockTestSchema = z.object({
 
 export const testResponseSchema = z.object({
   question_id: z.string().uuid(),
-  selected_option_ids: z.array(z.string().uuid()).optional(),
-  text_answer: z.string().optional(),
-  numerical_answer: z.number().optional(),
-  time_spent_seconds: z.number().int().default(0),
+  selected_option_ids: z.array(z.string().uuid()).max(20).optional(),
+  text_answer: z.string().max(10000).optional(),
+  numerical_answer: z.number().finite().optional(),
+  time_spent_seconds: z.number().int().min(0).max(86400).default(0),
   is_bookmarked: z.boolean().default(false),
   is_review_later: z.boolean().default(false),
 });

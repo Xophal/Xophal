@@ -47,6 +47,15 @@ export async function POST(request: NextRequest) {
     const body = await validateBody(bodySchema, await request.json().catch(() => ({})));
     const admin = createAdminClient();
     const blueprintId = await resolveBlueprintId(admin, body);
+    const { data: blueprint, error: blueprintError } = await admin
+      .from("blueprints")
+      .select("is_public")
+      .eq("id", blueprintId)
+      .maybeSingle();
+    if (blueprintError) throw blueprintError;
+    if (!blueprint || !blueprint.is_public) {
+      throw new ApiError(404, "Blueprint not found.", "BLUEPRINT_NOT_FOUND");
+    }
 
     const attempt = await startAttempt(admin, session.user.id, blueprintId, {
       seed: body.seed,

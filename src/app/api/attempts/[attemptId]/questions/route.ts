@@ -30,11 +30,24 @@ export async function GET(_request: NextRequest, { params }: Ctx) {
     if (!session) throw new ApiError(401, "Authentication required", "UNAUTHORIZED");
 
     const { attemptId } = await params;
-    await getAttemptState(createAdminClient(), attemptId, session.user.id);
+    const admin = createAdminClient();
+    const attempt = await getAttemptState(admin, attemptId, session.user.id);
 
     const userClient = await createClient();
-    const questions = await serveAttemptQuestions(userClient, attemptId);
-    return apiSuccess({ questions, count: questions.length });
+    const [questions, { data: savedAnswers, error: answerError }] = await Promise.all([
+      serveAttemptQuestions(userClient, attemptId),
+      admin
+        .from("attempt_answers")
+        .select("question_id,response_json,time_spent_sec,flagged")
+        .eq("attempt_id", attemptId),
+    ]);
+    if (answerError) throw answerError;
+    const answersByQuestion = new Map((savedAnswers ?? []).map((answer) => [answer.question_id, answer]));
+    const hydratedQuestions = questions.map((question) => ({
+      ...question,
+      response: answersByQuestion.get(question.questionId) ?? null,
+    }));
+    return apiSuccess({ attempt, questions: hydratedQuestions, count: questions.length });
   } catch (error) {
     return handleApiError(error);
   }

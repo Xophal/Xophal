@@ -23,6 +23,10 @@
 1. `npx supabase db push` (or run 013, 014, 015 in order in SQL editor).
 2. Verify: `node scripts/seed014/build_014.js` then
    `npx vitest run tests/unit/phase1-mock-engine-seed.test.ts`.
+3. Apply migration `046_mock_test_engine_completion.sql` before enabling the
+   student routes. It snapshots generated papers and answer keys separately,
+   enforces blueprint visibility and attempt limits, and adds the answer-save,
+   submit, result, and student practice-test routes at `/engine-tests`.
 
 ## Notes
 - Ids are deterministic (sha1 of `ch1q-<code>`), so 014 is re-runnable.

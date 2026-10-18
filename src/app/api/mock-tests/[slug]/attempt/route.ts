@@ -1,7 +1,7 @@
 import { ApiError, apiSuccess, handleApiError } from "@/lib/api-utils";
 import { requireAuth } from "@/lib/auth";
-import { canAccessPremiumContent } from "@/lib/auth-policy";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getUserEntitlement, isProductEntitled } from "@/lib/entitlements";
 
 export async function POST(_: Request, { params }: { params: Promise<{ slug: string }> }) {
   try {
@@ -21,12 +21,7 @@ export async function POST(_: Request, { params }: { params: Promise<{ slug: str
     if (testError) throw testError;
     if (!test) throw new ApiError(404, "Mock test not found", "TEST_NOT_FOUND");
 
-    const { data: subscription } = await adminClient
-      .from("subscriptions")
-      .select("id, status, expires_at, is_active")
-      .eq("user_id", session.user.id)
-      .limit(1)
-      .maybeSingle();
+    const entitlement = await getUserEntitlement(session.user.id);
 
     const { data: grant } = await adminClient
       .from("test_access_grants")
@@ -35,71 +30,79 @@ export async function POST(_: Request, { params }: { params: Promise<{ slug: str
       .eq("mock_test_id", test.id)
       .maybeSingle();
 
-    const premiumAccess = canAccessPremiumContent(session.profile, session.user, subscription);
-    if (test.is_premium && !premiumAccess.allowed && !grant) {
-      throw new ApiError(403, premiumAccess.reason || "Premium access required", "PREMIUM_REQUIRED");
+    const hasEntitlement = test.is_premium
+      ? entitlement.isPaid && isProductEntitled(entitlement.productType, "premium")
+      : true;
+
+    if (test.is_premium && !hasEntitlement && !grant) {
+      throw new ApiError(403, entitlement.reason || "Premium access required", "PREMIUM_REQUIRED");
     }
 
-    const { data: questionRows, error: questionError } = await adminClient
-      .from("mock_test_questions")
-      .select("question_id, sort_order, marks_override, questions(id, question_text, question_html, image_url, marks, negative_marks, time_seconds, topic_id, chapter_id, subject_id, question_types(code), question_options(id, option_text, option_html, image_url, sort_order, label, body, position))")
-      .eq("mock_test_id", test.id)
-      .order("sort_order", { ascending: true });
+    const { data: startedAttempt, error: startError } = await adminClient.rpc("start_mock_test_attempt", {
+      p_user_id: session.user.id,
+      p_mock_test_id: test.id,
+    });
+    if (startError) {
+      if (startError.message.includes("Maximum attempts reached")) {
+        throw new ApiError(403, "You have reached the maximum number of attempts for this test.", "MAX_ATTEMPTS_REACHED");
+      }
+      if (startError.message.includes("no questions")) {
+        throw new ApiError(400, "This mock test has no questions yet", "TEST_EMPTY");
+      }
+      if (startError.message.includes("Mock test not found")) {
+        throw new ApiError(404, "Mock test not found", "TEST_NOT_FOUND");
+      }
+      throw startError;
+    }
+    if (!startedAttempt || typeof startedAttempt !== "object") {
+      throw new ApiError(500, "Unable to start this mock test", "ATTEMPT_CREATE_FAILED");
+    }
+    const attemptData = startedAttempt as {
+      id: string;
+      started_at: string;
+      status: string;
+      duration_minutes: number;
+      resumed: boolean;
+    };
 
-    if (questionError) throw questionError;
-    const questions = (questionRows || [])
-      .map((row) => {
-        const question = Array.isArray(row.questions) ? row.questions[0] : row.questions;
-        if (!question) return null;
-        return {
-          ...question,
-          question_type: Array.isArray(question.question_types) ? question.question_types[0] : question.question_types,
-          marks: row.marks_override ?? question.marks,
-          options: (question.question_options || []).map((option) => ({
-            ...option,
-            is_correct: false,
-          })),
-        };
-      })
-      .filter((question) => question !== null);
+    const { data: paperRows, error: paperError } = await adminClient
+      .from("test_attempt_papers")
+      .select("question_id, position, marks, question_snapshot")
+      .eq("attempt_id", attemptData.id)
+      .order("position", { ascending: true });
+    if (paperError) throw paperError;
 
+    const questions = (paperRows ?? []).map((row) => {
+      const question = row.question_snapshot as Record<string, unknown> & {
+        question_options?: Array<Record<string, unknown>>;
+        options?: Array<Record<string, unknown>>;
+      };
+      const options = question.options ?? question.question_options ?? [];
+      return {
+        ...question,
+        marks: row.marks,
+        options: options.map((option) => ({ ...option, is_correct: false })),
+      };
+    });
     if (questions.length === 0) throw new ApiError(400, "This mock test has no questions yet", "TEST_EMPTY");
 
-    const { data: existingAttempt } = await adminClient
-      .from("test_attempts")
-      .select("id, started_at, status")
-      .eq("user_id", session.user.id)
-      .eq("mock_test_id", test.id)
-      .eq("status", "in_progress")
-      .order("started_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    const attempt = existingAttempt || (await adminClient
-      .from("test_attempts")
-      .insert({
-        user_id: session.user.id,
-        mock_test_id: test.id,
-        status: "in_progress",
-        total_questions: questions.length,
-        total_marks: questions.reduce((total, question) => total + Number(question.marks || 0), 0),
-      })
-      .select("id, started_at, status")
-      .single()).data;
-
-    if (!attempt) throw new ApiError(500, "Unable to start this mock test", "ATTEMPT_CREATE_FAILED");
-
-    const { data: savedResponses } = await adminClient
+    const { data: savedResponses, error: responseError } = await adminClient
       .from("test_responses")
       .select("question_id, selected_option_ids, text_answer, numerical_answer, time_spent_seconds, is_bookmarked, is_review_later, is_visited")
-      .eq("attempt_id", attempt.id);
+      .eq("attempt_id", attemptData.id);
+    if (responseError) throw responseError;
 
     return apiSuccess({
-      attempt,
-      test: { ...test, total_questions: questions.length, total_marks: questions.reduce((total, question) => total + Number(question.marks || 0), 0) },
+      attempt: { id: attemptData.id, started_at: attemptData.started_at, status: attemptData.status },
+      test: {
+        ...test,
+        duration_minutes: attemptData.duration_minutes,
+        total_questions: questions.length,
+        total_marks: questions.reduce((total, question) => total + Number(question.marks || 0), 0),
+      },
       questions,
       responses: savedResponses ?? [],
-    });
+    }, attemptData.resumed ? 200 : 201);
   } catch (error) {
     return handleApiError(error);
   }

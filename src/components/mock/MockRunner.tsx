@@ -88,7 +88,7 @@ export default function MockRunner({ slug }: { slug: string }) {
     }
     loadAttempt();
     return () => { active = false; };
-  }, [setAttempt, slug]);
+  }, [hydrateResponses, setAttempt, slug]);
 
   const question = questions[currentIndex];
   const response = question ? responses[question.id] : undefined;
@@ -110,7 +110,7 @@ export default function MockRunner({ slug }: { slug: string }) {
   const saveTextAnswer = (text_answer: string) => saveResponse(question.id, { text_answer: text_answer || null });
   const saveNumericalAnswer = (value: string) => saveResponse(question.id, { numerical_answer: value === "" || Number.isNaN(Number(value)) ? null : Number(value) });
 
-  async function completeSubmit() {
+  async function completeSubmit(expiredByTimer = false) {
     if (!attemptId || submitting) return;
     setSubmitting(true);
     setError(null);
@@ -120,7 +120,7 @@ export default function MockRunner({ slug }: { slug: string }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           attempt_id: attemptId,
-          expired: isExpired,
+          expired: expiredByTimer || isExpired,
           responses: Object.values(responses).map((item) => ({
             question_id: item.question_id,
             ...(item.selected_option_ids?.length ? { selected_option_ids: item.selected_option_ids } : {}),
@@ -145,6 +145,10 @@ export default function MockRunner({ slug }: { slug: string }) {
   }
 
   const currentState = getQuestionVisualState(getQuestionStatus(response, true));
+  const handleTimerExpiry = () => {
+    expireTest();
+    void completeSubmit(true);
+  };
 
   // Close the mobile palette sheet on Escape.
   useEffect(() => {
@@ -224,7 +228,7 @@ export default function MockRunner({ slug }: { slug: string }) {
         answeredCount={answeredCount}
         expiresAt={expiresAt}
         saveState={saveState}
-        onExpire={expireTest}
+        onExpire={handleTimerExpiry}
         onOpenPalette={() => setPaletteOpen(true)}
       />
 
@@ -461,7 +465,7 @@ export default function MockRunner({ slug }: { slug: string }) {
               <Button variant="outline" onClick={() => setShowConfirm(false)}>
                 Keep reviewing
               </Button>
-              <Button className="exam-cta" onClick={completeSubmit} isLoading={submitting} loadingText="Submitting…">
+              <Button className="exam-cta" onClick={() => void completeSubmit()} isLoading={submitting} loadingText="Submitting…">
                 Submit test
               </Button>
             </div>

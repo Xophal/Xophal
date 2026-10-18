@@ -17,7 +17,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { ApiError } from "@/lib/api-utils";
 
 import { getBlueprint } from "./blueprint-service";
-import { computeMaxMarks, generateInstance } from "./test-generator";
+import { generateInstance } from "./test-generator";
 
 type Admin = SupabaseClient;
 
@@ -47,7 +47,7 @@ export type ServedQuestion = {
   marks: number;
   negMarks: number;
   position: number;
-  options: Array<{ label: string | null; body: string | null; position: number | null }>;
+  options: Array<{ id: string; label: string | null; body: string | null; position: number | null }>;
 };
 
 /** The instance columns every read needs, with the question count folded in. */
@@ -127,6 +127,9 @@ export async function startAttempt(
   opts: { seed?: number; dateISO?: string } = {}
 ): Promise<AttemptState> {
   const blueprint = await getBlueprint(admin, blueprintId);
+  if (!blueprint.is_public) {
+    throw new ApiError(404, "Blueprint not found.", "NOT_FOUND");
+  }
   const now = Date.now();
 
   const { data: open, error: openErr } = await admin
@@ -164,7 +167,7 @@ export async function startAttempt(
   });
 
   const deadlineAt = new Date(now + (blueprint.duration_sec + SUBMIT_GRACE_SEC) * 1000).toISOString();
-  const maxScore = computeMaxMarks(blueprint.sections, instance.questions.length);
+  const maxScore = instance.totalMarks;
 
   const { data: attempt, error: attemptErr } = await admin
     .from("attempts")
@@ -243,5 +246,3 @@ export async function serveAttemptQuestions(
     options: (Array.isArray(r.options) ? r.options : []) as ServedQuestion["options"],
   }));
 }
-
-
