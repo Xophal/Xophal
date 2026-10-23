@@ -19,6 +19,7 @@ describe("user entitlements", () => {
     const subscriptionQuery = {
       select: vi.fn(() => subscriptionQuery),
       eq: vi.fn(() => subscriptionQuery),
+      lte: vi.fn(() => subscriptionQuery),
       gt: vi.fn(() => subscriptionQuery),
       order: vi.fn(() => subscriptionQuery),
       limit: vi.fn(() => subscriptionQuery),
@@ -28,6 +29,7 @@ describe("user entitlements", () => {
     const productQuery = {
       select: vi.fn(() => productQuery),
       eq: vi.fn(() => productQuery),
+      is: vi.fn(() => productQuery),
       order: vi.fn(() => productQuery),
       limit: vi.fn().mockResolvedValue({
         data: [{
