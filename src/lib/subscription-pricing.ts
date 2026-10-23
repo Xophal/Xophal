@@ -1,4 +1,4 @@
-export type ProductType = "free" | "class_9_monthly" | "class_10_season_pass";
+export type ProductType = "free" | "premium" | "pro" | "class_9_monthly" | "class_10_season_pass";
 
 export type ProductCatalogRecord = {
   id?: string;
@@ -14,6 +14,8 @@ export type ProductCatalogRecord = {
   duration_days?: number | null;
   validity_starts_at?: string | null;
   validity_ends_at?: string | null;
+  early_bird_starts_at?: string | null;
+  early_bird_ends_at?: string | null;
   is_active?: boolean;
   is_public?: boolean;
   metadata?: Record<string, unknown> | null;
@@ -30,11 +32,16 @@ export type ProductPriceDecision = {
   discountPaise: number;
 };
 
-const EARLY_BIRD_START = new Date("2026-11-01T00:00:00+05:30");
-const EARLY_BIRD_END = new Date("2026-11-15T23:59:59+05:30");
-
-export function isEarlyBirdWindow(now: Date = new Date()): boolean {
-  return now >= EARLY_BIRD_START && now <= EARLY_BIRD_END;
+export function isEarlyBirdWindow(
+  product: Pick<ProductCatalogRecord, "early_bird_starts_at" | "early_bird_ends_at">,
+  now: Date = new Date()
+): boolean {
+  const startsAt = product.early_bird_starts_at ? new Date(product.early_bird_starts_at) : null;
+  const endsAt = product.early_bird_ends_at ? new Date(product.early_bird_ends_at) : null;
+  if ((startsAt && !Number.isFinite(startsAt.getTime())) || (endsAt && !Number.isFinite(endsAt.getTime()))) {
+    return false;
+  }
+  return (!startsAt || now >= startsAt) && (!endsAt || now < endsAt);
 }
 
 export function resolveProductPrice(
@@ -48,13 +55,13 @@ export function resolveProductPrice(
   const schoolEligible = Boolean(options.isSchoolEligible);
   const regularPricePaise = Number(product.price_paise ?? 0);
 
+  const earlyBirdPricePaise = product.early_bird_price_paise ?? null;
   const earlyBirdEligible =
-    product.product_type === "class_10_season_pass" &&
     product.class_number === 10 &&
-    isEarlyBirdWindow(now);
+    earlyBirdPricePaise !== null &&
+    isEarlyBirdWindow(product, now);
 
   const schoolPricePaise = product.school_price_paise ?? null;
-  const earlyBirdPricePaise = product.early_bird_price_paise ?? null;
 
   let pricePaise = regularPricePaise;
   let appliedRule: ProductPriceDecision["appliedRule"] = "regular";
@@ -87,9 +94,11 @@ export function validateProductScope(product: ProductCatalogRecord): boolean {
   if (!product || !product.code || !product.name) return false;
   if (product.board_code !== "seba") return false;
   if (!([9, 10] as const).includes(product.class_number)) return false;
-  if (!(["free", "class_9_monthly", "class_10_season_pass"] as const).includes(product.product_type)) {
+  if (!(["free", "premium", "pro", "class_9_monthly", "class_10_season_pass"] as const).includes(product.product_type)) {
     return false;
   }
   if (product.product_type === "free" && product.price_paise !== 0) return false;
+  if (product.product_type === "class_9_monthly" && product.class_number !== 9) return false;
+  if (product.product_type === "class_10_season_pass" && product.class_number !== 10) return false;
   return true;
 }

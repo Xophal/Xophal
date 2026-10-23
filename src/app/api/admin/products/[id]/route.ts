@@ -1,13 +1,13 @@
 import { NextRequest } from "next/server";
 import { z } from "zod";
 import { apiError, apiSuccess, handleApiError, validateBody } from "@/lib/api-utils";
-import { requireAdminAuth } from "@/lib/auth";
+import { requireAdminRole } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { validateProductScope } from "@/lib/subscription-pricing";
 
 const productPatchSchema = z.object({
   code: z.string().min(3).max(80).optional(),
-  product_type: z.enum(["free", "class_9_monthly", "class_10_season_pass"]).optional(),
+  product_type: z.enum(["free", "premium", "pro", "class_9_monthly", "class_10_season_pass"]).optional(),
   board_code: z.string().min(2).max(32).optional(),
   class_number: z.union([z.literal(9), z.literal(10)]).optional(),
   name: z.string().min(2).max(200).optional(),
@@ -18,6 +18,8 @@ const productPatchSchema = z.object({
   duration_days: z.number().int().positive().nullable().optional(),
   validity_starts_at: z.string().optional().nullable(),
   validity_ends_at: z.string().optional().nullable(),
+  early_bird_starts_at: z.string().optional().nullable(),
+  early_bird_ends_at: z.string().optional().nullable(),
   is_active: z.boolean().optional(),
   is_public: z.boolean().optional(),
   metadata: z.record(z.any()).optional(),
@@ -27,7 +29,7 @@ type Params = { params: Promise<{ id: string }> };
 
 export async function GET(_: Request, { params }: Params) {
   try {
-    await requireAdminAuth();
+    await requireAdminRole(["super_admin", "admin", "subscription_admin"]);
     const { id } = await params;
     const { data, error } = await createAdminClient()
       .from("product_catalog")
@@ -45,7 +47,7 @@ export async function GET(_: Request, { params }: Params) {
 
 export async function PATCH(request: NextRequest, { params }: Params) {
   try {
-    await requireAdminAuth();
+    await requireAdminRole(["super_admin", "admin", "subscription_admin"]);
     const { id } = await params;
     const payload = await validateBody(productPatchSchema, await request.json());
     const row: Record<string, unknown> = { ...payload, updated_at: new Date().toISOString() };

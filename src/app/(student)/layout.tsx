@@ -18,6 +18,7 @@ const navItems = [
   { href: "/subjects", icon: "GraduationCap", label: t("nav.exams"), group: t("nav.group.prepare") },
   { href: "/mock-tests", icon: "Target", label: t("nav.mockTests"), group: t("nav.group.prepare") },
   { href: "/dashboard/ebooks", icon: "BookOpen", label: "My eBooks", group: t("nav.group.account") },
+  { href: "/subscriptions", icon: "CreditCard", label: "Subscriptions", group: t("nav.group.account") },
   { href: ROUTES.learn, icon: "BookOpen", label: t("nav.practice"), group: t("nav.group.prepare") },
   { href: "/previous-year-papers", icon: "FileText", label: t("nav.pyqs"), group: t("nav.group.prepare") },
   { href: "/dashboard#challenge-title", icon: "Flame", label: t("nav.dailyChallenge"), group: t("nav.group.prepare") },
@@ -38,6 +39,7 @@ const topNavItems = [
   { href: ROUTES.learn, label: t("nav.practice") },
   { href: "/previous-year-papers", label: t("nav.pyqs") },
   { href: "/dashboard#challenge-title", label: t("nav.dailyChallenge") },
+  { href: "/subscriptions", label: "Subscriptions" },
   { href: ROUTES.leaderboard, label: t("nav.leaderboard") },
 ];
 
