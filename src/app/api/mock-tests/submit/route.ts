@@ -7,7 +7,8 @@ import { finalTestSubmissionSchema } from "@/lib/validations";
 
 export async function POST(request: NextRequest) {
   try {
-    if (!(await requireAuth())) throw new ApiError(401, "Authentication required", "UNAUTHORIZED");
+    const session = await requireAuth();
+    if (!session) throw new ApiError(401, "Authentication required", "UNAUTHORIZED");
     const body = await validateBody(finalTestSubmissionSchema, await request.json());
     const supabase = await createClient();
     const { data, error } = await supabase.rpc("submit_test_attempt", {
@@ -26,9 +27,17 @@ export async function POST(request: NextRequest) {
     // Create an in-app notification for the user about submission/result
     try {
       const admin = createAdminClient();
-      await admin.from("notifications").insert([{ user_id: (await supabase.auth.getUser()).data.user?.id, title: "Test submitted", message: `Your test submission (${body.attempt_id}) has been received. View result.`, link_url: `/test/result/${body.attempt_id}` }]);
-    } catch {
-      // non-fatal: notification failure should not block submission
+      const { error: notificationError } = await admin.from("notifications").insert([{
+        user_id: session.user.id,
+        title: "Test submitted",
+        message: `Your test submission (${body.attempt_id}) has been received. View result.`,
+        link_url: `/test/result/${body.attempt_id}`,
+      }]);
+      if (notificationError) {
+        console.error("Test submission notification could not be created", notificationError);
+      }
+    } catch (notificationError) {
+      console.error("Test submission notification could not be created", notificationError);
     }
 
     return apiSuccess(data);
@@ -36,4 +45,3 @@ export async function POST(request: NextRequest) {
     return handleApiError(error);
   }
 }
-

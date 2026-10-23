@@ -3,7 +3,7 @@ import { z } from "zod";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireAdminAuth } from "@/lib/auth";
 import { normalizeRoleCode } from "@/lib/roles";
-import { apiError, apiSuccess, handleApiError, validateBody } from "@/lib/api-utils";
+import { apiError, apiSuccess, assertTrustedOrigin, handleApiError, validateBody } from "@/lib/api-utils";
 
 const adminCreateSchema = z.object({
   email: z.string().email(),
@@ -14,6 +14,12 @@ const adminCreateSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
+    assertTrustedOrigin(request);
+    const contentType = request.headers.get("content-type")?.split(";")[0].trim().toLowerCase();
+    if (contentType !== "application/json") {
+      return apiError("Content-Type must be application/json.", 415, "UNSUPPORTED_MEDIA_TYPE");
+    }
+
     const { user, profile } = await requireAdminAuth();
     const body = await request.json();
     const payload = await validateBody(adminCreateSchema, body);

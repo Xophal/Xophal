@@ -13,7 +13,14 @@ export default async function NotificationsPage() {
   }
 
   const supabase = await createClient();
-  const { data } = await supabase.from("notifications").select("id, title, message, type, link_url, is_read, created_at").or(`user_id.eq.${session.user.id},is_global.eq.true`).order("created_at", { ascending: false }).limit(50);
+  const { data, error } = await supabase.rpc("get_user_notifications", {
+    p_page: 1,
+    p_limit: 50,
+  });
+  if (error) throw error;
+  if (!data || typeof data !== "object" || !Array.isArray(data.items)) {
+    throw new Error("Notification service returned an invalid response.");
+  }
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -28,7 +35,7 @@ export default async function NotificationsPage() {
           <CardDescription>Latest 50 notifications</CardDescription>
         </CardHeader>
         <CardContent>
-          <NotificationListClient initial={data || []} />
+          <NotificationListClient initial={data.items} />
         </CardContent>
       </Card>
     </div>

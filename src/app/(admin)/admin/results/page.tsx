@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { Search, Trophy } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -25,9 +25,7 @@ export default function AdminResultsPage() {
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => { void load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [page]);
-
-  async function load(qValue = q, pageValue = page) {
+  const load = useCallback(async (qValue = q, pageValue = page) => {
     setLoading(true);
     try {
       const res = await fetch(`/api/admin/results?page=${pageValue}&limit=20&q=${encodeURIComponent(qValue)}`);
@@ -37,14 +35,20 @@ export default function AdminResultsPage() {
       setTotal(json.data.total || 0);
     } catch (e) {
       console.error(e);
-    } finally { setLoading(false); }
-  }
+    } finally {
+      setLoading(false);
+    }
+  }, [page, q]);
+
+  useEffect(() => {
+    void load(q, page);
+  }, [load, page, q]);
 
   function onSearch(e: React.FormEvent) {
     e.preventDefault();
-    setQ(search);
+    const nextQ = search.trim();
+    setQ(nextQ);
     setPage(1);
-    void load(search, 1);
   }
 
   return (

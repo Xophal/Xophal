@@ -29,7 +29,16 @@ export const ROUTES = {
   admin: "/admin",
 } as const;
 
-export const ADMIN_ROLES = ["super_admin", "admin", "content_manager", "reviewer"] as const;
+export const ADMIN_ROLES = [
+  "super_admin",
+  "admin",
+  "content_manager",
+  "reviewer",
+  "payment_verifier",
+  "subscription_admin",
+  "refund_approver",
+  "school_eligibility_reviewer",
+] as const;
 
 export const FALLBACK_BOARDS = [
   {

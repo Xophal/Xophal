@@ -1,9 +1,9 @@
-export const SUPER_ADMIN_PHONE = "";
-export const SUPER_ADMIN_EMAIL = "";
-export const ADMIN_PHONE = "";
-export const ADMIN_EMAIL = "";
-export const SUPPORT_EMAIL = "support@xophol.com";
-export const SUPPORT_PHONE = "";
+export const SUPER_ADMIN_PHONE = "+918876886919";
+export const SUPER_ADMIN_EMAIL = "borahjayanta840@gmail.com";
+export const ADMIN_PHONE = "+918876886919";
+export const ADMIN_EMAIL = "biplopdasofficial1999@gmail.com";
+export const SUPPORT_EMAIL = "xophal123@gmail.com";
+export const SUPPORT_PHONE = SUPER_ADMIN_PHONE;
 export const SUPPORT_ADDRESS = "Jorhat, Assam, India";
 export const CONTACT_FORM_MAX_MESSAGE_LENGTH = 2000;
 
@@ -12,7 +12,20 @@ export const CONTACT_DETAILS: ReadonlyArray<{
   phone: string;
   email: string;
   whatsapp: string;
-}> = [];
+}> = [
+  {
+    label: "Support Team",
+    phone: SUPER_ADMIN_PHONE,
+    email: SUPPORT_EMAIL,
+    whatsapp: SUPER_ADMIN_PHONE,
+  },
+  {
+    label: "Admin Desk",
+    phone: ADMIN_PHONE,
+    email: ADMIN_EMAIL,
+    whatsapp: ADMIN_PHONE,
+  },
+];
 
 export function phoneHref(phone: string) {
   return `tel:${phone.replace(/[^+\d]/g, "")}`;
