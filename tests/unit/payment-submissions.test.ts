@@ -68,6 +68,7 @@ describe("manual payment submissions", () => {
       amount_minor: 14900,
       final_amount_minor: 14900,
     });
+    const settingsQuery = createQuery({ upi_id: "merchant@bank", is_enabled: true });
 
     let paymentSubmissionCallCount = 0;
 
@@ -78,6 +79,7 @@ describe("manual payment submissions", () => {
     mocks.requireVerifiedSession.mockReturnValue({ isAuthenticated: true });
     mocks.createAdminClient.mockReturnValue({
       from: vi.fn((table: string) => {
+        if (table === "manual_payment_settings") return settingsQuery;
         if (table === "product_catalog") return productQuery;
         if (table === "payment_submissions") {
           paymentSubmissionCallCount += 1;
@@ -131,6 +133,7 @@ describe("manual payment submissions", () => {
     const schoolQuery = createQuery({ is_verified: true });
     const duplicateQuery = createQuery(null);
     const insertQuery = createQuery({ id: "submission-school", status: "pending_verification" });
+    const settingsQuery = createQuery({ upi_id: "merchant@bank", is_enabled: true });
 
     mocks.requireAuth.mockResolvedValue({
       user: { id: "user-123" },
@@ -139,6 +142,7 @@ describe("manual payment submissions", () => {
     mocks.requireVerifiedSession.mockReturnValue({ isAuthenticated: true });
     mocks.createAdminClient.mockReturnValue({
       from: vi.fn((table: string) => {
+        if (table === "manual_payment_settings") return settingsQuery;
         if (table === "product_catalog") return productQuery;
         if (table === "school_student_eligibility") return eligibilityQuery;
         if (table === "school_records") return schoolQuery;
@@ -184,6 +188,7 @@ describe("manual payment submissions", () => {
     };
     const productQuery = createQuery(product);
     const eligibilityQuery = createQuery(null);
+    const settingsQuery = createQuery({ upi_id: "merchant@bank", is_enabled: true });
 
     mocks.requireAuth.mockResolvedValue({
       user: { id: "user-123" },
@@ -191,6 +196,7 @@ describe("manual payment submissions", () => {
     });
     mocks.requireVerifiedSession.mockReturnValue({ isAuthenticated: true });
     const from = vi.fn((table: string) => {
+      if (table === "manual_payment_settings") return settingsQuery;
       if (table === "product_catalog") return productQuery;
       if (table === "school_student_eligibility") return eligibilityQuery;
       throw new Error(`Unexpected table: ${table}`);
@@ -216,25 +222,22 @@ describe("manual payment submissions", () => {
     expect(from).not.toHaveBeenCalledWith("payment_submissions");
   });
 
-  it("allows a payment verifier to approve a pending submission", async () => {
-    const existing = { id: "submission-456", status: "pending_verification", reason: null };
-    const updated = { ...existing, status: "approved", approved_by: "admin-123" };
-
-    const fetchQuery = createQuery(existing);
-    const updateQuery = createQuery(updated);
-    let adminFromCallCount = 0;
+  it("approves a payment through the atomic subscription-granting database function", async () => {
+    const rpc = vi.fn().mockResolvedValue({
+      data: {
+        status: "approved",
+        subscription_id: "subscription-123",
+        starts_at: "2026-10-24T00:00:00.000Z",
+        expires_at: "2026-11-23T00:00:00.000Z",
+      },
+      error: null,
+    });
 
     mocks.requireAdminRole.mockResolvedValue({
       user: { id: "admin-123" },
       profile: { id: "admin-123", email_verified: true, is_active: true },
     });
-    mocks.createAdminClient.mockReturnValue({
-      from: vi.fn((table: string) => {
-        if (table !== "payment_submissions") throw new Error(`Unexpected table: ${table}`);
-        adminFromCallCount += 1;
-        return adminFromCallCount === 1 ? fetchQuery : updateQuery;
-      }),
-    });
+    mocks.createAdminClient.mockReturnValue({ rpc });
 
     const response = await approveSubmission(new NextRequest("http://localhost/api/admin/payment-submissions/submission-456", {
       method: "PATCH",
@@ -243,9 +246,87 @@ describe("manual payment submissions", () => {
     }), { params: Promise.resolve({ id: "submission-456" }) });
 
     expect(response.status).toBe(200);
+    expect(mocks.requireAdminRole).toHaveBeenCalledWith(["payment_verifier", "subscription_admin"]);
+    expect(rpc).toHaveBeenCalledWith("resolve_manual_payment_submission", {
+      p_submission_id: "submission-456",
+      p_actor_id: "admin-123",
+      p_status: "approved",
+      p_reason: "Verified via UPI reference",
+    });
     await expect(response.json()).resolves.toMatchObject({
       success: true,
-      data: expect.objectContaining({ status: "approved" }),
+      data: expect.objectContaining({ status: "approved", subscription_id: "subscription-123" }),
+    });
+  });
+
+  it("rejects a payment through the database review function", async () => {
+    const rpc = vi.fn().mockResolvedValue({ data: { status: "rejected" }, error: null });
+    mocks.requireAdminRole.mockResolvedValue({ user: { id: "admin-123" } });
+    mocks.createAdminClient.mockReturnValue({ rpc });
+
+    const response = await approveSubmission(new NextRequest("http://localhost/api/admin/payment-submissions/submission-456", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: "rejected", reason: "Reference not found" }),
+    }), { params: Promise.resolve({ id: "submission-456" }) });
+
+    expect(response.status).toBe(200);
+    expect(rpc).toHaveBeenCalledWith("resolve_manual_payment_submission", {
+      p_submission_id: "submission-456",
+      p_actor_id: "admin-123",
+      p_status: "rejected",
+      p_reason: "Reference not found",
+    });
+  });
+
+  it("does not silently accept payment requests when manual UPI settings are missing", async () => {
+    const settingsQuery = createQuery(null);
+    const from = vi.fn((table: string) => {
+      if (table === "manual_payment_settings") return settingsQuery;
+      throw new Error(`Unexpected table: ${table}`);
+    });
+    mocks.requireAuth.mockResolvedValue({
+      user: { id: "user-123" },
+      profile: { id: "user-123", email_verified: true, is_active: true },
+    });
+    mocks.requireVerifiedSession.mockReturnValue({ isAuthenticated: true });
+    mocks.createAdminClient.mockReturnValue({ from });
+
+    const response = await submitPayment(new NextRequest("http://localhost/api/payments/submissions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        product_id: "11111111-1111-4111-8111-111111111111",
+        reference_code: "UPI-REF-789",
+      }),
+    }));
+
+    expect(response.status).toBe(503);
+    await expect(response.json()).resolves.toMatchObject({
+      success: false,
+      code: "MANUAL_PAYMENTS_NOT_CONFIGURED",
+    });
+    expect(from).not.toHaveBeenCalledWith("product_catalog");
+  });
+
+  it("returns a conflict when a submission was already reviewed", async () => {
+    const rpc = vi.fn().mockResolvedValue({
+      data: null,
+      error: { message: "Payment submission has already been reviewed" },
+    });
+    mocks.requireAdminRole.mockResolvedValue({ user: { id: "admin-123" } });
+    mocks.createAdminClient.mockReturnValue({ rpc });
+
+    const response = await approveSubmission(new NextRequest("http://localhost/api/admin/payment-submissions/submission-456", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: "approved" }),
+    }), { params: Promise.resolve({ id: "submission-456" }) });
+
+    expect(response.status).toBe(409);
+    await expect(response.json()).resolves.toMatchObject({
+      success: false,
+      code: "SUBMISSION_ALREADY_REVIEWED",
     });
   });
 });

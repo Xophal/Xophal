@@ -72,24 +72,12 @@ export async function POST(request: NextRequest) {
     }
 
     const admin = createAdminClient();
-    let paymentSettings: { upi_id?: string | null; is_enabled?: boolean | null } = { upi_id: "UPI_TEST@DEFAULT", is_enabled: true };
-    try {
-      const { data, error } = await admin
-        .from("manual_payment_settings")
-        .select("upi_id, is_enabled")
-        .eq("id", 1)
-        .maybeSingle();
-      if (error) throw error;
-      if (data) {
-        paymentSettings = data;
-      }
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error ?? "");
-      const fallbackCodes = ["manual_payment_settings", "42501", "42P01", "42703", "does not exist", "Unexpected table"];
-      if (!fallbackCodes.some((token) => message.includes(token))) {
-        throw error;
-      }
-    }
+    const { data: paymentSettings, error: paymentSettingsError } = await admin
+      .from("manual_payment_settings")
+      .select("upi_id, is_enabled")
+      .eq("id", 1)
+      .maybeSingle();
+    if (paymentSettingsError) throw paymentSettingsError;
 
     if (!paymentSettings?.is_enabled || !paymentSettings.upi_id) {
       return apiError("Manual UPI payments are not configured yet.", 503, "MANUAL_PAYMENTS_NOT_CONFIGURED");
