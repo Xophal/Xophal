@@ -1,13 +1,13 @@
 import { NextRequest } from "next/server";
 import { z } from "zod";
 import { apiError, apiSuccess, handleApiError, validateBody } from "@/lib/api-utils";
-import { requireAdminAuth } from "@/lib/auth";
+import { requireAdminRole } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { validateProductScope } from "@/lib/subscription-pricing";
+import { type ProductCatalogRecord, validateProductScope } from "@/lib/subscription-pricing";
 
 const productSchema = z.object({
   code: z.string().min(3).max(80),
-  product_type: z.enum(["free", "class_9_monthly", "class_10_season_pass"]),
+  product_type: z.enum(["free", "premium", "pro", "class_9_monthly", "class_10_season_pass"]),
   board_code: z.string().min(2).max(32).default("seba"),
   class_number: z.union([z.literal(9), z.literal(10)]),
   name: z.string().min(2).max(200),
@@ -18,6 +18,8 @@ const productSchema = z.object({
   duration_days: z.number().int().positive().nullable().optional(),
   validity_starts_at: z.string().optional().nullable(),
   validity_ends_at: z.string().optional().nullable(),
+  early_bird_starts_at: z.string().optional().nullable(),
+  early_bird_ends_at: z.string().optional().nullable(),
   is_active: z.boolean().optional().default(true),
   is_public: z.boolean().optional().default(true),
   metadata: z.record(z.any()).optional().default({}),
@@ -25,7 +27,7 @@ const productSchema = z.object({
 
 export async function GET() {
   try {
-    await requireAdminAuth();
+    await requireAdminRole(["super_admin", "admin", "subscription_admin"]);
     const { data, error } = await createAdminClient()
       .from("product_catalog")
       .select("*")
@@ -41,15 +43,18 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
-    await requireAdminAuth();
+    await requireAdminRole(["super_admin", "admin", "subscription_admin"]);
     const payload = await validateBody(productSchema, await request.json());
-    const product = {
+    const product: ProductCatalogRecord = {
       ...payload,
+      board_code: payload.board_code ?? "seba",
       description: payload.description || null,
       metadata: payload.metadata ?? {},
+      price_paise: Number(payload.price_paise ?? 0),
+      class_number: payload.class_number,
     };
 
-    if (!validateProductScope(product as any)) {
+    if (!validateProductScope(product)) {
       return apiError("Product scope is not valid for the approved SEBA product model.", 400, "INVALID_PRODUCT_SCOPE");
     }
 

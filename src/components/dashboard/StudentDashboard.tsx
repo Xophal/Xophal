@@ -7,6 +7,7 @@ import {
   Check,
   CheckCircle2,
   Circle,
+  CreditCard,
   Flame,
   Lightbulb,
   ListChecks,
@@ -171,6 +172,9 @@ export default function StudentDashboard({
               </Link>
               <Link href="/mock-tests" className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-white/20 bg-white/5 px-4 text-sm font-semibold text-white transition hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300">
                 <Target className="h-4 w-4" aria-hidden="true" />{t("hero.takeMockTest")}
+              </Link>
+              <Link href="/subscriptions" className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-emerald-200/30 bg-emerald-300/10 px-4 text-sm font-semibold text-emerald-100 transition hover:bg-emerald-300/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300">
+                <CreditCard className="h-4 w-4" aria-hidden="true" />Subscriptions
               </Link>
             </div>
           </div>

@@ -49,31 +49,49 @@ async function getApprovedProductEntitlement(userId: string): Promise<Entitlemen
   const admin = createAdminClient();
   const { data: approvedSubmissions, error } = await admin
     .from("payment_submissions")
-    .select("id, approved_at, product_id, product_catalog(code, name, product_type, duration_days)")
+    .select("id, approved_at, subscription_id, product_snapshot, product_catalog(code, name, product_type, duration_days)")
     .eq("user_id", userId)
     .eq("status", "approved")
+    .is("subscription_id", null)
     .order("approved_at", { ascending: false })
     .limit(25);
 
   if (error) throw error;
 
   const eligible = (approvedSubmissions ?? []).reduce<EntitlementStatus | null>((best, submission) => {
+    const snapshot = submission?.product_snapshot as {
+      product_type?: unknown;
+      validity_starts_at?: unknown;
+      validity_ends_at?: unknown;
+      duration_days?: unknown;
+    } | null;
     const productCatalog = Array.isArray(submission?.product_catalog)
       ? submission.product_catalog[0]
       : submission?.product_catalog;
-    const productType = normalizeProductType(productCatalog?.product_type ?? null);
+    const productType = normalizeProductType(snapshot?.product_type ?? productCatalog?.product_type ?? null);
     const approvedAt = submission?.approved_at ? new Date(submission.approved_at) : null;
-    const durationDays = Number(productCatalog?.duration_days ?? 0);
+    const snapshotExpiry = typeof snapshot?.validity_ends_at === "string"
+      ? new Date(snapshot.validity_ends_at)
+      : null;
+    const snapshotStart = typeof snapshot?.validity_starts_at === "string"
+      ? new Date(snapshot.validity_starts_at)
+      : null;
+    const durationDays = Number(snapshot?.duration_days ?? productCatalog?.duration_days ?? 0);
 
     if (!productType || !approvedAt || !Number.isFinite(approvedAt.getTime())) {
       return best;
     }
 
-    const expiresAtDate = durationDays > 0
+    const expiresAtDate = snapshotExpiry && Number.isFinite(snapshotExpiry.getTime())
+      ? snapshotExpiry
+      : durationDays > 0
       ? new Date(approvedAt.getTime() + durationDays * 24 * 60 * 60 * 1000)
       : approvedAt;
 
-    if (expiresAtDate.getTime() <= Date.now()) {
+    if (
+      expiresAtDate.getTime() <= Date.now() ||
+      (snapshotStart && Number.isFinite(snapshotStart.getTime()) && snapshotStart.getTime() > Date.now())
+    ) {
       return best;
     }
 
@@ -103,6 +121,7 @@ export async function getUserEntitlement(userId: string): Promise<EntitlementSta
     .select("id, status, expires_at, plan_id, subscription_plans(code, name, price, currency, duration_days)")
     .eq("user_id", userId)
     .eq("status", "active")
+    .lte("starts_at", new Date().toISOString())
     .gt("expires_at", new Date().toISOString())
     .order("starts_at", { ascending: false })
     .limit(1)
