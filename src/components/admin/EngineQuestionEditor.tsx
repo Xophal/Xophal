@@ -14,10 +14,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import Upload from "@/components/shared/Upload";
 import { toast } from "@/hooks/use-toast";
 import type { CreateEngineQuestionInput, EngineOptionInput } from "@/lib/engine/question-schema";
 import type { EngineStatus } from "@/lib/engine/vocab";
-import { ENGINE_BOARDS, ENGINE_SKILLS, ENGINE_SOURCES, ENGINE_TYPES } from "@/lib/engine/vocab";
+import { ENGINE_BOARDS, ENGINE_SKILLS, ENGINE_SOURCES, ENGINE_TYPES, LEGACY_QTYPE_FOR_ENGINE } from "@/lib/engine/vocab";
 
 /* ------------------------------------------------------------------ types */
 
@@ -43,6 +44,9 @@ export type EngineQuestionRow = {
   tags: string[] | null;
   question_options?: EngineOptionRow[] | null;
   question_answers?: EngineAnswerRow[] | null;
+  question_type?: { code?: string | null; name?: string | null } | Array<{ code?: string | null; name?: string | null }> | null;
+  image_url?: string | null;
+  topic?: { name?: string | null; chapters?: { name?: string | null; subjects?: { name?: string | null } | null } | null } | null;
   question_tags?: Array<{ tag: string }> | null;
   question_stats?: EngineStatsRow[] | null;
 };
@@ -174,6 +178,8 @@ export default function EngineQuestionEditor({
   const [source, setSource] = useState<string>("manual");
   const [tags, setTags] = useState("");
   const [explanation, setExplanation] = useState("");
+  const [questionTypeCode, setQuestionTypeCode] = useState("single_correct");
+  const [imageUrl, setImageUrl] = useState("");
   const [options, setOptions] = useState<EditableOption[]>(toEditableOptions(null));
   const [assertion, setAssertion] = useState("");
   const [reason, setReason] = useState("");
@@ -192,13 +198,18 @@ export default function EngineQuestionEditor({
   /** Single-correct types must have exactly one tick, so selecting one clears the rest. */
   const toggleCorrect = useCallback(
     (idx: number) => {
-      const single = type === "mcq" || type === "assertion_reason" || type === "statement";
+      const single = questionTypeCode !== "multiple_correct" && (type === "mcq" || type === "assertion_reason" || type === "statement");
       setOptions((prev) =>
         prev.map((o, i) => ({ ...o, is_correct: single ? i === idx : i === idx ? !o.is_correct : o.is_correct }))
       );
     },
-    [type]
+    [type, questionTypeCode]
   );
+
+  function changeEngineType(nextType: string) {
+    setType(nextType);
+    setQuestionTypeCode(LEGACY_QTYPE_FOR_ENGINE[nextType as keyof typeof LEGACY_QTYPE_FOR_ENGINE] ?? "single_correct");
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -218,6 +229,9 @@ export default function EngineQuestionEditor({
         const q = qjson.data;
         setExisting(q);
         setType(q.engine_type ?? "mcq");
+        const questionType = Array.isArray(q.question_type) ? q.question_type[0] : q.question_type;
+        setQuestionTypeCode(questionType?.code ?? "single_correct");
+        setImageUrl(q.image_url ?? "");
         setStem(q.stem ?? q.question_text ?? "");
         setTopicId(q.topic_id ?? "");
         setSubtopicId(q.subtopic_id ?? "");
@@ -275,6 +289,9 @@ export default function EngineQuestionEditor({
     const optInput = OPTION_TYPES.has(type) ? toEngineOptionInput(options) : [];
 
     const answer: Record<string, unknown> = {};
+    const correctLabels = options.filter((option) => option.is_correct).map((option) => option.label);
+    if (correctLabels.length === 1) answer.correct_option = correctLabels[0];
+    if (correctLabels.length > 1) answer.correct_options = correctLabels;
     if (type === "assertion_reason") {
       answer.assertion = assertion.trim();
       answer.reason = reason.trim();
@@ -300,6 +317,8 @@ export default function EngineQuestionEditor({
       type: type as CreateEngineQuestionInput["type"],
       stem: stem.trim(),
       topicId,
+      questionTypeCode,
+      imageUrl,
       subtopicId: subtopicId || null,
       parentId: parentId || null,
       difficulty: Number(difficulty) as 1 | 2 | 3,
@@ -380,7 +399,7 @@ export default function EngineQuestionEditor({
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-1.5">
             <Label htmlFor="eq-type">Type</Label>
-            <Select value={type} onValueChange={setType}>
+            <Select value={type} onValueChange={changeEngineType}>
               <SelectTrigger id="eq-type">
                 <SelectValue />
               </SelectTrigger>
@@ -394,7 +413,7 @@ export default function EngineQuestionEditor({
             </Select>
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="eq-topic">Topic</Label>
+            <Label htmlFor="eq-topic">Topic (optional)</Label>
             <Select
               value={topicId}
               onValueChange={(v) => {
@@ -414,6 +433,24 @@ export default function EngineQuestionEditor({
               </SelectContent>
             </Select>
           </div>
+        </div>
+
+        <div className="space-y-2">
+          <Label>Optional question diagram</Label>
+          <Upload
+            bucket="public"
+            path="question-diagrams"
+            accept="image/png,image/jpeg,image/webp,image/gif"
+            onUploadComplete={(files) => {
+              if (files[0]) setImageUrl(files[0].url);
+            }}
+          />
+          {imageUrl && (
+            <div className="flex flex-wrap items-center gap-3">
+              <img src={imageUrl} alt="Question diagram preview" className="max-h-40 rounded-md border object-contain" />
+              <Button type="button" variant="outline" size="sm" onClick={() => setImageUrl("")}>Remove diagram</Button>
+            </div>
+          )}
         </div>
 
         <div className="space-y-1.5">
@@ -446,7 +483,7 @@ export default function EngineQuestionEditor({
             {options.map((o, i) => (
               <div key={i} className="flex items-center gap-2">
                 <input
-                  type={type === "statement" || type === "fill_blank" ? "checkbox" : "radio"}
+                  type={questionTypeCode === "multiple_correct" || type === "statement" || type === "fill_blank" ? "checkbox" : "radio"}
                   className="h-4 w-4"
                   checked={o.is_correct}
                   onChange={() => toggleCorrect(i)}
@@ -649,7 +686,7 @@ export default function EngineQuestionEditor({
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <Button onClick={() => void save()} disabled={saving || !stem.trim() || !topicId}>
+          <Button onClick={() => void save()} disabled={saving || !stem.trim()}>
             {saving ? "Saving…" : questionId ? "Save changes" : "Create question"}
           </Button>
           {onCancel && (

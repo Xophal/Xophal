@@ -118,6 +118,20 @@ describe("engine question schema", () => {
     expect(res.success).toBe(false);
   });
 
+  it("allows a question to remain unassigned and preserves its question type", () => {
+    const parsed = createEngineQuestionSchema.parse({
+      type: "mcq",
+      stem: "Choose all that apply",
+      topicId: "",
+      difficulty: 1,
+      skill: "recall",
+      questionTypeCode: "multiple_correct",
+      imageUrl: "",
+    });
+    expect(parsed.topicId).toBe("");
+    expect(parsed.questionTypeCode).toBe("multiple_correct");
+  });
+
   it("coerces query paging and applies query defaults", () => {
     const q = engineQuestionQuerySchema.parse({ page: "2", limit: "5" });
     expect(q.page).toBe(2);
@@ -143,6 +157,11 @@ describe("validateOptionsForType", () => {
     expect(validateOptionsForType("mcq", opts([["a", false], ["b", true]]))).toBeNull();
     expect(validateOptionsForType("mcq", opts([["a", false], ["b", false]]))).toMatch(/exactly one/i);
     expect(validateOptionsForType("mcq", opts([["a", true], ["b", true]]))).toMatch(/exactly one/i);
+  });
+
+  it("allows multiple correct options for multiple-correct mcqs", () => {
+    expect(validateOptionsForType("mcq", opts([["a", true], ["b", false], ["c", true]]), "multiple_correct")).toBeNull();
+    expect(validateOptionsForType("mcq", opts([["a", false], ["b", false]]), "multiple_correct")).toMatch(/at least one/i);
   });
 
   it("requires at least two options", () => {

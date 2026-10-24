@@ -77,9 +77,11 @@ const assertionSchema = z.object({ assertion: z.string().trim().min(1).max(3000)
 export const createEngineQuestionSchema = z.object({
   type: z.enum(ENGINE_TYPES),
   stem: z.string().trim().min(1).max(12000),
-  topicId: z.string().uuid(),
+  topicId: uuidOrEmpty,
   subtopicId: z.string().uuid().nullable().optional(),
   parentId: z.string().uuid().nullable().optional(),
+  questionTypeCode: z.string().trim().min(1).max(50).optional(),
+  imageUrl: z.string().url().optional().or(z.literal("")),
   chapterId: uuidOrEmpty,
   subjectId: uuidOrEmpty,
   difficulty: z.union([z.literal(1), z.literal(2), z.literal(3)]),
@@ -178,6 +180,9 @@ export const engineQuestionQuerySchema = z.object({
   type: z.string().trim().max(40).optional().default(""),
   status: z.string().trim().max(40).optional().default(""),
   topicId: z.string().trim().max(40).optional().default(""),
+  chapterId: z.string().trim().max(40).optional().default(""),
+  subjectId: z.string().trim().max(40).optional().default(""),
+  unassigned: z.enum(["true", "false"]).optional().default("false"),
   difficulty: z.coerce.number().int().min(0).max(3).optional().default(0),
   board: z.string().trim().max(20).optional().default(""),
 });
@@ -263,8 +268,6 @@ export function buildAnswerJson(
   return { ...derived, ...(input.answer ?? {}) };
 }
 
-const csvCell = z.string().trim();
-
 /**
  * A missing or blank CSV cell means "use the fallback" rather than "invalid
  * value": `z.string().trim()` turns "" into an empty string, which an enum
@@ -337,13 +340,21 @@ export function parseCsvRows(csv: string): Array<Record<string, string>> {
  * Per-type structural validation of the option list.
  * Returns an error message, or null when valid.
  */
-export function validateOptionsForType(type: CreateEngineQuestionInput["type"], options: EngineOptionInput[]): string | null {
+export function validateOptionsForType(
+  type: CreateEngineQuestionInput["type"],
+  options: EngineOptionInput[],
+  questionTypeCode?: string
+): string | null {
   const bodies = options.map((o) => (o.body?.trim() ? o.body : (o.text ?? "").trim()));
   if (type === "mcq" || type === "assertion_reason" || type === "statement") {
     if (options.length < 2) return "At least two options are required.";
     if (options.length > 6) return "No more than six options are allowed.";
     if (bodies.some((b) => !b)) return "Every option needs text.";
     const correct = options.filter((o) => (o.is_correct ?? o.isCorrect ?? false)).length;
+    if (type === "mcq" && questionTypeCode === "multiple_correct") {
+      if (correct < 1) return "At least one option must be marked correct.";
+      return null;
+    }
     if (correct !== 1) return "Exactly one option must be marked correct.";
     return null;
   }

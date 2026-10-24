@@ -7,7 +7,7 @@ import EngineQuestionEditor, {
 } from "@/components/admin/EngineQuestionEditor";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -45,10 +45,9 @@ const STATUS_BADGE: Record<EngineStatus, "default" | "secondary" | "outline" | "
 };
 
 const CSV_TEMPLATE = [
-  "type,stem,topic_slug,difficulty,skill,marks,neg_marks,est_time_sec,board_pattern,tags,options,answer_json,rubric_json,explanation",
-  'mcq,"Which gas turns limewater milky?",corrosion-and-rancidity,1,recall,1,0.25,60,CBSE,"reactions|recall",',
-  '"[ {""label"":""A"",""body"":""Oxygen"",""is_correct"":false},{""label"":""B"",""body"":""Carbon dioxide"",""is_correct"":true},{""label"":""C"",""body"":""Hydrogen"",""is_correct"":false} ]",',
-  '"{""correct_option"":""B""}","", "Carbon dioxide reacts with limewater to form calcium carbonate."',
+  "question,option_a,option_b,option_c,option_d,correct_answer,marks,negative_marks,time_seconds,type,explanation",
+  '"Which gas turns limewater milky?","Oxygen","Carbon dioxide","Hydrogen","Nitrogen","B",1,0.25,60,single_correct,"Carbon dioxide reacts with limewater to form calcium carbonate."',
+  '"Select all prime numbers.","2","4","5","9","A|C",2,0,45,multiple_correct,"2 and 5 are prime."',
 ].join("\n");
 
 export default function EngineQuestionsPage() {
@@ -63,6 +62,7 @@ export default function EngineQuestionsPage() {
   const [statusFilter, setStatusFilter] = useState("");
   const [topicFilter, setTopicFilter] = useState("");
   const [difficultyFilter, setDifficultyFilter] = useState("");
+  const [unassignedOnly, setUnassignedOnly] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -94,6 +94,7 @@ export default function EngineQuestionsPage() {
       if (statusFilter) params.set("status", statusFilter);
       if (topicFilter) params.set("topicId", topicFilter);
       if (difficultyFilter) params.set("difficulty", difficultyFilter);
+      if (unassignedOnly) params.set("unassigned", "true");
       const res = await fetch(`/api/admin/engine/questions?${params.toString()}`, { cache: "no-store" });
       const json = (await res.json()) as ListResponse;
       if (!res.ok || !json.success) throw new Error(json.error ?? "Failed to load questions");
@@ -110,10 +111,13 @@ export default function EngineQuestionsPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, search, typeFilter, statusFilter, topicFilter, difficultyFilter]);
+  }, [page, search, typeFilter, statusFilter, topicFilter, difficultyFilter, unassignedOnly]);
 
   useEffect(() => {
-    void load();
+    const refresh = async () => {
+      await load();
+    };
+    void refresh();
   }, [load]);
 
   function resetFilters() {
@@ -123,6 +127,7 @@ export default function EngineQuestionsPage() {
     setStatusFilter("");
     setTopicFilter("");
     setDifficultyFilter("");
+    setUnassignedOnly(false);
   }
 
   async function transition(id: string, to: EngineStatus, reviewNotes: string) {
@@ -205,8 +210,7 @@ export default function EngineQuestionsPage() {
         <div>
           <h1 className="text-2xl font-semibold">Question bank</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            All {ENGINE_TYPES.length} engine question types. Imported and AI-generated content stays in draft until
-            a reviewer publishes it.
+            Import simple four-option questions, then assign each question a topic before using it in a mock test.
           </p>
         </div>
         <Button onClick={() => setCreating(true)}>New question</Button>
@@ -233,12 +237,12 @@ export default function EngineQuestionsPage() {
         <TabsList>
           <TabsTrigger value="list">Browse</TabsTrigger>
           <TabsTrigger value="queue">Review queue</TabsTrigger>
-          <TabsTrigger value="import">CSV import</TabsTrigger>
+          <TabsTrigger value="import">Import questions</TabsTrigger>
         </TabsList>
 
         <TabsContent value="list" className="space-y-4">
           <Card>
-            <CardContent className="grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-6">
+            <CardContent className="grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-7">
               <div className="space-y-1.5 lg:col-span-2">
                 <Label htmlFor="f-search">Search stem</Label>
                 <Input
@@ -325,6 +329,17 @@ export default function EngineQuestionsPage() {
                   <option value="3">3</option>
                 </select>
               </div>
+              <label className="flex items-end gap-2 pb-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={unassignedOnly}
+                  onChange={(event) => {
+                    setUnassignedOnly(event.target.checked);
+                    setPage(1);
+                  }}
+                />
+                Needs topic assignment
+              </label>
               <div className="flex items-end">
                 <Button variant="outline" onClick={resetFilters}>
                   Reset
@@ -428,8 +443,14 @@ function QuestionRow({
             {row.source === "ai" && <Badge variant="outline">AI</Badge>}
             {row.source === "import" && <Badge variant="outline">import</Badge>}
             {row.pyq_year ? <Badge variant="outline">PYQ {row.pyq_year}</Badge> : null}
+            {!row.topic_id ? <Badge variant="secondary">Needs curriculum</Badge> : null}
           </div>
           <p className="line-clamp-2 text-sm font-medium">{stem}</p>
+          {row.topic?.chapters && (
+            <p className="text-xs text-muted-foreground">
+              {[row.topic.chapters.subjects?.name, row.topic.chapters.name, row.topic.name].filter(Boolean).join(" › ")}
+            </p>
+          )}
           <p className="text-xs text-muted-foreground">
             {row.skill ?? "recall"} &middot; {row.marks ?? 1} marks &middot; {row.neg_marks ?? 0} neg &middot;{" "}
             {row.est_time_sec ?? 60}s &middot; {row.board_pattern ?? "CBSE"}
@@ -490,7 +511,10 @@ function ReviewQueue({ onDone, onEdit }: { onDone: () => void; onEdit: (id: stri
   }, []);
 
   useEffect(() => {
-    void load();
+    const refresh = async () => {
+      await load();
+    };
+    void refresh();
   }, [load]);
 
   async function decide(id: string, to: EngineStatus) {
@@ -574,35 +598,64 @@ function ReviewQueue({ onDone, onEdit }: { onDone: () => void; onEdit: (id: stri
 /* --------------------------------------------------------- csv import */
 
 function CsvImport({ onDone }: { onDone: () => void }) {
-  const [csv, setCsv] = useState("");
-  const [defaultStatus, setDefaultStatus] = useState<"draft" | "reviewed">("draft");
+  const [file, setFile] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
   const [created, setCreated] = useState<number | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [preview, setPreview] = useState<{
+    totalRows: number;
+    validRows: number;
+    invalidRows: number;
+    issues: Array<{ row: number; field: string; message: string }>;
+  } | null>(null);
 
-  async function run() {
-    if (!csv.trim()) {
-      toast({ title: "Nothing to import", description: "Paste CSV text first.", variant: "destructive" });
+  async function run(action: "preview" | "import") {
+    if (!file) {
+      setError("Choose a .csv or .xlsx file first.");
       return;
     }
     setBusy(true);
-    setCreated(null);
+    setError(null);
     try {
-      const res = await fetch("/api/admin/engine/questions", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ csv, defaultStatus }),
-      });
-      const json = (await res.json()) as { success: boolean; data?: { created: number }; error?: string };
-      if (!res.ok || !json.success) throw new Error(json.error ?? "Import failed");
-      setCreated(json.data?.created ?? 0);
-      toast({ title: `Imported ${json.data?.created ?? 0} question(s)` });
-      onDone();
+      const form = new FormData();
+      form.append("file", file);
+      form.append("action", action);
+      const res = await fetch("/api/admin/question-bank/import", { method: "POST", body: form });
+      const json = (await res.json()) as {
+        success: boolean;
+        data?: {
+          totalRows: number;
+          validRows: number;
+          invalidRows: number;
+          issues: Array<{ row: number; field: string; message: string }>;
+          imported?: number;
+        };
+        error?: string;
+      };
+      if (!res.ok || !json.success || !json.data) throw new Error(json.error ?? "Import failed");
+      if (action === "preview") {
+        setPreview(json.data);
+        setCreated(null);
+        if (json.data.invalidRows) {
+          toast({
+            title: "Review spreadsheet issues",
+            description: `${json.data.invalidRows} row(s) need fixes.`,
+            variant: "destructive",
+          });
+        } else {
+          toast({ title: "Spreadsheet ready", description: `${json.data.validRows} question(s) passed validation.` });
+        }
+      } else {
+        setCreated(json.data.imported ?? 0);
+        setPreview(null);
+        toast({
+          title: `Imported ${json.data.imported ?? 0} question(s)`,
+          description: "Questions are published in the bank and ready to classify.",
+        });
+        onDone();
+      }
     } catch (err) {
-      toast({
-        title: "Import failed",
-        description: err instanceof Error ? err.message : String(err),
-        variant: "destructive",
-      });
+      setError(err instanceof Error ? err.message : String(err));
     } finally {
       setBusy(false);
     }
@@ -612,52 +665,77 @@ function CsvImport({ onDone }: { onDone: () => void }) {
     <div className="grid gap-4 lg:grid-cols-2">
       <Card>
         <CardHeader>
-          <CardTitle>Paste CSV</CardTitle>
+          <CardTitle>Upload a question spreadsheet</CardTitle>
+          <CardDescription>
+            Import up to 500 four-option questions from CSV or XLSX. Preview validation before confirming.
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
           <p className="text-sm text-muted-foreground">
-            Header row required. Options must be a JSON array; answer_json and rubric_json are optional. Validation
-            is all-or-nothing: one bad row rejects the whole batch. Max 500 rows.
+            Required: question, four options, correct_answer, marks, negative_marks, and time_seconds (1–60).
+            Optional: type and explanation. Separate multiple correct answers with <code>|</code>. Add diagrams to
+            each question after import.
           </p>
-          <Textarea rows={16} value={csv} onChange={(e) => setCsv(e.target.value)} placeholder={CSV_TEMPLATE} />
+          <Input
+            id="question-import-file"
+            type="file"
+            accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            onChange={(event) => {
+              setFile(event.target.files?.[0] ?? null);
+              setPreview(null);
+              setCreated(null);
+              setError(null);
+            }}
+          />
+          {file && <p className="text-sm text-muted-foreground">Selected: {file.name}</p>}
           <div className="flex flex-wrap items-center gap-3">
-            <Label htmlFor="imp-status" className="text-sm">
-              Import as
-            </Label>
-            <select
-              id="imp-status"
-              className="glass-input rounded-md px-2 py-1 text-sm"
-              value={defaultStatus}
-              onChange={(e) => setDefaultStatus(e.target.value === "reviewed" ? "reviewed" : "draft")}
-            >
-              <option value="draft">draft (recommended)</option>
-              <option value="reviewed">reviewed</option>
-            </select>
-            <Button onClick={() => void run()} disabled={busy}>
-              {busy ? "Importingâ€¦" : "Run import"}
+            <Button onClick={() => void run("preview")} disabled={busy || !file}>
+              {busy ? "Checking…" : "Preview spreadsheet"}
             </Button>
-            {created !== null && <Badge variant="outline">{created} created</Badge>}
+            {preview && preview.invalidRows === 0 && preview.validRows > 0 && (
+              <Button onClick={() => void run("import")} disabled={busy}>
+                {busy ? "Importing…" : `Import ${preview.validRows} questions`}
+              </Button>
+            )}
+            {created !== null && <Badge variant="outline">{created} imported</Badge>}
           </div>
+          {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
+          {preview && (
+            <div className="space-y-2 rounded-md border p-3 text-sm">
+              <p>
+                Rows: {preview.totalRows} · Valid: {preview.validRows} · Invalid: {preview.invalidRows}
+              </p>
+              {preview.issues.length > 0 && (
+                <ul className="max-h-48 space-y-1 overflow-y-auto text-destructive">
+                  {preview.issues.map((issue, index) => (
+                    <li key={`${issue.row}-${issue.field}-${index}`}>
+                      Row {issue.row}, {issue.field}: {issue.message}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
         </CardContent>
       </Card>
       <Card>
         <CardHeader>
-          <CardTitle>Template</CardTitle>
+          <CardTitle>Spreadsheet template</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3 text-sm">
-          <p className="text-muted-foreground">
-            Required: <code>type</code>, <code>stem</code>, <code>topic_slug</code>, <code>difficulty</code>,{" "}
-            <code>skill</code>.
+          <p className="text-muted-foreground">Download this CSV, fill it in Excel, and upload the saved CSV or XLSX.</p>
+          <pre className="overflow-x-auto whitespace-pre-wrap rounded-md bg-muted/50 p-3 text-xs">{CSV_TEMPLATE}</pre>
+          <a
+            className="inline-flex h-9 items-center justify-center rounded-md border px-4 text-sm font-medium"
+            href={`data:text/csv;charset=utf-8,${encodeURIComponent(CSV_TEMPLATE)}`}
+            download="question-bank-template.csv"
+          >
+            Download CSV template
+          </a>
+          <p className="text-xs text-muted-foreground">
+            Types: single_correct, multiple_correct, assertion_reason, case_study, diagram_based, match_following,
+            or true_false. Leave type blank for a standard single-correct MCQ.
           </p>
-          <p className="text-muted-foreground">
-            Optional: <code>subtopic_slug</code>, <code>marks</code>, <code>neg_marks</code>,{" "}
-            <code>est_time_sec</code>, <code>board_pattern</code>, <code>tags</code> (pipe separated),{" "}
-            <code>options</code>, <code>answer_json</code>, <code>rubric_json</code>, <code>explanation</code>.
-          </p>
-          <pre className="overflow-x-auto rounded-md bg-muted/50 p-3 text-xs">{CSV_TEMPLATE}</pre>
-          <Button variant="outline" onClick={() => setCsv(CSV_TEMPLATE)}>
-            Load template into editor
-          </Button>
         </CardContent>
       </Card>
     </div>

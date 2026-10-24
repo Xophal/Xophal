@@ -15,7 +15,7 @@ import { buildAnswerJson, validateOptionsForType, withEngineDefaults } from "./q
 
 type Admin = SupabaseClient;
 
-const LIST_SELECT = "id,question_text,explanation,marks,negative_marks,time_seconds,tags,status,is_active,is_verified,created_at,updated_at,topic_id,chapter_id,subject_id,question_type_id,difficulty_level_id,engine_type,stem,parent_id,subtopic_id,difficulty,skill,neg_marks,est_time_sec,board_pattern,pyq_year,lang,engine_status,source,review_notes";
+const LIST_SELECT = "id,question_text,explanation,image_url,marks,negative_marks,time_seconds,tags,status,is_active,is_verified,created_at,updated_at,topic_id,chapter_id,subject_id,question_type_id,difficulty_level_id,engine_type,stem,parent_id,subtopic_id,difficulty,skill,neg_marks,est_time_sec,board_pattern,pyq_year,lang,engine_status,source,review_notes,question_type:question_types(code,name),topic:topics(name,chapters(name,subjects(name)))";
 
 function norm(opts: EngineOptionInput[] | undefined): NormalizedEngineOption[] {
   return (opts ?? []).map((o, i) => ({
@@ -44,8 +44,8 @@ function rawFallback(stored: unknown): EngineOptionInput[] {
   });
 }
 
-async function vocab(admin: Admin, type: EngineType, level: number) {
-  const legacyQ = LEGACY_QTYPE_FOR_ENGINE[type] ?? "single_correct";
+async function vocab(admin: Admin, type: EngineType, level: number, questionTypeCode?: string) {
+  const legacyQ = questionTypeCode ?? LEGACY_QTYPE_FOR_ENGINE[type] ?? "single_correct";
   const legacyD = LEGACY_DIFF_FOR_LEVEL[String(level)] ?? "medium";
   const { data: qt, error: qe } = await admin.from("question_types").select("id,code").ilike("code", legacyQ).maybeSingle();
   if (qe || !qt) throw new ApiError(500, `Question type '${legacyQ}' is not configured.`, "VOCAB_MISSING");
@@ -83,6 +83,9 @@ export async function listEngineQuestions(admin: Admin, q: EngineQuestionQuery) 
   if (q.type) query = query.eq("engine_type", q.type);
   if (q.status) query = query.eq("engine_status", q.status);
   if (q.topicId) query = query.eq("topic_id", q.topicId);
+  if (q.chapterId) query = query.eq("chapter_id", q.chapterId);
+  if (q.subjectId) query = query.eq("subject_id", q.subjectId);
+  if (q.unassigned === "true") query = query.is("topic_id", null);
   if (q.difficulty) query = query.eq("difficulty", q.difficulty);
   if (q.board) query = query.eq("board_pattern", q.board);
   const offset = (q.page - 1) * q.limit;
@@ -104,11 +107,11 @@ export async function getEngineQuestion(admin: Admin, id: string) {
 
 export async function createEngineQuestion(admin: Admin, userId: string | null, draft: CreateEngineQuestionInput) {
   const input = withEngineDefaults(draft);
-  const optErr = validateOptionsForType(input.type, input.options);
+  const optErr = validateOptionsForType(input.type, input.options, input.questionTypeCode);
   if (optErr) throw new ApiError(400, optErr, "INVALID_OPTIONS");
   const options = norm(input.options);
-  const { qt, dl } = await vocab(admin, input.type, input.difficulty);
-  const chain = await topicChain(admin, input.topicId);
+  const { qt, dl } = await vocab(admin, input.type, input.difficulty, input.questionTypeCode);
+  const chain = input.topicId ? await topicChain(admin, input.topicId) : { chapterId: null, subjectId: null };
   const subtopicId: string | null = input.subtopicId ?? null;
   if (subtopicId) {
     const { data: st } = await admin.from("subtopics").select("id,topic_id").eq("id", subtopicId).maybeSingle();
@@ -123,10 +126,11 @@ export async function createEngineQuestion(admin: Admin, userId: string | null, 
   const payload = {
     question_type_id: qt.id,
     difficulty_level_id: dl.id,
-    topic_id: input.topicId,
+    topic_id: input.topicId || null,
     chapter_id: input.chapterId || chain.chapterId,
     subject_id: input.subjectId || chain.subjectId,
     question_text: input.stem.trim(),
+    image_url: input.imageUrl || null,
     explanation,
     marks: input.marks,
     negative_marks: input.negMarks,
@@ -166,18 +170,38 @@ export async function createEngineQuestion(admin: Admin, userId: string | null, 
 export async function updateEngineQuestion(admin: Admin, id: string, input: UpdateEngineQuestionInput) {
   const cur = await getEngineQuestion(admin, id) as Record<string, unknown>;
   const type = (input.type ?? cur.engine_type ?? "mcq") as EngineType;
+  const storedQuestionType = Array.isArray(cur.question_type) ? cur.question_type[0] : cur.question_type;
+  const questionTypeCode = input.questionTypeCode ?? (storedQuestionType as { code?: string } | null)?.code;
   const options = norm(input.options !== undefined ? input.options : rawFallback(cur.question_options));
-  const optErr = validateOptionsForType(type, options.map((o) => ({ label: o.label, body: o.body, is_correct: o.is_correct, position: o.position })));
+  const optErr = validateOptionsForType(
+    type,
+    options.map((o) => ({ label: o.label, body: o.body, is_correct: o.is_correct, position: o.position })),
+    questionTypeCode
+  );
   if (optErr) throw new ApiError(400, optErr, "INVALID_OPTIONS");
-  if (input.topicId) await topicChain(admin, input.topicId);
+  const chain = input.topicId
+    ? await topicChain(admin, input.topicId)
+    : input.topicId === ""
+      ? { chapterId: null, subjectId: null }
+      : null;
   if (input.status && !isAllowedEngineTransition(String(cur.engine_status ?? "draft") as EngineStatus, input.status as EngineStatus)) {
     throw new ApiError(400, `Cannot move status from ${String(cur.engine_status)} to ${String(input.status)}.`, "INVALID_TRANSITION");
   }
   const updates: Record<string, unknown> = { updated_at: new Date().toISOString() };
   if (input.stem !== undefined) { updates.question_text = input.stem.trim(); updates.stem = input.stem.trim(); }
-  if (input.type !== undefined) { const v = await vocab(admin, input.type, Number(input.difficulty ?? cur.difficulty)); updates.question_type_id = v.qt.id; updates.engine_type = input.type; }
-  if (input.difficulty !== undefined) { const v = await vocab(admin, type, input.difficulty); updates.difficulty_level_id = v.dl.id; updates.difficulty = input.difficulty; }
-  if (input.topicId !== undefined) updates.topic_id = input.topicId;
+  if (input.imageUrl !== undefined) updates.image_url = input.imageUrl || null;
+  if (input.type !== undefined || input.questionTypeCode !== undefined) {
+    const v = await vocab(admin, type, Number(input.difficulty ?? cur.difficulty ?? 2), input.questionTypeCode);
+    updates.question_type_id = v.qt.id;
+    if (input.type !== undefined) updates.engine_type = input.type;
+  }
+  if (input.difficulty !== undefined) { const v = await vocab(admin, type, input.difficulty, input.questionTypeCode); updates.difficulty_level_id = v.dl.id; updates.difficulty = input.difficulty; }
+  if (input.topicId !== undefined) {
+    updates.topic_id = input.topicId || null;
+    updates.chapter_id = chain?.chapterId ?? null;
+    updates.subject_id = chain?.subjectId ?? null;
+    if (!input.topicId) updates.subtopic_id = null;
+  }
   if (input.subtopicId !== undefined) updates.subtopic_id = input.subtopicId;
   if (input.parentId !== undefined) updates.parent_id = input.parentId;
   if (input.skill !== undefined) updates.skill = input.skill;
