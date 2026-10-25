@@ -204,10 +204,28 @@ function isSupabaseAuthConfigured() {
   }
 }
 
+function isLocalDevRuntimeAllowed() {
+  if (process.env.NODE_ENV === "production") return false;
+  if (process.env.VERCEL === "1" || process.env.VERCEL === "true") return false;
+  if (process.env.CI === "true") return false;
+  const appUrl = (process.env.NEXT_PUBLIC_APP_URL ?? "").trim();
+  if (appUrl) {
+    try {
+      const hostname = new URL(appUrl).hostname.toLowerCase();
+      if (hostname !== "localhost" && !hostname.endsWith(".local") && hostname !== "127.0.0.1" && hostname !== "0.0.0.0") {
+        return false;
+      }
+    } catch {
+      return false;
+    }
+  }
+  return true;
+}
+
 function getDevBypassSession(): { user: User; profile: Profile } | null {
   const enableFlag = process.env.LOCAL_DEV_SKIP_AUTH;
   const isTestRuntime = process.env.NODE_ENV === "test" || process.env.VITEST === "true" || process.env.CI === "true";
-  const isLocalDev = !isTestRuntime && process.env.NODE_ENV !== "production";
+  const isLocalDev = !isTestRuntime && isLocalDevRuntimeAllowed();
   const explicitBypass = isLocalDev && (enableFlag === "true" || enableFlag === "1");
   const missingSupabaseConfig = isLocalDev && !isSupabaseAuthConfigured();
 

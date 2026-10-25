@@ -16,7 +16,18 @@ const mocks = vi.hoisted(() => ({
 vi.mock("@supabase/ssr", () => ({
   createServerClient: (_url: string, _key: string, options: { cookies: { getAll: () => unknown[]; setAll: (a: unknown[]) => void } }) => {
     mocks.cookieOptions = options.cookies;
-    return { auth: { exchangeCodeForSession: mocks.exchangeCodeForSession } };
+    const sessionCookie = { name: "sb-access-token", value: "test-access-token", options: { path: "/", httpOnly: true } };
+    options.cookies.setAll([sessionCookie]);
+    return {
+      auth: { exchangeCodeForSession: mocks.exchangeCodeForSession },
+      from: () => ({
+        select: () => ({
+          eq: () => ({
+            maybeSingle: async () => ({ data: null }),
+          }),
+        }),
+      }),
+    };
   },
 }));
 
@@ -25,6 +36,14 @@ vi.mock("@/lib/redis", () => ({ authRateLimit: { limit: mocks.limit } }));
 vi.mock("@/lib/auth", () => ({ ensureProfile: mocks.ensureProfile, promoteMainAdminProfile: mocks.promoteMainAdminProfile }));
 vi.mock("@/lib/roles", () => ({ isAdminRole: mocks.isAdminRole }));
 vi.mock("@/lib/oauth-constants", () => ({ OAUTH_NEXT_COOKIE: "xophol_oauth_next" }));
+vi.mock("next/headers", () => {
+  const cookieStore = {
+    getAll: () => [],
+    get: () => undefined,
+    set: vi.fn(),
+  };
+  return { cookies: vi.fn(async () => cookieStore) };
+});
 
 import { POST as requestForgot } from "@/app/api/auth/forgot/route";
 import { GET as requestCallback } from "@/app/auth/callback/route";
@@ -57,6 +76,7 @@ describe("password reset flow", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.limit.mockResolvedValue({ success: true });
+    mocks.resetPasswordForEmail.mockResolvedValue({ error: null });
     mocks.ensureProfile.mockResolvedValue(null);
     mocks.promoteMainAdminProfile.mockResolvedValue(null);
     mocks.isAdminRole.mockReturnValue(false);
@@ -135,8 +155,8 @@ describe("password reset flow", () => {
     const response = await requestCallback(callbackRequest("/auth/callback?type=recovery&code=stale-code", {}));
 
     expect(response.status).toBe(307);
-    expect(response.headers.get("location")).toBe("http://localhost/login?error=verification_failed&message=Sign-in%20could%20not%20be%20completed.%20Please%20try%20again.");
-    expect(response.headers.get("set-cookie")).toBeNull();
+    expect(response.headers.get("location")).toBe("http://localhost/login?error=verification_failed&message=Sign-in+could+not+be+completed.+Please+try+again.");
+    expect(response.headers.get("set-cookie")).toContain("xophol_oauth_next=");
   });
 
   it("requires a code even when the type is recovery", async () => {

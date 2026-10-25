@@ -158,7 +158,6 @@ export const testResponseSchema = z.object({
 
 export const finalTestSubmissionSchema = z.object({
   attempt_id: z.string().uuid(),
-  expired: z.boolean().optional().default(false),
   responses: z.array(testResponseSchema).max(500),
 });
 

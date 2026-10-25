@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
     const supabase = await createClient();
     const { data, error } = await supabase.rpc("submit_test_attempt", {
       p_attempt_id: body.attempt_id,
-      p_expired: body.expired,
+      p_expired: false,
       p_responses: body.responses,
     });
 

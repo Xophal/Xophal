@@ -120,7 +120,6 @@ export default function MockRunner({ slug }: { slug: string }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           attempt_id: attemptId,
-          expired: expiredByTimer || isExpired,
           responses: Object.values(responses).map((item) => ({
             question_id: item.question_id,
             ...(item.selected_option_ids?.length ? { selected_option_ids: item.selected_option_ids } : {}),

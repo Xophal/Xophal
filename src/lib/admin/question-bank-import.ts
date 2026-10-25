@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { z } from "zod";
 import { parseCsvRows } from "@/lib/engine/question-schema";
 
@@ -59,6 +60,21 @@ export function normalizeQuestionImportRow(row: Record<string, unknown>) {
     normalized[ALIASES[key] ?? key] = typeof value === "string" ? value.trim() : value;
   }
   return normalized;
+}
+
+export function buildQuestionImportLegacyId(row: Pick<BankQuestionImportRow, "question" | "type" | "option_a" | "option_b" | "option_c" | "option_d" | "correctAnswers" | "marks" | "negative_marks" | "time_seconds" | "explanation">) {
+  const payload = {
+    type: row.type,
+    question: row.question,
+    options: [row.option_a, row.option_b, row.option_c, row.option_d],
+    correctAnswers: [...row.correctAnswers].sort(),
+    marks: row.marks,
+    negative_marks: row.negative_marks ?? 0,
+    time_seconds: row.time_seconds,
+    explanation: row.explanation ?? "",
+  };
+
+  return `question-import:${createHash("sha1").update(JSON.stringify(payload)).digest("hex")}`;
 }
 
 export function validateQuestionImportRows(rawRows: Record<string, unknown>[]) {

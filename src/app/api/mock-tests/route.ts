@@ -297,7 +297,8 @@ export async function POST(request: NextRequest) {
 
     const { data, error } = await adminClient
       .from("mock_tests")
-      .insert({
+      .insert([
+        {
           test_type_id: testTypeId,
           title: payload.title,
           slug: payload.slug,
@@ -319,7 +320,8 @@ export async function POST(request: NextRequest) {
           year: payload.year ?? new Date().getFullYear(),
           instructions: payload.instructions || null,
           metadata: curriculumMetadata,
-        })
+        },
+      ])
       .select()
       .single();
 

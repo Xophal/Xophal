@@ -51,6 +51,22 @@ describe("public route allowlist", () => {
     expect(response.headers.get("location")).toContain("/login");
   });
 
+  it("disables the local dev bypass when the app is configured for a remote host", async () => {
+    vi.stubEnv("NODE_ENV", "development");
+    vi.stubEnv("VERCEL", "1");
+    vi.stubEnv("LOCAL_DEV_SKIP_AUTH", "true");
+    vi.stubEnv("NEXT_PUBLIC_APP_URL", "https://xophol.vercel.app");
+
+    try {
+      const response = await updateSession(buildRequest("/dashboard"));
+
+      expect(response.status).toBe(307);
+      expect(response.headers.get("location")).toContain("/login");
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+
   it("keeps authenticated visitors on the public homepage", async () => {
     const maybeSingle = vi.fn().mockResolvedValue({
       data: { role_id: "student", roles: [{ code: "student" }] },

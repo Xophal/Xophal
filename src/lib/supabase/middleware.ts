@@ -10,10 +10,25 @@ function copySupabaseCookies(target: NextResponse, source: NextResponse) {
 }
 
 function shouldUseLocalDevBypass() {
-  const isLocalEnv = process.env.NODE_ENV !== "production";
+  if (process.env.NODE_ENV === "production") return false;
+  if (process.env.VERCEL === "1" || process.env.VERCEL === "true") return false;
+  if (process.env.CI === "true") return false;
+
+  const appUrl = (process.env.NEXT_PUBLIC_APP_URL ?? "").trim();
+  if (appUrl) {
+    try {
+      const hostname = new URL(appUrl).hostname.toLowerCase();
+      if (hostname !== "localhost" && !hostname.endsWith(".local") && hostname !== "127.0.0.1" && hostname !== "0.0.0.0") {
+        return false;
+      }
+    } catch {
+      return false;
+    }
+  }
+
   const bypassEnabled = process.env.LOCAL_DEV_SKIP_AUTH === "true" || process.env.LOCAL_DEV_SKIP_AUTH === "1";
   const missingSupabaseConfig = !process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  return isLocalEnv && (bypassEnabled || missingSupabaseConfig);
+  return (bypassEnabled || missingSupabaseConfig);
 }
 
 export async function updateSession(request: NextRequest) {

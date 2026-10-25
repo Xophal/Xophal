@@ -31,7 +31,7 @@ function readNextCookie(raw: string | undefined) {
   }
 }
 
-function redirectWithError(origin: string, code: string, message: string, next: string | null) {
+function redirectWithError(origin: string, code: string, message: string | null, next: string | null) {
   const url = new URL("/login", origin);
   url.searchParams.set("error", code);
   if (message) url.searchParams.set("message", message.slice(0, 300));
@@ -64,7 +64,7 @@ export async function GET(request: NextRequest) {
   }
 
   if (!code) {
-    return redirectWithError(requestUrl.origin, "verification_failed", "Sign-in could not be completed. No authorization code was returned.", next);
+    return redirectWithError(requestUrl.origin, "verification_failed", null, next);
   }
 
   const cookieStore = await cookies();
@@ -95,7 +95,12 @@ export async function GET(request: NextRequest) {
       message: error?.message,
       hasUser: Boolean(data?.user),
     });
-    return redirectWithError(requestUrl.origin, "verification_failed", error?.message || "Sign-in could not be completed. Please try again.", next);
+    return redirectWithError(
+      requestUrl.origin,
+      "verification_failed",
+      "Sign-in could not be completed. Please try again.",
+      next
+    );
   }
 
   // Password-reset links arrive as `?type=recovery&code=...`. The session has

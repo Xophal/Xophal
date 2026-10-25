@@ -16,7 +16,6 @@ const answerSchema = z.object({
 });
 const submitSchema = z.object({
   answers: z.array(answerSchema).max(500),
-  expired: z.boolean().default(false),
 });
 type Params = { params: Promise<{ attemptId: string }> };
 
@@ -30,7 +29,7 @@ export async function POST(request: NextRequest, { params }: Params) {
     const { data, error } = await supabase.rpc("submit_engine_attempt", {
       p_attempt_id: attemptId,
       p_answers: payload.answers,
-      p_expired: payload.expired,
+      p_expired: false,
     });
     if (error) {
       if (error.message.includes("not found")) throw new ApiError(404, "Attempt not found.", "ATTEMPT_NOT_FOUND");

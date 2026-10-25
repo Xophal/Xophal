@@ -6,6 +6,7 @@ const mocks = vi.hoisted(() => ({
   requireVerifiedSession: vi.fn(),
   requireAdminRole: vi.fn(),
   createAdminClient: vi.fn(),
+  checkRateLimit: vi.fn(),
 }));
 
 vi.mock("@/lib/auth", () => ({
@@ -21,8 +22,39 @@ vi.mock("@/lib/supabase/admin", () => ({
   createAdminClient: mocks.createAdminClient,
 }));
 
+vi.mock("@/lib/rate-limit", () => ({
+  checkRateLimit: mocks.checkRateLimit,
+}));
+
 import { POST as submitPayment } from "@/app/api/payments/submissions/route";
 import { PATCH as approveSubmission } from "@/app/api/admin/payment-submissions/[id]/route";
+
+const REQUEST_ID = "33333333-3333-4333-8333-333333333333";
+
+function createPaymentRequest(fields: Record<string, string>) {
+  const formData = new FormData();
+  formData.set("payment_request_id", REQUEST_ID);
+  formData.set("payment_paid_at", "2026-10-24T12:00");
+  formData.set("claimed_amount", "49.00");
+  formData.set("reference_code", "UPI-REF-123");
+  for (const [key, value] of Object.entries(fields)) formData.set(key, value);
+  formData.set("receipt", new File([
+    new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+  ], "receipt.png", { type: "image/png" }));
+
+  return new NextRequest("http://localhost/api/payments/submissions", {
+    method: "POST",
+    body: formData,
+  });
+}
+
+function createStorageMock() {
+  const bucket = {
+    upload: vi.fn().mockResolvedValue({ data: { path: "user/receipt.png" }, error: null }),
+    remove: vi.fn().mockResolvedValue({ data: [], error: null }),
+  };
+  return { from: vi.fn(() => bucket), bucket };
+}
 
 function createQuery(data: unknown) {
   const query: Record<string, ReturnType<typeof vi.fn>> = {};
@@ -45,30 +77,34 @@ describe("manual payment submissions", () => {
     vi.clearAllMocks();
   });
 
-  it("creates a pending payment submission for a valid product and rejects price mismatch", async () => {
+  it("creates a pending submission while keeping the claimed amount separate from the expected price", async () => {
     const product = {
       id: "11111111-1111-4111-8111-111111111111",
       code: "seba_class_9_monthly",
-      product_type: "class_9_monthly",
+      product_type: "premium",
       board_code: "seba",
       class_number: 9,
-      name: "SEBA Class 9 Monthly",
-      price_paise: 14900,
-      early_bird_price_paise: 12900,
+      name: "Class 9 Premium",
+      price_paise: 4900,
+      duration_days: 30,
+      early_bird_price_paise: null,
       school_price_paise: null,
       is_active: true,
     };
 
     const productQuery = createQuery(product);
+    const requestIdQuery = createQuery(null);
     const duplicateQuery = createQuery(null);
     const insertQuery = createQuery({
-      id: "submission-123",
+      id: REQUEST_ID,
       status: "pending_verification",
       product_id: product.id,
-      amount_minor: 14900,
-      final_amount_minor: 14900,
+      amount_minor: 4900,
+      claimed_amount_minor: 1200,
+      final_amount_minor: 4900,
     });
     const settingsQuery = createQuery({ upi_id: "merchant@bank", is_enabled: true });
+    const storage = createStorageMock();
 
     let paymentSubmissionCallCount = 0;
 
@@ -78,50 +114,59 @@ describe("manual payment submissions", () => {
     });
     mocks.requireVerifiedSession.mockReturnValue({ isAuthenticated: true });
     mocks.createAdminClient.mockReturnValue({
+      storage: storage,
       from: vi.fn((table: string) => {
         if (table === "manual_payment_settings") return settingsQuery;
         if (table === "product_catalog") return productQuery;
         if (table === "payment_submissions") {
           paymentSubmissionCallCount += 1;
-          return paymentSubmissionCallCount === 1 ? duplicateQuery : insertQuery;
+          if (paymentSubmissionCallCount === 1) return requestIdQuery;
+          if (paymentSubmissionCallCount === 2) return duplicateQuery;
+          return insertQuery;
         }
         throw new Error(`Unexpected table: ${table}`);
       }),
     });
 
-    const response = await submitPayment(new NextRequest("http://localhost/api/payments/submissions", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ product_id: product.id, amount_minor: 14900, reference_code: "UPI-REF-123", evidence_url: "https://example.com/evidence.png" }),
+    const response = await submitPayment(createPaymentRequest({
+      product_id: product.id,
+      claimed_amount: "12.00",
     }));
 
     expect(response.status).toBe(201);
     expect(mocks.createAdminClient).toHaveBeenCalled();
-
-    const mismatchResponse = await submitPayment(new NextRequest("http://localhost/api/payments/submissions", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ product_id: product.id, amount_minor: 12000, reference_code: "UPI-REF-456", evidence_url: "https://example.com/evidence2.png" }),
-    }));
-
-    expect(mismatchResponse.status).toBe(400);
-    await expect(mismatchResponse.json()).resolves.toMatchObject({
-      success: false,
-      code: "PRICE_MISMATCH",
-    });
+    expect(storage.bucket.upload).toHaveBeenCalledWith(
+      expect.stringMatching(new RegExp(`^user-123/${REQUEST_ID}-[0-9a-f-]+\\.png$`)),
+      expect.any(Uint8Array),
+      expect.objectContaining({ contentType: "image/png", upsert: false })
+    );
+    expect(insertQuery.insert).toHaveBeenCalledWith([
+      expect.objectContaining({
+        amount_minor: 4900,
+        claimed_amount_minor: 1200,
+        id: REQUEST_ID,
+        status: "pending_verification",
+      }),
+    ]);
+    const inserted = await response.json();
+    expect(inserted.data.id).toBe(REQUEST_ID);
+    expect(inserted.data.amount_minor).toBe(4900);
+    expect(inserted.data.claimed_amount_minor).toBe(1200);
   });
 
   it("requires verified, user-specific school eligibility before applying school pricing", async () => {
     const product = {
       id: "11111111-1111-4111-8111-111111111111",
-      code: "seba_class_9_monthly",
-      product_type: "class_9_monthly",
+      code: "seba_class_10_premium",
+      product_type: "premium",
       board_code: "seba",
-      class_number: 9,
-      name: "SEBA Class 9 Monthly",
-      price_paise: 14900,
+      class_number: 10,
+      name: "HSLC 2027 Premium",
+      price_paise: 19900,
       early_bird_price_paise: null,
       school_price_paise: 9900,
+      validity_starts_at: "2026-11-01T00:00:00+05:30",
+      validity_ends_at: "2027-03-31T23:59:59+05:30",
       is_active: true,
     };
     const productQuery = createQuery(product);
@@ -130,10 +175,17 @@ describe("manual payment submissions", () => {
       school_id: "22222222-2222-4222-8222-222222222222",
       student_id: "user-123",
     });
-    const schoolQuery = createQuery({ is_verified: true });
+    const schoolQuery = createQuery({
+      is_verified: true,
+      class_10_total_students: 100,
+      class_10_covered_students: 80,
+      name: "Verified School",
+    });
+    const requestIdQuery = createQuery(null);
     const duplicateQuery = createQuery(null);
     const insertQuery = createQuery({ id: "submission-school", status: "pending_verification" });
     const settingsQuery = createQuery({ upi_id: "merchant@bank", is_enabled: true });
+    const storage = createStorageMock();
 
     mocks.requireAuth.mockResolvedValue({
       user: { id: "user-123" },
@@ -141,27 +193,23 @@ describe("manual payment submissions", () => {
     });
     mocks.requireVerifiedSession.mockReturnValue({ isAuthenticated: true });
     mocks.createAdminClient.mockReturnValue({
+      storage: storage,
       from: vi.fn((table: string) => {
         if (table === "manual_payment_settings") return settingsQuery;
         if (table === "product_catalog") return productQuery;
         if (table === "school_student_eligibility") return eligibilityQuery;
         if (table === "school_records") return schoolQuery;
         if (table === "payment_submissions") {
+          if (requestIdQuery.maybeSingle.mock.calls.length === 0) return requestIdQuery;
           return duplicateQuery.maybeSingle.mock.calls.length ? insertQuery : duplicateQuery;
         }
         throw new Error(`Unexpected table: ${table}`);
       }),
     });
 
-    const response = await submitPayment(new NextRequest("http://localhost/api/payments/submissions", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        product_id: product.id,
-        school_id: "22222222-2222-4222-8222-222222222222",
-        amount_minor: 9900,
-        reference_code: "UPI-SCHOOL-123",
-      }),
+    const response = await submitPayment(createPaymentRequest({
+      product_id: product.id,
+      school_id: "22222222-2222-4222-8222-222222222222",
     }));
 
     expect(response.status).toBe(201);
@@ -169,21 +217,29 @@ describe("manual payment submissions", () => {
     expect(eligibilityQuery.or).toHaveBeenCalledWith(`product_id.is.null,product_id.eq.${product.id}`);
     expect(eligibilityQuery.not).toHaveBeenCalledWith("verified_at", "is", null);
     expect(insertQuery.insert).toHaveBeenCalledWith([
-      expect.objectContaining({ amount_minor: 9900, discount_minor: 5000 }),
+      expect.objectContaining({
+        amount_minor: 9900,
+        claimed_amount_minor: 4900,
+        discount_minor: 10000,
+        id: REQUEST_ID,
+        status: "pending_verification",
+      }),
     ]);
   });
 
   it("rejects school pricing when the user has no verified eligibility record", async () => {
     const product = {
       id: "11111111-1111-4111-8111-111111111111",
-      code: "seba_class_9_monthly",
-      product_type: "class_9_monthly",
+      code: "seba_class_10_premium",
+      product_type: "premium",
       board_code: "seba",
-      class_number: 9,
-      name: "SEBA Class 9 Monthly",
-      price_paise: 14900,
+      class_number: 10,
+      name: "HSLC 2027 Premium",
+      price_paise: 19900,
       early_bird_price_paise: null,
       school_price_paise: 9900,
+      validity_starts_at: "2026-11-01T00:00:00+05:30",
+      validity_ends_at: "2027-03-31T23:59:59+05:30",
       is_active: true,
     };
     const productQuery = createQuery(product);
@@ -203,15 +259,9 @@ describe("manual payment submissions", () => {
     });
     mocks.createAdminClient.mockReturnValue({ from });
 
-    const response = await submitPayment(new NextRequest("http://localhost/api/payments/submissions", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        product_id: product.id,
-        school_id: "22222222-2222-4222-8222-222222222222",
-        amount_minor: 9900,
-        reference_code: "UPI-SCHOOL-456",
-      }),
+    const response = await submitPayment(createPaymentRequest({
+      product_id: product.id,
+      school_id: "22222222-2222-4222-8222-222222222222",
     }));
 
     expect(response.status).toBe(403);
@@ -292,13 +342,8 @@ describe("manual payment submissions", () => {
     mocks.requireVerifiedSession.mockReturnValue({ isAuthenticated: true });
     mocks.createAdminClient.mockReturnValue({ from });
 
-    const response = await submitPayment(new NextRequest("http://localhost/api/payments/submissions", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        product_id: "11111111-1111-4111-8111-111111111111",
-        reference_code: "UPI-REF-789",
-      }),
+    const response = await submitPayment(createPaymentRequest({
+      product_id: "11111111-1111-4111-8111-111111111111",
     }));
 
     expect(response.status).toBe(503);

@@ -100,7 +100,6 @@ export default function EngineTestRunner({ blueprintSlug }: { blueprintSlug: str
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          expired,
           answers: Object.entries(answersRef.current).map(([question_id, answer]) => ({
             question_id,
             response_json: {

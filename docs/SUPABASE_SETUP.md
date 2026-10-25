@@ -39,6 +39,7 @@ supabase link --project-ref <YOUR_PROJECT_REF>
 
 - The repository contains SQL migrations in the `supabase/migrations/` directory.
 - The eBook marketplace ships as migrations `026_ebook_marketplace.sql` through `029_ebook_razorpay_route.sql` (listings/categories/authors, transactions and payouts, fulfillment/privacy, and Razorpay route hardening). Apply all of them so admin commission rules and the purchase RPCs exist.
+- Manual UPI subscription submissions use the additive migration `048_manual_upi_student_receipts.sql`. It adds claimed payment details and a private `upi-receipts` bucket, and revokes direct student inserts into `payment_submissions`; the application server creates pending requests after validating the student session, plan, amount, and receipt. Apply and verify this in staging before enabling UPI payments. Do not apply migrations or change production settings as part of local development.
 - To apply migrations to your remote project, run:
 
 ```bash

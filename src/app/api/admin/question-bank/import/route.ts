@@ -3,6 +3,7 @@ import { requireAdminRole } from "@/lib/auth";
 import { apiError, apiSuccess, handleApiError } from "@/lib/api-utils";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
+  buildQuestionImportLegacyId,
   parseQuestionImportFile,
   validateQuestionImportRows,
   type BankQuestionType,
@@ -88,6 +89,7 @@ export async function POST(request: NextRequest) {
       for (const row of preview.rows) {
         const questionTypeId = typeIds.get(row.type);
         if (!questionTypeId) throw new Error(`Question type '${row.type}' was not loaded.`);
+        const legacyId = buildQuestionImportLegacyId(row);
         const options = [
           row.option_a,
           row.option_b,
@@ -101,9 +103,18 @@ export async function POST(request: NextRequest) {
           position: index + 1,
           is_correct: row.correctAnswers.includes(String.fromCharCode(65 + index)),
         }));
+
+        const { data: existing, error: existingError } = await admin
+          .from("questions")
+          .select("id")
+          .eq("legacy_id", legacyId)
+          .maybeSingle();
+        if (existingError) throw existingError;
+
         const { data: question, error: questionError } = await admin
           .from("questions")
-          .insert({
+          .upsert({
+            id: existing?.id,
             question_type_id: questionTypeId,
             question_text: row.question,
             stem: row.question,
@@ -113,17 +124,18 @@ export async function POST(request: NextRequest) {
             time_seconds: row.time_seconds,
             est_time_sec: row.time_seconds,
             engine_type: ENGINE_TYPE_BY_BANK_TYPE[row.type],
-            engine_status: "published",
-            status: "published",
+            engine_status: "draft",
+            status: "draft",
             source: "import",
             skill: "recall",
             difficulty: 2,
             board_pattern: "OTHER",
             is_active: true,
-            is_verified: true,
+            is_verified: false,
             created_by: user.id,
+            legacy_id: legacyId,
             metadata: { question_format: row.type },
-          })
+          }, { onConflict: "legacy_id" })
           .select("id")
           .single();
         if (questionError) throw questionError;
@@ -131,20 +143,26 @@ export async function POST(request: NextRequest) {
 
         const { error: optionsError } = await admin
           .from("question_options")
-          .insert(options.map((option) => ({ ...option, question_id: question.id })));
+          .delete()
+          .eq("question_id", question.id);
         if (optionsError) throw optionsError;
+
+        const { error: optionInsertError } = await admin
+          .from("question_options")
+          .insert(options.map((option) => ({ ...option, question_id: question.id })));
+        if (optionInsertError) throw optionInsertError;
 
         const answerJson = row.type === "multiple_correct"
           ? { correct_options: row.correctAnswers }
           : { correct_option: row.correctAnswers[0] };
         const { error: answerError } = await admin
           .from("question_answers")
-          .insert({
+          .upsert({
             question_id: question.id,
             answer_json: answerJson,
             rubric_json: {},
             explanation: row.explanation || null,
-          });
+          }, { onConflict: "question_id" });
         if (answerError) throw answerError;
       }
     } catch (error) {

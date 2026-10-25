@@ -8,12 +8,20 @@ import EbookResources from "@/components/marketing/home/EbookResources";
 import { createClient } from "@/lib/supabase/server";
 
 export default async function HomePage() {
-  const supabase = await createClient();
-  const { data: boards } = await supabase
-    .from("boards")
-    .select("id, code, name, slug, description")
-    .eq("is_active", true)
-    .order("sort_order");
+  let boards: Array<{ id: string; code: string; name: string; slug: string; description: string | null }> = [];
+
+  try {
+    const supabase = await createClient();
+    const { data } = await supabase
+      .from("boards")
+      .select("id, code, name, slug, description")
+      .eq("is_active", true)
+      .order("sort_order");
+
+    boards = data ?? [];
+  } catch (error) {
+    console.error("Could not load public board listings", error);
+  }
 
   return (
     <main className="hx-root home-page">
