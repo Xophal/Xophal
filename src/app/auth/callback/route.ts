@@ -98,6 +98,19 @@ export async function GET(request: NextRequest) {
     return redirectWithError(requestUrl.origin, "verification_failed", error?.message || "Sign-in could not be completed. Please try again.", next);
   }
 
+  // Password-reset links arrive as `?type=recovery&code=...`. The session has
+  // already been established by `exchangeCodeForSession` above, so we hand off to
+  // the `/reset-password` page instead of running the OAuth profile/promotion
+  // side-effects. Passing a recovery code through OAuth logic (or letting the
+  // `!code` check below swallow it) would either leave the user on an OAuth
+  // dashboard or drop them on the homepage with no session.
+  const authType = requestUrl.searchParams.get("type");
+  if (authType === "recovery") {
+    const response = clearNextCookie(NextResponse.redirect(new URL("/reset-password", requestUrl.origin)));
+    refreshedCookies.forEach(({ name, value, options }) => response.cookies.set(name, value, options));
+    return response;
+  }
+
   const { data: profileRow } = await supabase
     .from("profiles")
     .select("role_id, roles(code)")
