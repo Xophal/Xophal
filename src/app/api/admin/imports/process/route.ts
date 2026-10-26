@@ -3,11 +3,23 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { requireAdminRole } from "@/lib/auth";
 import { apiSuccess, apiError, handleApiError } from "@/lib/api-utils";
 
-async function processJob(adminClient: ReturnType<typeof createAdminClient>, job: any) {
-  const rows = job.preview_data ?? [];
-  if (!Array.isArray(rows) || rows.length === 0) {
+type ImportRow = Record<string, unknown>;
+type ImportJob = {
+  entity_type: string;
+  preview_data?: unknown;
+  user_id: string;
+};
+
+function isImportRow(value: unknown): value is ImportRow {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+async function processJob(adminClient: ReturnType<typeof createAdminClient>, job: ImportJob) {
+  const previewData = job.preview_data ?? [];
+  if (!Array.isArray(previewData) || previewData.length === 0 || !previewData.every(isImportRow)) {
     throw new Error("No rows to process");
   }
+  const rows = previewData;
 
   if (job.entity_type === "mock_tests") {
     const inserts = rows.map((r) => ({
@@ -110,7 +122,7 @@ async function processJob(adminClient: ReturnType<typeof createAdminClient>, job
   }
 
   if (job.entity_type === "notes") {
-    const slugify = (s: any) => String(s || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+    const slugify = (s: unknown) => String(s || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
     const inserts = rows.map((r) => ({
       topic_id: r.topic_id || null,
       chapter_id: r.chapter_id || null,
@@ -143,17 +155,43 @@ export async function POST(request: NextRequest) {
     if (job.user_id !== user.id && profile.roles?.[0]?.code !== "super_admin") {
       return apiError("You cannot process this import job", 403, "FORBIDDEN");
     }
+    if (job.status !== "VALIDATED") {
+      return apiError("This import job is no longer available for processing.", 409, "IMPORT_NOT_VALIDATED");
+    }
+    if (job.total_rows <= 0 || !Array.isArray(job.preview_data) || job.preview_data.length !== job.total_rows) {
+      return apiError("This import job has no complete preview data.", 400, "INVALID_IMPORT_PREVIEW");
+    }
+    if (job.invalid_rows > 0) {
+      return apiError("Resolve all validation issues and create a new preview before importing.", 400, "IMPORT_HAS_INVALID_ROWS");
+    }
 
-    // update status to IMPORTING
-    await adminClient.from("import_jobs").update({ status: "IMPORTING" }).eq("id", jobId);
+    const { data: claimedJob, error: claimError } = await adminClient
+      .from("import_jobs")
+      .update({ status: "IMPORTING" })
+      .eq("id", jobId)
+      .eq("status", "VALIDATED")
+      .select("id")
+      .maybeSingle();
+    if (claimError) throw claimError;
+    if (!claimedJob) {
+      return apiError("This import job has already been processed or is being processed.", 409, "IMPORT_ALREADY_CLAIMED");
+    }
 
     try {
       const processed = await processJob(adminClient, job);
-      await adminClient.from("import_jobs").update({ status: "COMPLETED", imported_rows: processed }).eq("id", jobId);
+      const { error: completeError } = await adminClient
+        .from("import_jobs")
+        .update({ status: "COMPLETED", imported_rows: processed })
+        .eq("id", jobId);
+      if (completeError) throw completeError;
       return apiSuccess({ imported: processed });
     } catch (err) {
       console.error("Import processing failed:", err);
-      await adminClient.from("import_jobs").update({ status: "FAILED" }).eq("id", jobId);
+      const { error: failError } = await adminClient
+        .from("import_jobs")
+        .update({ status: "FAILED" })
+        .eq("id", jobId);
+      if (failError) console.error("Could not mark import job as failed:", failError);
       throw err;
     }
   } catch (error) {

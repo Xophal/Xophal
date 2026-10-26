@@ -1,14 +1,16 @@
 import { Metadata } from "next";
+import { connection } from "next/server";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ArrowRight, Clock3, Sparkles } from "lucide-react";
 import { APP_NAME } from "@/constants";
-import { blogDemoPosts, getDemoPostBySlug } from "@/data/blog-demo";
+import { getPublicBlogPost, getPublicBlogPosts } from "@/lib/blog-data";
 import BlogArticle from "@/components/blog/blog-article";
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  await connection();
   const { slug } = await params;
-  const post = getDemoPostBySlug(slug);
+  const post = await getPublicBlogPost(slug);
 
   if (!post) {
     return { title: `Post | ${APP_NAME}` };
@@ -21,14 +23,18 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 }
 
 export default async function PostPage({ params }: { params: Promise<{ slug: string }> }) {
+  await connection();
   const { slug } = await params;
-  const post = getDemoPostBySlug(slug);
+  const [post, posts] = await Promise.all([
+    getPublicBlogPost(slug),
+    getPublicBlogPosts(),
+  ]);
 
   if (!post) {
     return notFound();
   }
 
-  const relatedPosts = blogDemoPosts.filter((item) => item.slug !== post.slug).slice(0, 2);
+  const relatedPosts = posts.filter((item) => item.slug !== post.slug).slice(0, 2);
 
   return (
     <main className="mx-auto max-w-6xl px-4 py-10 md:px-6 lg:px-8 lg:py-14">

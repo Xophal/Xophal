@@ -7,21 +7,23 @@ import { AdminChip, AdminEmpty, AdminLoading } from "@/components/admin/ui";
 type ActivityItem = {
   id?: string | number;
   title?: string;
+  name?: string;
+  filename?: string;
   type?: string;
   date?: string;
+  created_at?: string;
+  updated_at?: string;
 };
 
 async function fetchRecent(url: string): Promise<ActivityItem[]> {
-  try {
-    const res = await fetch(url, { cache: "no-store" });
-    if (!res.ok) return [];
-    const json = await res.json();
-    if (Array.isArray(json)) return json.slice(0, 6);
-    if (Array.isArray(json?.data)) return json.data.slice(0, 6);
-    return [];
-  } catch {
-    return [];
+  const res = await fetch(url, { cache: "no-store" });
+  const json = await res.json();
+  if (!res.ok || !json.success) {
+    throw new Error(json.error || `Could not load ${url}.`);
   }
+  if (Array.isArray(json.data)) return json.data.slice(0, 6);
+  if (Array.isArray(json.data?.data)) return json.data.data.slice(0, 6);
+  throw new Error(`Unexpected response from ${url}.`);
 }
 
 function formatWhen(date?: string) {
@@ -42,22 +44,44 @@ function formatWhen(date?: string) {
 export default function RecentActivity() {
   const [items, setItems] = useState<ActivityItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const [imports, edits] = await Promise.all([
+      const results = await Promise.allSettled([
         fetchRecent("/api/admin/imports"),
         fetchRecent("/api/admin/content"),
       ]);
 
       const merged: ActivityItem[] = [];
-      imports.forEach((it: any) =>
-        merged.push({ id: it.id, title: it.name || it.filename || `Import ${it.id}`, type: "import", date: it.created_at || it.updated_at })
-      );
-      edits.forEach((it: any) =>
-        merged.push({ id: it.id, title: it.title || `Content ${it.id}`, type: "edit", date: it.updated_at || it.created_at })
-      );
+      const errors: string[] = [];
+      const imports = results[0];
+      const edits = results[1];
+      if (imports.status === "fulfilled") {
+        imports.value.forEach((it) =>
+          merged.push({
+            id: it.id,
+            title: it.name || it.filename || `Import ${it.id}`,
+            type: "import",
+            date: it.created_at || it.updated_at,
+          })
+        );
+      } else {
+        errors.push(imports.reason instanceof Error ? imports.reason.message : "Could not load imports.");
+      }
+      if (edits.status === "fulfilled") {
+        edits.value.forEach((it) =>
+          merged.push({
+            id: it.id,
+            title: it.title || `Content ${it.id}`,
+            type: "edit",
+            date: it.updated_at || it.created_at,
+          })
+        );
+      } else {
+        errors.push(edits.reason instanceof Error ? edits.reason.message : "Could not load content activity.");
+      }
       merged.sort((a, b) => {
         const da = a.date ? Date.parse(a.date) : 0;
         const db = b.date ? Date.parse(b.date) : 0;
@@ -66,6 +90,7 @@ export default function RecentActivity() {
 
       if (!cancelled) {
         setItems(merged.slice(0, 6));
+        setError(errors.length > 0 ? errors.join(" ") : null);
         setLoading(false);
       }
     })();
@@ -77,6 +102,7 @@ export default function RecentActivity() {
   if (loading) return <AdminLoading label="Loading recent activity…" />;
 
   if (items.length === 0) {
+    if (error) return <p role="alert" className="text-sm text-red-600">{error}</p>;
     return (
       <AdminEmpty
         icon={UploadCloud}
@@ -88,6 +114,7 @@ export default function RecentActivity() {
 
   return (
     <div className="space-y-3">
+      {error ? <p role="alert" className="text-sm text-red-600">{error}</p> : null}
       {items.map((it, index) => (
         <div key={String(it.id ?? index)} className="admin-row">
           <div className="flex min-w-0 items-center gap-3">
@@ -109,4 +136,3 @@ export default function RecentActivity() {
     </div>
   );
 }
-

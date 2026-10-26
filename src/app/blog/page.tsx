@@ -1,9 +1,11 @@
 import Link from "next/link";
+import { connection } from "next/server";
 import { ArrowRight, Sparkles } from "lucide-react";
-import { blogDemoPosts } from "@/data/blog-demo";
+import { getPublicBlogPosts } from "@/lib/blog-data";
 
-export default function BlogPage() {
-  const posts = blogDemoPosts;
+export default async function BlogPage() {
+  await connection();
+  const posts = await getPublicBlogPosts();
   const featuredPost = posts.find((post) => post.featured) ?? posts[0];
 
   return (

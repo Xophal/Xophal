@@ -53,3 +53,19 @@ export async function POST(request: NextRequest) {
     return handleApiError(error);
   }
 }
+
+export async function GET() {
+  try {
+    await requireAdminAuth();
+    const { data, error } = await createAdminClient()
+      .from("import_jobs")
+      .select("id, entity_type, format, status, filename, total_rows, imported_rows, created_at, updated_at, user_id")
+      .order("created_at", { ascending: false })
+      .limit(20);
+
+    if (error) throw error;
+    return apiSuccess(data ?? []);
+  } catch (error) {
+    return handleApiError(error);
+  }
+}

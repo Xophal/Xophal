@@ -40,12 +40,17 @@ type ImportIssue = {
 };
 
   const [preview, setPreview] = useState<ImportPreview | null>(null);
+  const [jobId, setJobId] = useState<string | null>(null);
   const [issues, setIssues] = useState<ImportIssue[]>([]);
   const [loading, setLoading] = useState(false);
+  const [processing, setProcessing] = useState(false);
+  const [processed, setProcessed] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     setPreview(null);
+    setJobId(null);
+    setProcessed(false);
     setIssues([]);
     setError(null);
 
@@ -78,6 +83,8 @@ type ImportIssue = {
     setError(null);
     setLoading(true);
     setPreview(null);
+    setJobId(null);
+    setProcessed(false);
     setIssues([]);
 
     try {
@@ -100,24 +107,6 @@ type ImportIssue = {
           body: form,
         });
         result = await response.json();
-        // if job created, trigger processing automatically
-        if (result?.data?.job?.id) {
-          try {
-            const proc = await fetch("/api/admin/imports/process", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ jobId: result.data.job.id }),
-            });
-            const procJson = await proc.json();
-            if (!proc.ok) {
-              toast({ title: "Import processing failed", description: procJson.error || "Processing failed on server" });
-            } else {
-              toast({ title: "Import processed", description: `Imported ${procJson.data.imported} rows` });
-            }
-          } catch (e) {
-            // ignore
-          }
-        }
       } else {
         response = await fetch("/api/admin/imports", {
           method: "POST",
@@ -139,14 +128,49 @@ type ImportIssue = {
         return;
       }
 
+      setJobId(result.data.job?.id ? String(result.data.job.id) : null);
       setPreview(result.data.preview ?? null);
       setIssues(result.data.preview?.issues ?? []);
-      toast({ title: "Import preview ready", description: "Validation completed successfully." });
-    } catch {
-      setError("Unable to reach import endpoint.");
-      toast({ title: "Import request failed", description: "Please check your connection and try again." });
+      toast({ title: "Import preview ready", description: "No catalog content has been imported yet." });
+    } catch (requestError) {
+      const message = requestError instanceof Error ? requestError.message : "Unable to reach the import endpoint.";
+      setError(message);
+      toast({ title: "Import request failed", description: message });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleProcessImport = async () => {
+    if (!jobId || !preview) return;
+    if (preview.totalRows === 0 || preview.invalidRows > 0) {
+      setError("Fix all validation issues and preview the corrected file before processing.");
+      return;
+    }
+    if (!window.confirm(`Import ${preview.validRows} validated rows${entityType === "mock_tests" ? ". Mock tests will be published" : ""}? This writes to the content database.`)) {
+      return;
+    }
+
+    setError(null);
+    setProcessing(true);
+    try {
+      const response = await fetch("/api/admin/imports/process", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ jobId }),
+      });
+      const result = await response.json();
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || "Import processing failed.");
+      }
+      setProcessed(true);
+      toast({ title: "Import processed", description: `Imported ${result.data.imported} rows.` });
+    } catch (processError) {
+      const message = processError instanceof Error ? processError.message : "Import processing failed.";
+      setError(message);
+      toast({ title: "Import processing failed", description: message });
+    } finally {
+      setProcessing(false);
     }
   };
 
@@ -156,7 +180,7 @@ type ImportIssue = {
         <CardHeader>
           <CardTitle>Bulk Content Import</CardTitle>
           <CardDescription>
-            Upload CSV, XLSX, or JSON content to validate required fields, duplicates, and row-level issues before processing.
+            Validate a CSV, XLSX, or JSON file first. Preview stores a validation job; processing is a separate action.
           </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4">
@@ -165,7 +189,15 @@ type ImportIssue = {
             <select
               id="entityType"
               value={entityType}
-              onChange={(event) => setEntityType(event.target.value)}
+              onChange={(event) => {
+                setEntityType(event.target.value);
+                setPreview(null);
+                setJobId(null);
+                setProcessed(false);
+                setIssues([]);
+                setError(null);
+              }}
+              disabled={loading || processing}
               className="px-3 py-2 glass-input"
             >
               {ENTITY_OPTIONS.map((option) => (
@@ -178,14 +210,23 @@ type ImportIssue = {
 
           <div className="grid gap-2">
             <Label htmlFor="csvFile">Import file ({fileFormat})</Label>
-            <Input id="csvFile" type="file" accept=".csv,.json,.xlsx,.xls" onChange={handleFileChange} />
+            <Input id="csvFile" type="file" accept=".csv,.json,.xlsx,.xls" onChange={handleFileChange} disabled={loading || processing} />
             {fileName ? <p className="text-sm text-slate-600">Selected file: {fileName}</p> : null}
           </div>
 
           <div className="flex items-center gap-3">
-            <Button variant="default" onClick={handleSubmit} disabled={loading}>
+            <Button variant="default" onClick={handleSubmit} disabled={loading || processing}>
               {loading ? "Validating..." : "Preview Import"}
             </Button>
+            {preview && jobId ? (
+              <Button
+                variant="default"
+                onClick={handleProcessImport}
+                disabled={loading || processing || processed || preview.totalRows === 0 || preview.invalidRows > 0}
+              >
+                {processing ? "Processing..." : processed ? "Import processed" : "Process Import"}
+              </Button>
+            ) : null}
           </div>
           {error ? <p className="text-sm text-red-600">{error}</p> : null}
         </CardContent>
@@ -194,12 +235,17 @@ type ImportIssue = {
       {preview ? (
         <Card>
           <CardHeader>
-            <CardTitle>Preview Results</CardTitle>
+            <CardTitle>{processed ? "Import Results" : "Preview Results"}</CardTitle>
             <CardDescription>
               Total rows: {preview.totalRows} · Valid rows: {preview.validRows} · Invalid rows: {preview.invalidRows} · Duplicates: {preview.duplicateCount}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            {!processed ? (
+              <p className="text-sm text-amber-700">
+                Preview stores validation data only; catalog records are not imported until you select “Process Import”.
+              </p>
+            ) : null}
             {issues.length > 0 ? (
               <div>
                 <p className="mb-2 text-sm font-medium">Issues</p>
