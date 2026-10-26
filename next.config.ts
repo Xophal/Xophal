@@ -6,6 +6,27 @@ import { validateEnv } from "./src/lib/env.server";
 // deployments over a fixable environment-variable gap.
 validateEnv();
 
+const remoteImageHosts = Array.from(
+  new Set(
+    [
+      process.env.NEXT_PUBLIC_SUPABASE_URL,
+      process.env.SUPABASE_URL,
+      process.env.NEXT_PUBLIC_APP_URL,
+      "https://www.xophol.com",
+      "https://xophol.com",
+    ]
+      .filter((value): value is string => Boolean(value?.trim()))
+      .map((value) => {
+        try {
+          return new URL(value).hostname;
+        } catch {
+          return null;
+        }
+      })
+      .filter((value): value is string => Boolean(value))
+  )
+);
+
 const nextConfig: NextConfig = {
   allowedDevOrigins: ["127.0.0.1", "localhost", "10.203.91.253"],
   experimental: {
@@ -14,10 +35,10 @@ const nextConfig: NextConfig = {
     },
   },
   images: {
-    remotePatterns: [
-      { protocol: "http", hostname: "localhost" },
-      { protocol: "https", hostname: "**" },
-    ],
+    remotePatterns: remoteImageHosts.map((hostname) => ({
+      protocol: "https",
+      hostname,
+    })),
   },
   headers: async () => [
     {

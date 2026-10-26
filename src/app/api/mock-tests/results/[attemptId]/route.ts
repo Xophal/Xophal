@@ -35,6 +35,17 @@ export function sanitizeQuestionReview(
   };
 }
 
+export function sanitizeResponseReview(
+  response: { is_correct?: boolean | null; marks_awarded?: number | null } | null | undefined,
+  showSolutions: boolean
+) {
+  if (!showSolutions) return {};
+  return {
+    is_correct: response?.is_correct ?? null,
+    marks_awarded: response?.marks_awarded ?? 0,
+  };
+}
+
 export async function GET(_: Request, { params }: { params: Promise<{ attemptId: string }> }) {
   try {
     const session = await requireAuth();
@@ -86,8 +97,7 @@ export async function GET(_: Request, { params }: { params: Promise<{ attemptId:
         selected_option_ids: response?.selected_option_ids ?? null,
         text_answer: response?.text_answer ?? null,
         numerical_answer: response?.numerical_answer ?? null,
-        is_correct: response?.is_correct ?? null,
-        marks_awarded: response?.marks_awarded ?? 0,
+        ...sanitizeResponseReview(response, showSolutions),
         questions: sanitizeQuestionReview(question, showSolutions),
       };
     });

@@ -52,7 +52,6 @@
     "clsx": "^2.1.1",
     "cmdk": "^1.0.4",
     "date-fns": "^4.1.0",
-    "docker": "^1.0.0",
     "dotenv": "^17.4.2",
     "exceljs": "^3.4.0",
     "framer-motion": "^11.15.0",

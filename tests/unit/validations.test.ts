@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { sanitizeQuestionReview } from "@/app/api/mock-tests/results/[attemptId]/route";
+import {
+  sanitizeQuestionReview,
+  sanitizeResponseReview,
+} from "@/app/api/mock-tests/results/[attemptId]/route";
 import { finalTestSubmissionSchema, loginSchema, registerSchema } from "@/lib/validations";
 
 describe("authentication validation", () => {
@@ -75,5 +78,17 @@ describe("authentication validation", () => {
       { id: "a", option_text: "3" },
       { id: "b", option_text: "4" },
     ]);
+  });
+
+  it("strips per-question correctness and awarded marks when solutions are hidden", () => {
+    expect(
+      sanitizeResponseReview({ is_correct: true, marks_awarded: 1 }, false)
+    ).toEqual({});
+  });
+
+  it("includes per-question correctness and awarded marks when solutions are enabled", () => {
+    expect(
+      sanitizeResponseReview({ is_correct: true, marks_awarded: 1 }, true)
+    ).toEqual({ is_correct: true, marks_awarded: 1 });
   });
 });
