@@ -1,0 +1,99 @@
+- generic [active] [ref=f4e1]:
+  - generic [ref=f4e2]:
+    - main [ref=f4e3]:
+      - generic [ref=f4e4]:
+        - generic [ref=f4e6]:
+          - generic [ref=f4e7]:
+            - generic [ref=f4e8]: Xophol Blog
+            - heading "Real learning ideas for exam-ready students." [level=1] [ref=f4e11]
+          - paragraph [ref=f4e12]: Study strategies, revision systems, and practical exam advice designed for school students who want more clarity and better results.
+        - generic [ref=f4e15]:
+          - generic [ref=f4e16]:
+            - generic [ref=f4e17]: Study Strategy
+            - generic [ref=f4e18]:
+              - heading "How to build a board exam routine that actually works" [level=2] [ref=f4e19]
+              - paragraph [ref=f4e20]: A realistic, sustainable study schedule for Class 10 and 12 students who want consistency instead of burnout.
+            - generic [ref=f4e21]:
+              - generic [ref=f4e22]: Xophol Editorial Desk
+              - generic [ref=f4e23]: •
+              - generic [ref=f4e24]: 7 Sept 2026
+              - generic [ref=f4e25]: •
+              - generic [ref=f4e26]: 6 min read
+          - link "Read article" [ref=f4e28] [cursor=pointer]:
+            - /url: /blog/how-to-build-a-board-exam-routine-that-actually-works
+        - generic [ref=f4e31]:
+          - article [ref=f4e32]:
+            - generic [ref=f4e34]:
+              - generic [ref=f4e35]:
+                - generic [ref=f4e36]: Study Strategy
+                - generic [ref=f4e37]: 6 min read
+              - generic [ref=f4e38]:
+                - heading "How to build a board exam routine that actually works" [level=3] [ref=f4e39]
+                - paragraph [ref=f4e40]: A realistic, sustainable study schedule for Class 10 and 12 students who want consistency instead of burnout.
+              - generic [ref=f4e41]:
+                - generic [ref=f4e42]: Xophol Editorial Desk
+                - link "Read more" [ref=f4e43] [cursor=pointer]:
+                  - /url: /blog/how-to-build-a-board-exam-routine-that-actually-works
+          - article [ref=f4e46]:
+            - generic [ref=f4e48]:
+              - generic [ref=f4e49]:
+                - generic [ref=f4e50]: Mock Tests
+                - generic [ref=f4e51]: 4 min read
+              - generic [ref=f4e52]:
+                - heading "3 mistakes students make in mock tests" [level=3] [ref=f4e53]
+                - paragraph [ref=f4e54]: Mock tests are meant to reveal weak spots, not just generate a score. Here is how to use them properly.
+              - generic [ref=f4e55]:
+                - generic [ref=f4e56]: Nisha Dutta
+                - link "Read more" [ref=f4e57] [cursor=pointer]:
+                  - /url: /blog/3-mistakes-students-make-in-mock-tests
+          - article [ref=f4e60]:
+            - generic [ref=f4e62]:
+              - generic [ref=f4e63]:
+                - generic [ref=f4e64]: Science
+                - generic [ref=f4e65]: 5 min read
+              - generic [ref=f4e66]:
+                - heading "How to revise Science without burning out" [level=3] [ref=f4e67]
+                - paragraph [ref=f4e68]: Short, active revision cycles make science easier to remember than long sessions of passive rereading.
+              - generic [ref=f4e69]:
+                - generic [ref=f4e70]: Rituraj Sen
+                - link "Read more" [ref=f4e71] [cursor=pointer]:
+                  - /url: /blog/how-to-revise-science-without-burning-out
+          - article [ref=f4e74]:
+            - generic [ref=f4e76]:
+              - generic [ref=f4e77]:
+                - generic [ref=f4e78]: Mathematics
+                - generic [ref=f4e79]: 5 min read
+              - generic [ref=f4e80]:
+                - heading "A smarter way to study Maths before your exam" [level=3] [ref=f4e81]
+                - paragraph [ref=f4e82]: Build confidence in Maths by focusing on concepts, patterns, and a simple error log instead of memorisation alone.
+              - generic [ref=f4e83]:
+                - generic [ref=f4e84]: Ananya Roy
+                - link "Read more" [ref=f4e85] [cursor=pointer]:
+                  - /url: /blog/a-smarter-way-to-study-maths-before-your-exam
+          - article [ref=f4e88]:
+            - generic [ref=f4e90]:
+              - generic [ref=f4e91]:
+                - generic [ref=f4e92]: Language
+                - generic [ref=f4e93]: 6 min read
+              - generic [ref=f4e94]:
+                - heading "How to write stronger answers in Assamese and English" [level=3] [ref=f4e95]
+                - paragraph [ref=f4e96]: Improve clarity, structure and confidence in language papers with simple, repeatable writing habits.
+              - generic [ref=f4e97]:
+                - generic [ref=f4e98]: Pallavi Gogoi
+                - link "Read more" [ref=f4e99] [cursor=pointer]:
+                  - /url: /blog/how-to-write-stronger-answers-in-assamese-and-english
+          - article [ref=f4e102]:
+            - generic [ref=f4e104]:
+              - generic [ref=f4e105]:
+                - generic [ref=f4e106]: Exam Strategy
+                - generic [ref=f4e107]: 7 min read
+              - generic [ref=f4e108]:
+                - heading "The last 30 days before your board exams" [level=3] [ref=f4e109]
+                - paragraph [ref=f4e110]: A focused plan for the final month—how to revise, recover energy, and enter the exam hall calmer than before.
+              - generic [ref=f4e111]:
+                - generic [ref=f4e112]: Xophol Learning Desk
+                - link "Read more" [ref=f4e113] [cursor=pointer]:
+                  - /url: /blog/the-last-30-days-before-your-board-exams
+    - region "Notifications (F8)":
+      - list
+  - alert [ref=f4e116]

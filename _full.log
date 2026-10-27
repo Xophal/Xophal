@@ -1,0 +1,20 @@
+
+[1m[30m[46m RUN [49m[39m[22m [36mv4.1.11 [39m[90mC:/Users/Saurabh/Desktop/Xophol Mock[39m
+
+ [31m❯[39m tests/unit/password-reset.test.ts [2m([22m[2m0 test[22m[2m)[22m
+ [31m❯[39m tests/unit/tiny-smoke.test.ts [2m([22m[2m0 test[22m[2m)[22m
+ [32m✓[39m tests/unit/deploy-check.test.ts [2m([22m[2m5 tests[22m[2m)[22m[33m 2925[2mms[22m[39m
+     [33m[2m✓[22m[39m accepts a complete production configuration [33m 450[2mms[22m[39m
+     [33m[2m✓[22m[39m rejects missing required configuration [33m 435[2mms[22m[39m
+     [33m[2m✓[22m[39m rejects insecure URLs and the local authentication bypass [33m 506[2mms[22m[39m
+     [33m[2m✓[22m[39m requires two distinct valid admin approver emails [33m 354[2mms[22m[39m
+     [33m[2m✓[22m[39m requires a dedicated Route webhook secret only when seller payouts are enabled [33m 1176[2mms[22m[39m
+ [32m✓[39m tests/unit/payment-submissions.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 125[2mms[22m[39m
+ [32m✓[39m tests/unit/subscription-order.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 50[2mms[22m[39m
+ [32m✓[39m tests/unit/origin-guard.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 38[2mms[22m[39m
+ [32m✓[39m tests/unit/dashboard-metrics.test.ts [2m([22m[2m45 tests[22m[2m)[22m[32m 241[2mms[22m[39m
+ [32m✓[39m tests/unit/phase3-generator.test.ts [2m([22m[2m63 tests[22m[2m)[22m[32m 134[2mms[22m[39m
+ [32m✓[39m tests/unit/ch1-question-bank-import.test.ts [2m([22m[2m14 tests[22m[2m)[22m[32m 148[2mms[22m[39m
+ [32m✓[39m tests/unit/ai-study-plan-route.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 49[2mms[22m[39m
+ [32m✓[39m tests/unit/analytics.test.ts [2m([22m[2m14 tests[22m[2m)[22m[32m 68[2mms[22m[39m
+ [32m✓[39m tests/unit/env.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 213[2mms[22m[39m

@@ -4,7 +4,7 @@ import { ApiError } from "@/lib/api-utils";
 import type { ResolvedSection } from "./blueprint-service";
 import { getBlueprint, loadPool } from "./blueprint-service";
 import type { Candidate, GenerationWarning, PickedQuestion } from "./generator";
-import { dailySeed, generateStatic, hashSeed } from "./generator";
+import { createRng, dailySeed, generateStatic, hashSeed, seededShuffle } from "./generator";
 
 type Admin = SupabaseClient;
 
@@ -25,6 +25,10 @@ export function computeMaxMarks(
   const sectionById = new Map(sections.map((section) => [section.id, section]));
   const total = picks.reduce((sum, pick) => sum + Number(sectionById.get(pick.sectionId ?? "")?.marks_per_q ?? 0), 0);
   return Math.round(total * 100) / 100;
+}
+
+export function isFixedPaperComplete(expectedCount: number, snapshotCount: number): boolean {
+  return expectedCount > 0 && snapshotCount === expectedCount;
 }
 
 /**
@@ -73,70 +77,113 @@ export async function generateInstance(
     throw new ApiError(400, "This blueprint has no sections, so no paper can be generated.", "NO_SECTIONS");
   }
 
-  const pool = await loadPool(admin);
-  if (pool.length === 0) {
-    throw new ApiError(400, "The question bank has no published questions yet.", "EMPTY_BANK");
+  const seed = opts.seed ?? dailySeed(opts.dateISO ?? new Date().toISOString().slice(0, 10), blueprint.slug);
+  const fixedQuestions = blueprint.fixedQuestions;
+  if (
+    blueprint.source_mock_test_id &&
+    !isFixedPaperComplete(
+      sections.reduce((count, section) => count + section.count, 0),
+      fixedQuestions.length
+    )
+  ) {
+    throw new ApiError(409, "This mock test's fixed paper snapshot is incomplete.", "FIXED_PAPER_INCOMPLETE");
   }
 
-  const seed = opts.seed ?? dailySeed(opts.dateISO ?? new Date().toISOString().slice(0, 10), blueprint.slug);
+  let result: ReturnType<typeof generateStatic>;
+  let snapshots: Map<string, { question: Record<string, unknown>; answer: Record<string, unknown> }>;
 
-  const recentlySeen = opts.userId ? await loadRecentlySeen(admin, opts.userId) : [];
-  const allowRepeat = opts.allowRepeat ?? recentlySeen.length >= pool.length;
+  if (fixedQuestions.length > 0) {
+    const orderedFixedQuestions = blueprint.shuffle_questions
+      ? seededShuffle(fixedQuestions, createRng(seed))
+      : fixedQuestions;
+    result = {
+      picks: orderedFixedQuestions.map((question, index) => ({
+        questionId: question.question_id,
+        sectionId: question.section_id,
+        position: index,
+        difficulty: null,
+      })),
+      warnings: [],
+      seed,
+      usedRelaxations: [],
+    };
+    snapshots = new Map(fixedQuestions.map((question) => [
+      question.question_id,
+      {
+        question: question.question_snapshot,
+        answer: question.answer_json,
+      },
+    ]));
+  } else {
+    const pool = await loadPool(admin);
+    if (pool.length === 0) {
+      throw new ApiError(400, "The question bank has no published questions yet.", "EMPTY_BANK");
+    }
 
-  const result = generateStatic(sections, pool, seed, { recentlySeen, allowRepeat }, blueprint.shuffle_questions);
-  if (result.picks.length === 0) {
-    throw new ApiError(
-      400,
-      "No published questions match this blueprint's filters.",
-      "NO_MATCHING_QUESTIONS"
+    const recentlySeen = opts.userId ? await loadRecentlySeen(admin, opts.userId) : [];
+    const allowRepeat = opts.allowRepeat ?? recentlySeen.length >= pool.length;
+    result = generateStatic(sections, pool, seed, { recentlySeen, allowRepeat }, blueprint.shuffle_questions);
+    if (result.picks.length === 0) {
+      throw new ApiError(
+        400,
+        "No published questions match this blueprint's filters.",
+        "NO_MATCHING_QUESTIONS"
+      );
+    }
+
+    const questionIds = result.picks.map((pick) => pick.questionId);
+    const { data: questionRows, error: questionError } = await admin
+      .from("questions")
+      .select("id,engine_type,stem,explanation,image_url,topic_id,subtopic_id,parent_id,difficulty,skill,board_pattern,pyq_year,lang,question_options(id,label,body,image_url,position),question_answers(answer_json)")
+      .in("id", questionIds);
+    if (questionError) throw questionError;
+
+    snapshots = new Map(
+      (questionRows ?? []).map((row) => {
+        const question = row as typeof row & {
+          id: string;
+          engine_type: string;
+          stem: string;
+          explanation: string | null;
+          image_url: string | null;
+          question_options: Array<{ id: string; label: string | null; body: string | null; image_url: string | null; position: number | null }> | null;
+          question_answers: Array<{ answer_json: Record<string, unknown> }> | { answer_json: Record<string, unknown> } | null;
+        };
+        const answer = Array.isArray(question.question_answers) ? question.question_answers[0] : question.question_answers;
+        return [
+          question.id,
+          {
+            question: {
+              id: question.id,
+              engine_type: question.engine_type,
+              stem: question.stem,
+              explanation: question.explanation,
+              image_url: question.image_url,
+              topic_id: question.topic_id,
+              subtopic_id: question.subtopic_id,
+              parent_id: question.parent_id,
+              difficulty: question.difficulty,
+              skill: question.skill,
+              board_pattern: question.board_pattern,
+              pyq_year: question.pyq_year,
+              lang: question.lang,
+              select_multiple: Array.isArray(answer?.answer_json.correct_options) && answer.answer_json.correct_options.length > 1,
+              options: (question.question_options ?? []).map((option) => ({
+                id: option.id,
+                label: option.label,
+                body: option.body,
+                image_url: option.image_url,
+                position: option.position,
+              })),
+            },
+            answer: answer?.answer_json ?? {},
+          },
+        ] as const;
+      })
     );
   }
 
   const questionIds = result.picks.map((pick) => pick.questionId);
-  const { data: questionRows, error: questionError } = await admin
-    .from("questions")
-    .select("id,engine_type,stem,topic_id,subtopic_id,parent_id,difficulty,skill,board_pattern,pyq_year,lang,question_options(id,label,body,position),question_answers(answer_json)")
-    .in("id", questionIds);
-  if (questionError) throw questionError;
-
-  const snapshots = new Map(
-    (questionRows ?? []).map((row) => {
-      const question = row as typeof row & {
-        id: string;
-        engine_type: string;
-        stem: string;
-        question_options: Array<{ id: string; label: string | null; body: string | null; position: number | null }> | null;
-        question_answers: Array<{ answer_json: Record<string, unknown> }> | { answer_json: Record<string, unknown> } | null;
-      };
-      const answer = Array.isArray(question.question_answers) ? question.question_answers[0] : question.question_answers;
-      return [
-        question.id,
-        {
-          question: {
-            id: question.id,
-            engine_type: question.engine_type,
-            stem: question.stem,
-            topic_id: question.topic_id,
-            subtopic_id: question.subtopic_id,
-            parent_id: question.parent_id,
-            difficulty: question.difficulty,
-            skill: question.skill,
-            board_pattern: question.board_pattern,
-            pyq_year: question.pyq_year,
-            lang: question.lang,
-            select_multiple: Array.isArray(answer?.answer_json.correct_options) && answer.answer_json.correct_options.length > 1,
-            options: (question.question_options ?? []).map((option) => ({
-              id: option.id,
-              label: option.label,
-              body: option.body,
-              position: option.position,
-            })),
-          },
-          answer: answer?.answer_json ?? {},
-        },
-      ] as const;
-    })
-  );
   if (snapshots.size !== questionIds.length) {
     throw new ApiError(409, "The question bank changed while generating this test. Please try again.", "QUESTION_BANK_CHANGED");
   }
@@ -159,15 +206,19 @@ export async function generateInstance(
   if (ie) throw ie;
   const instanceId = (inst as { id: string }).id;
 
-  const rows = result.picks.map((p: PickedQuestion, i) => ({
-    instance_id: instanceId,
-    question_id: p.questionId,
-    section_id: p.sectionId,
-    position: i,
-    marks: Number(sections.find((section) => section.id === p.sectionId)?.marks_per_q ?? 0),
-    neg_marks: Number(sections.find((section) => section.id === p.sectionId)?.neg_marks ?? 0),
-    question_snapshot: snapshots.get(p.questionId)?.question,
-  }));
+  const fixedByQuestion = new Map(fixedQuestions.map((question) => [question.question_id, question]));
+  const rows = result.picks.map((p: PickedQuestion, i) => {
+    const fixed = fixedByQuestion.get(p.questionId);
+    return {
+      instance_id: instanceId,
+      question_id: p.questionId,
+      section_id: fixed?.section_id ?? p.sectionId,
+      position: i,
+      marks: Number(fixed?.marks ?? sections.find((section) => section.id === p.sectionId)?.marks_per_q ?? 0),
+      neg_marks: Number(fixed?.neg_marks ?? sections.find((section) => section.id === p.sectionId)?.neg_marks ?? 0),
+      question_snapshot: snapshots.get(p.questionId)?.question,
+    };
+  });
   const { error: qe } = await admin.from("test_instance_questions").insert(rows);
   if (qe) {
     // Never leave a half-written instance behind: it would look like a valid
@@ -199,7 +250,7 @@ export async function generateInstance(
       negMarks: rows[i].neg_marks,
     })),
     warnings: result.warnings,
-    totalMarks: computeMaxMarks(sections, result.picks),
+    totalMarks: rows.reduce((total, row) => total + Number(row.marks), 0),
   };
 }
 

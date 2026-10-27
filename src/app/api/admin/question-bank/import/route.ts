@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
+import { ApiError, apiError, apiSuccess, handleApiError } from "@/lib/api-utils";
 import { requireAdminRole } from "@/lib/auth";
-import { apiError, apiSuccess, handleApiError } from "@/lib/api-utils";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
   buildQuestionImportLegacyId,
@@ -84,7 +84,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const createdIds: string[] = [];
+    const importedIds: string[] = [];
+    let writesStarted = false;
     try {
       for (const row of preview.rows) {
         const questionTypeId = typeIds.get(row.type);
@@ -111,6 +112,7 @@ export async function POST(request: NextRequest) {
           .maybeSingle();
         if (existingError) throw existingError;
 
+        writesStarted = true;
         const { data: question, error: questionError } = await admin
           .from("questions")
           .upsert({
@@ -139,8 +141,6 @@ export async function POST(request: NextRequest) {
           .select("id")
           .single();
         if (questionError) throw questionError;
-        createdIds.push(question.id);
-
         const { error: optionsError } = await admin
           .from("question_options")
           .delete()
@@ -164,19 +164,22 @@ export async function POST(request: NextRequest) {
             explanation: row.explanation || null,
           }, { onConflict: "question_id" });
         if (answerError) throw answerError;
+        importedIds.push(question.id);
       }
     } catch (error) {
-      if (createdIds.length) {
-        const { error: cleanupError } = await admin.from("questions").delete().in("id", createdIds);
-        if (cleanupError) {
-          console.error("Question import rollback failed", { createdIds, cleanupError });
-          throw new Error("Import failed and cleanup was incomplete. Contact support before retrying.");
-        }
-      }
-      throw error;
+      if (!writesStarted) throw error;
+      console.error("Question bank import stopped after partial writes", {
+        importedCount: importedIds.length,
+        error,
+      });
+      throw new ApiError(
+        500,
+        "The import stopped after database writes began. Existing question data was not rolled back. Review the question bank before retrying.",
+        "PARTIAL_IMPORT"
+      );
     }
 
-    return apiSuccess({ imported: createdIds.length, questionIds: createdIds }, 201);
+    return apiSuccess({ imported: importedIds.length, questionIds: importedIds }, 201);
   } catch (error) {
     return handleApiError(error);
   }

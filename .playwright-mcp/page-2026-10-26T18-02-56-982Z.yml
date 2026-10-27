@@ -1,0 +1,77 @@
+- generic [active] [ref=f3e1]:
+  - generic [ref=f3e2]:
+    - generic [ref=f3e4]:
+      - generic [ref=f3e6]:
+        - generic [ref=f3e7]:
+          - generic [ref=f3e8]: XOPHOL CONTROL ROOM
+          - heading "Admin portal" [level=3] [ref=f3e9]
+          - paragraph [ref=f3e10]: Sign in to manage content
+        - generic [ref=f3e11]:
+          - generic [ref=f3e12]:
+            - generic [ref=f3e13]:
+              - text: Email address
+              - textbox "Email address" [ref=f3e14]:
+                - /placeholder: admin@xophol.com
+            - generic [ref=f3e15]:
+              - generic [ref=f3e16]:
+                - generic [ref=f3e17]: Password
+                - link "Forgot password?" [ref=f3e18] [cursor=pointer]:
+                  - /url: /forgot-password
+              - generic [ref=f3e19]:
+                - textbox "Password" [ref=f3e20]
+                - button "Show password" [ref=f3e21] [cursor=pointer]
+          - generic [ref=f3e25]:
+            - button "Sign in" [ref=f3e26] [cursor=pointer]
+            - generic [ref=f3e29]: or
+            - button "GContinue with Google" [ref=f3e30] [cursor=pointer]
+            - button "Sign in with email code instead" [ref=f3e32] [cursor=pointer]
+            - paragraph [ref=f3e34]: Need admin access? Contact a super administrator.
+      - contentinfo [ref=f3e35]:
+        - generic [ref=f3e36]:
+          - generic [ref=f3e37]:
+            - paragraph [ref=f3e39]: Premium online learning platform for competitive exams and mock tests
+            - generic [ref=f3e40]:
+              - heading "Quick Links" [level=3] [ref=f3e41]
+              - navigation [ref=f3e42]:
+                - link "Home" [ref=f3e43] [cursor=pointer]:
+                  - /url: /
+                - link "Courses" [ref=f3e44] [cursor=pointer]:
+                  - /url: /courses
+                - link "Mock Tests" [ref=f3e45] [cursor=pointer]:
+                  - /url: /mock-tests
+                - link "Study Notes" [ref=f3e46] [cursor=pointer]:
+                  - /url: /notes
+            - generic [ref=f3e47]:
+              - heading "Resources" [level=3] [ref=f3e48]
+              - navigation [ref=f3e49]:
+                - link "Help Center" [ref=f3e50] [cursor=pointer]:
+                  - /url: /help-center
+                - link "FAQ" [ref=f3e51] [cursor=pointer]:
+                  - /url: /faq
+                - link "Blog" [ref=f3e52] [cursor=pointer]:
+                  - /url: /blog
+                - link "Contact Us" [ref=f3e53] [cursor=pointer]:
+                  - /url: /contact
+            - generic [ref=f3e54]:
+              - heading "Legal" [level=3] [ref=f3e55]
+              - navigation [ref=f3e56]:
+                - link "Privacy Policy" [ref=f3e57] [cursor=pointer]:
+                  - /url: /privacy-policy
+                - link "Terms & Conditions" [ref=f3e58] [cursor=pointer]:
+                  - /url: /terms-and-conditions
+                - link "Cookie Policy" [ref=f3e59] [cursor=pointer]:
+                  - /url: /cookie-policy
+                - link "Refund Policy" [ref=f3e60] [cursor=pointer]:
+                  - /url: /refund-policy
+          - generic [ref=f3e62]:
+            - paragraph [ref=f3e63]: © 2026 Xophol. All rights reserved.
+            - generic [ref=f3e64]:
+              - link "Twitter" [ref=f3e65] [cursor=pointer]:
+                - /url: https://twitter.com
+              - link "LinkedIn" [ref=f3e68] [cursor=pointer]:
+                - /url: https://linkedin.com
+              - link "Facebook" [ref=f3e72] [cursor=pointer]:
+                - /url: https://facebook.com
+    - region "Notifications (F8)":
+      - list
+  - alert [ref=f3e75]

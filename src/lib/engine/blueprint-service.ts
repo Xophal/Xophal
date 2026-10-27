@@ -18,7 +18,7 @@ import type { Relaxation } from "./generator";
 type Admin = SupabaseClient;
 
 const BP_SELECT =
-  "id,name,slug,description,kind,duration_sec,total_marks,marking_scheme_json,shuffle_questions,shuffle_options,is_public,chapter_id,subject_id,created_at,updated_at";
+  "id,name,slug,description,kind,duration_sec,total_marks,marking_scheme_json,shuffle_questions,shuffle_options,is_public,chapter_id,subject_id,source_mock_test_id,created_at,updated_at";
 
 export type BlueprintRow = {
   id: string;
@@ -34,8 +34,19 @@ export type BlueprintRow = {
   is_public: boolean;
   chapter_id: string | null;
   subject_id: string | null;
+  source_mock_test_id: string | null;
   created_at?: string;
   updated_at?: string;
+};
+
+export type BlueprintFixedQuestionRow = {
+  section_id: string | null;
+  question_id: string;
+  position: number;
+  marks: number;
+  neg_marks: number;
+  question_snapshot: Record<string, unknown>;
+  answer_json: Record<string, unknown>;
 };
 
 export type BlueprintSectionRow = {
@@ -103,7 +114,17 @@ export async function getBlueprint(admin: Admin, id: string) {
   if (!data) throw new ApiError(404, "Blueprint not found.", "NOT_FOUND");
   const bp = data as BlueprintRow & { blueprint_sections: BlueprintSectionRow[] | null };
   const sections = (bp.blueprint_sections ?? []).slice().sort((a, b) => a.position - b.position).map(shapeSection);
-  return { ...bp, sections };
+  const { data: fixedQuestions, error: fixedQuestionsError } = await admin
+    .from("blueprint_fixed_questions")
+    .select("section_id,question_id,position,marks,neg_marks,question_snapshot,answer_json")
+    .eq("blueprint_id", id)
+    .order("position", { ascending: true });
+  if (fixedQuestionsError) throw fixedQuestionsError;
+  return {
+    ...bp,
+    sections,
+    fixedQuestions: (fixedQuestions ?? []) as BlueprintFixedQuestionRow[],
+  };
 }
 
 export type ResolvedBlueprint = Awaited<ReturnType<typeof getBlueprint>>;
@@ -216,7 +237,8 @@ export async function updateBlueprint(admin: Admin, id: string, input: UpdateBlu
       if (ie) throw ie;
     }
     for (const r of updates) {
-      const { blueprint_id: _ignored, ...rest } = r;
+      const rest: Partial<typeof r> = { ...r };
+      delete rest.blueprint_id;
       const { error: se } = await admin.from("blueprint_sections").update(rest).eq("id", r.id as string);
       if (se) throw se;
     }

@@ -1,0 +1,24 @@
+
+[31m⎯⎯⎯⎯⎯⎯[39m[1m[41m Failed Suites 1 [49m[22m[31m⎯⎯⎯⎯⎯⎯⎯[39m
+
+[41m[1m FAIL [22m[49m tests/unit/password-reset.test.ts[2m [ tests/unit/password-reset.test.ts ][22m
+[31m[1mError[22m: Transform failed with 1 error:
+C:/Users/Saurabh/Desktop/Xophol Mock/tests/unit/password-reset.test.ts:175:0: ERROR: Unexpected "}"[39m
+  Plugin: [35mvite:esbuild[39m
+  File: [36mC:/Users/Saurabh/Desktop/Xophol Mock/tests/unit/password-reset.test.ts[39m:175:0
+[33m  
+  [33mUnexpected "}"[33m
+  173 |  });
+  174 |  
+  175 |  });
+      |  ^
+  176 |  
+  [39m
+[90m [2m❯[22m failureErrorWithLog node_modules/esbuild/lib/main.js:[2m1752:15[22m[39m
+[90m [2m❯[22m node_modules/esbuild/lib/main.js:[2m1019:50[22m[39m
+[90m [2m❯[22m responseCallbacks.<computed> node_modules/esbuild/lib/main.js:[2m886:9[22m[39m
+[90m [2m❯[22m handleIncomingPacket node_modules/esbuild/lib/main.js:[2m941:12[22m[39m
+[90m [2m❯[22m Socket.readFromStdout node_modules/esbuild/lib/main.js:[2m864:7[22m[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯[22m[39m
+

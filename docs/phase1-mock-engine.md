@@ -32,3 +32,29 @@
 - Ids are deterministic (sha1 of `ch1q-<code>`), so 014 is re-runnable.
 - Case children Q27–Q29 → parent Q26; Q31–Q33 → parent Q30.
 - Blueprint `filter_json` stores both resolved `topic_ids` and `topic_slugs`.
+
+## Fixed mock-test compatibility
+
+Migration `051_engine_fixed_mock_test_compatibility.sql` adds an additive bridge
+from legacy `mock_tests` to engine `blueprints`. It backfills a blueprint and a
+`blueprint_fixed_questions` snapshot only for legacy tests whose assigned
+questions are supported `mcq` or `assertion_reason` choice questions and all
+have at least two options and at least one correct option. Other legacy tests
+remain on their existing routes and are not silently converted.
+
+The fixed-question snapshot keeps the original question IDs, order, marks,
+negative marks, option labels, and answer keys. It does not duplicate question
+bank rows. The snapshot table is inaccessible to `anon` and `authenticated`;
+engine question delivery and grading continue through trusted server paths.
+
+For a linked blueprint, the engine start route follows the source test's
+published/active status, premium entitlement or test-specific grant, and the
+attempt limit. Attempt creation is serialized per user and blueprint in the
+database. Results honor the source test's `show_solutions` setting and do not
+return per-question correctness or answer keys when review is disabled.
+
+This is a compatibility layer, not a production cutover. Existing URLs,
+legacy attempts, analytics, and result history remain on the legacy model.
+Apply and validate migration 051 in a verified staging project before routing
+any production traffic to the linked engine blueprints. Confirm skipped legacy
+tests and answer-option formats against real staging metadata first.

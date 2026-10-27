@@ -34,6 +34,7 @@ export type AttemptState = {
   startedAt: string;
   deadlineAt: string;
   maxScore: number;
+  score: number | null;
   durationSec: number;
   questionCount: number;
   /** True when an unfinished attempt was resumed instead of a new one created. */
@@ -92,6 +93,7 @@ function toState(
     started_at: string;
     deadline_at: string;
     max_score: number | null;
+    score?: number | null;
   },
   instance: InstanceJoin,
   resumed: boolean
@@ -106,6 +108,7 @@ function toState(
     startedAt: row.started_at,
     deadlineAt: row.deadline_at,
     maxScore: Number(row.max_score ?? 0),
+    score: row.score == null ? null : Number(row.score),
     durationSec: instance.duration_sec,
     questionCount: instance.test_instance_questions?.[0]?.count ?? 0,
     resumed,
@@ -134,7 +137,7 @@ export async function startAttempt(
 
   const { data: open, error: openErr } = await admin
     .from("attempts")
-    .select(`id,instance_id,status,started_at,deadline_at,max_score,${INSTANCE_JOIN}`)
+    .select(`id,instance_id,status,started_at,deadline_at,max_score,score,${INSTANCE_JOIN}`)
     .eq("user_id", userId)
     .eq("test_instances.blueprint_id", blueprintId)
     .in("status", ["in_progress", "submitted"])
@@ -152,11 +155,12 @@ export async function startAttempt(
     // The deadline passed while the attempt sat in_progress: retire it so it
     // cannot be resumed or submitted, then fall through and start a new one.
     if (plan === "expire") {
-      await admin
+      const { error: expireError } = await admin
         .from("attempts")
         .update({ status: "expired", updated_at: new Date().toISOString() })
         .eq("id", open.id)
         .eq("status", "in_progress");
+      if (expireError) throw expireError;
     }
   }
 
@@ -169,41 +173,38 @@ export async function startAttempt(
   const deadlineAt = new Date(now + (blueprint.duration_sec + SUBMIT_GRACE_SEC) * 1000).toISOString();
   const maxScore = instance.totalMarks;
 
-  const { data: attempt, error: attemptErr } = await admin
-    .from("attempts")
-    .insert({
-      instance_id: instance.instanceId,
-      user_id: userId,
-      status: "in_progress",
-      started_at: new Date(now).toISOString(),
-      deadline_at: deadlineAt,
-      max_score: maxScore,
-      metadata: { seed: instance.seed, blueprint_slug: blueprint.slug, warnings: instance.warnings },
-    })
-    .select("id,started_at,deadline_at")
-    .single();
+  const cleanupInstance = async () => {
+    const { error } = await admin.from("test_instances").delete().eq("id", instance.instanceId);
+    if (error) {
+      console.error("Unclaimed test instance cleanup failed", {
+        instanceId: instance.instanceId,
+        error,
+      });
+      throw new Error("The attempt could not be finalized and its temporary paper could not be cleaned up. Contact support.");
+    }
+  };
+
+  const { data: attempt, error: attemptErr } = await admin.rpc("create_engine_attempt", {
+    p_blueprint_id: blueprintId,
+    p_instance_id: instance.instanceId,
+    p_user_id: userId,
+    p_started_at: new Date(now).toISOString(),
+    p_deadline_at: deadlineAt,
+    p_max_score: maxScore,
+    p_metadata: { seed: instance.seed, blueprint_slug: blueprint.slug, warnings: instance.warnings },
+  });
   if (attemptErr) {
-    // Never leave a frozen instance with no attempt: it would look like a paper a
-    // student sat but never finished.
-    await admin.from("test_instance_questions").delete().eq("instance_id", instance.instanceId);
-    await admin.from("test_instances").delete().eq("id", instance.instanceId);
+    await cleanupInstance();
+    if (attemptErr.message.includes("Maximum attempts reached")) {
+      throw new ApiError(403, "You have reached the maximum number of attempts for this test.", "MAX_ATTEMPTS_REACHED");
+    }
     throw attemptErr;
   }
 
-  return {
-    attemptId: attempt.id,
-    instanceId: instance.instanceId,
-    blueprintId,
-    blueprintSlug: blueprint.slug,
-    blueprintTitle: blueprint.name,
-    status: "in_progress",
-    startedAt: attempt.started_at,
-    deadlineAt: attempt.deadline_at,
-    maxScore,
-    durationSec: blueprint.duration_sec,
-    questionCount: instance.questions.length,
-    resumed: false,
-  };
+  const result = attempt as unknown as { attempt_id: string; resumed: boolean };
+  if (result.resumed) await cleanupInstance();
+  const state = await getAttemptState(admin, result.attempt_id, userId);
+  return { ...state, resumed: result.resumed };
 }
 
 
@@ -211,7 +212,7 @@ export async function startAttempt(
 export async function getAttemptState(admin: Admin, attemptId: string, userId: string): Promise<AttemptState> {
   const { data, error } = await admin
     .from("attempts")
-    .select(`id,user_id,instance_id,status,started_at,deadline_at,max_score,${INSTANCE_JOIN}`)
+    .select(`id,user_id,instance_id,status,started_at,deadline_at,max_score,score,${INSTANCE_JOIN}`)
     .eq("id", attemptId)
     .maybeSingle();
   if (error) throw error;

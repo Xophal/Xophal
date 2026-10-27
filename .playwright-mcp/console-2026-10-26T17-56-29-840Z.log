@@ -1,0 +1,2 @@
+[    7717ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://www.xophol.com/favicon.ico:0
+[    8550ms] [ERROR] Failed to load resource: the server responded with a status of 401 () @ https://www.xophol.com/api/notifications?limit=5:0

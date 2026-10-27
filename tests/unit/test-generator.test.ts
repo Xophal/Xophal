@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { sectionFilterSchema } from "@/lib/engine/blueprint-schema";
 import type { ResolvedSection } from "@/lib/engine/blueprint-service";
-import { computeMaxMarks } from "@/lib/engine/test-generator";
+import { computeMaxMarks, isFixedPaperComplete } from "@/lib/engine/test-generator";
 
 function section(id: string, marksPerQuestion: number): ResolvedSection {
   return {
@@ -31,5 +31,14 @@ describe("computeMaxMarks", () => {
 
   it("returns zero when the generator picks no questions", () => {
     expect(computeMaxMarks([section("empty", 3)], [])).toBe(0);
+  });
+});
+
+describe("isFixedPaperComplete", () => {
+  it("requires every expected legacy question to have a frozen snapshot", () => {
+    expect(isFixedPaperComplete(4, 4)).toBe(true);
+    expect(isFixedPaperComplete(4, 3)).toBe(false);
+    expect(isFixedPaperComplete(4, 0)).toBe(false);
+    expect(isFixedPaperComplete(0, 0)).toBe(false);
   });
 });

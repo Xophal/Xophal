@@ -5,6 +5,7 @@ import { ApiError, apiSuccess, handleApiError, validateBody } from "@/lib/api-ut
 import { requireAuth } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { startAttempt } from "@/lib/engine/attempt-service";
+import { requireLinkedMockTestAccess } from "@/lib/engine/blueprint-access";
 
 /**
  * POST /api/test-instances
@@ -49,7 +50,7 @@ export async function POST(request: NextRequest) {
     const blueprintId = await resolveBlueprintId(admin, body);
     const { data: blueprint, error: blueprintError } = await admin
       .from("blueprints")
-      .select("is_public")
+      .select("is_public,source_mock_test_id")
       .eq("id", blueprintId)
       .maybeSingle();
     if (blueprintError) throw blueprintError;
@@ -57,6 +58,7 @@ export async function POST(request: NextRequest) {
       throw new ApiError(404, "Blueprint not found.", "BLUEPRINT_NOT_FOUND");
     }
 
+    await requireLinkedMockTestAccess(admin, session.user.id, blueprint.source_mock_test_id);
     const attempt = await startAttempt(admin, session.user.id, blueprintId, {
       seed: body.seed,
       dateISO: body.dateISO,

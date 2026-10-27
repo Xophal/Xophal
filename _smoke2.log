@@ -1,0 +1,22 @@
+
+[31m⎯⎯⎯⎯⎯⎯[39m[1m[41m Failed Suites 1 [49m[22m[31m⎯⎯⎯⎯⎯⎯⎯[39m
+
+[41m[1m FAIL [22m[49m tests/unit/tiny-smoke.test.ts[2m [ tests/unit/tiny-smoke.test.ts ][22m
+[31m[1mError[22m: Transform failed with 1 error:
+C:/Users/Saurabh/Desktop/Xophol Mock/tests/unit/tiny-smoke.test.ts:1:116: ERROR: Unterminated string literal[39m
+  Plugin: [35mvite:esbuild[39m
+  File: [36mC:/Users/Saurabh/Desktop/Xophol Mock/tests/unit/tiny-smoke.test.ts[39m:1:116
+[33m  
+  [33mUnterminated string literal[33m
+  1  |  import { describe, it, expect } from " vitest\; describe(\smoke\, () => { it(\x\, () => { expect(1).toBe(1); }); });
+     |                                                                                                                      ^
+  2  |  
+  [39m
+[90m [2m❯[22m failureErrorWithLog node_modules/esbuild/lib/main.js:[2m1752:15[22m[39m
+[90m [2m❯[22m node_modules/esbuild/lib/main.js:[2m1019:50[22m[39m
+[90m [2m❯[22m responseCallbacks.<computed> node_modules/esbuild/lib/main.js:[2m886:9[22m[39m
+[90m [2m❯[22m handleIncomingPacket node_modules/esbuild/lib/main.js:[2m941:12[22m[39m
+[90m [2m❯[22m Socket.readFromStdout node_modules/esbuild/lib/main.js:[2m864:7[22m[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯[22m[39m
+
