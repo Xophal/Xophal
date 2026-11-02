@@ -4,7 +4,7 @@ import { requireAdminRole } from "@/lib/auth";
 import { apiSuccess, apiError, handleApiError } from "@/lib/api-utils";
 
 type ImportRow = Record<string, unknown>;
-type ImportJob = {
+export type ImportJob = {
   entity_type: string;
   preview_data?: unknown;
   user_id: string;
@@ -14,7 +14,7 @@ function isImportRow(value: unknown): value is ImportRow {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-async function processJob(adminClient: ReturnType<typeof createAdminClient>, job: ImportJob) {
+export async function processJob(adminClient: ReturnType<typeof createAdminClient>, job: ImportJob) {
   const previewData = job.preview_data ?? [];
   if (!Array.isArray(previewData) || previewData.length === 0 || !previewData.every(isImportRow)) {
     throw new Error("No rows to process");
@@ -32,7 +32,7 @@ async function processJob(adminClient: ReturnType<typeof createAdminClient>, job
       total_questions: r.total_questions ?? null,
       total_marks: r.total_marks ?? null,
       duration_minutes: r.duration_minutes ?? null,
-      is_published: true,
+      is_published: false,
       is_active: true,
       year: r.year ?? null,
     }));
@@ -55,19 +55,17 @@ async function processJob(adminClient: ReturnType<typeof createAdminClient>, job
         question_text: r.question_text || r.stem || "",
         explanation: r.explanation || null,
         tags: Array.isArray(r.tags) ? r.tags : typeof r.tags === "string" ? r.tags.split(",").map((tag: string) => tag.trim()).filter(Boolean) : [],
-        status: r.status || "draft",
+        status: "draft",
         marks: r.marks ? Number(r.marks) : 1,
         negative_marks: r.negative_marks ? Number(r.negative_marks) : 0,
         created_by: job.user_id,
       };
 
       const { data: qdata, error: qerr } = await adminClient.from("questions").insert([payload]).select().maybeSingle();
-      if (qerr) {
-        console.error("Failed to insert question:", qerr, "row:", r);
-        continue;
-      }
+      if (qerr) throw qerr;
+      if (!qdata?.id) throw new Error("Question import did not return the created record.");
 
-      const qid = qdata?.id;
+      const qid = qdata.id;
       const optionKeys = ["option_a", "option_b", "option_c", "option_d"];
       const optionInserts = [];
       for (let i = 0; i < optionKeys.length; i++) {
@@ -80,7 +78,7 @@ async function processJob(adminClient: ReturnType<typeof createAdminClient>, job
 
       if (optionInserts.length) {
         const { error: optErr } = await adminClient.from("question_options").insert(optionInserts);
-        if (optErr) console.error("Failed to insert options for question", qid, optErr);
+        if (optErr) throw optErr;
       }
 
       processed++;

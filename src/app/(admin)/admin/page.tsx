@@ -33,6 +33,7 @@ const adminModules = [
   { title: "Chapters", description: "Structure chapters inside every subject", href: "/admin/chapters", icon: Layers3 },
   { title: "Topics", description: "Maintain the topic layer under each chapter", href: "/admin/topics", icon: Boxes },
   { title: "Questions", description: "Author, review and publish the question bank", href: "/admin/questions", icon: ShieldCheck },
+  { title: "Test blueprints", description: "Configure generated tests and validate question-bank coverage", href: "/admin/engine/blueprints", icon: Layers3 },
   { title: "Mock tests", description: "Create and manage timed practice exams", href: "/admin/mock-tests", icon: ClipboardList },
   { title: "Notes", description: "Publish revision notes and study guides", href: "/admin/notes", icon: FileText },
   { title: "eBooks", description: "Review marketplace listings, reports, and settings", href: "/admin/ebooks", icon: BookOpen },

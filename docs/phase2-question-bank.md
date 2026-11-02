@@ -202,7 +202,7 @@ unreferenced draft and the response should say `deleted`.
 
 ## Next phase
 
-**Phase 3 — Blueprints and generator.** Blueprint CRUD with a visual section builder,
-a live "can this be filled?" check against the bank, and the static generator
-(seeded randomisation, per-section counts, difficulty mix, recently-seen exclusion,
-constraint relaxation with warnings) plus its unit tests.
+**Next — student exam workflows.** The admin blueprint builder and generator are
+implemented in [phase3-blueprints.md](./phase3-blueprints.md). The next work should
+focus on validating student attempt creation, answer persistence, submission,
+scoring, result review, and subscription/eligibility behavior end-to-end.

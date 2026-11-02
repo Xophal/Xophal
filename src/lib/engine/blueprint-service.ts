@@ -248,8 +248,33 @@ export async function updateBlueprint(admin: Admin, id: string, input: UpdateBlu
 }
 
 export async function deleteBlueprint(admin: Admin, id: string) {
+  const { count, error: instancesError } = await admin
+    .from("test_instances")
+    .select("id", { count: "exact", head: true })
+    .eq("blueprint_id", id);
+  if (instancesError) throw instancesError;
+  if ((count ?? 0) > 0) {
+    throw new ApiError(
+      409,
+      "This blueprint has generated test instances and cannot be deleted.",
+      "BLUEPRINT_HAS_INSTANCES"
+    );
+  }
+
   const { error } = await admin.from("blueprints").delete().eq("id", id);
-  if (error) throw error;
+  if (error) {
+    if (
+      error.code === "23503" &&
+      error.message === "Blueprint has generated test instances and cannot be deleted."
+    ) {
+      throw new ApiError(
+        409,
+        "This blueprint has generated test instances and cannot be deleted.",
+        "BLUEPRINT_HAS_INSTANCES"
+      );
+    }
+    throw error;
+  }
   return { id, deleted: true };
 }
 

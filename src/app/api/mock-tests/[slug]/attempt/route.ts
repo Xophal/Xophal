@@ -2,6 +2,7 @@ import { ApiError, apiSuccess, handleApiError } from "@/lib/api-utils";
 import { requireAuth } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getUserEntitlement, isProductEntitled } from "@/lib/entitlements";
+import { sanitizeMockTestAttemptQuestion } from "@/lib/mock-test-questions";
 
 export async function POST(_: Request, { params }: { params: Promise<{ slug: string }> }) {
   try {
@@ -67,23 +68,18 @@ export async function POST(_: Request, { params }: { params: Promise<{ slug: str
 
     const { data: paperRows, error: paperError } = await adminClient
       .from("test_attempt_papers")
-      .select("question_id, position, marks, question_snapshot")
+      .select("question_id, position, marks, negative_marks, question_snapshot")
       .eq("attempt_id", attemptData.id)
       .order("position", { ascending: true });
     if (paperError) throw paperError;
 
-    const questions = (paperRows ?? []).map((row) => {
-      const question = row.question_snapshot as Record<string, unknown> & {
-        question_options?: Array<Record<string, unknown>>;
-        options?: Array<Record<string, unknown>>;
-      };
-      const options = question.options ?? question.question_options ?? [];
-      return {
-        ...question,
-        marks: row.marks,
-        options: options.map((option) => ({ ...option, is_correct: false })),
-      };
-    });
+    const questions = (paperRows ?? []).map((row) =>
+      sanitizeMockTestAttemptQuestion(
+        row.question_snapshot,
+        Number(row.marks ?? 0),
+        Number(row.negative_marks ?? 0)
+      )
+    );
     if (questions.length === 0) throw new ApiError(400, "This mock test has no questions yet", "TEST_EMPTY");
 
     const { data: savedResponses, error: responseError } = await adminClient

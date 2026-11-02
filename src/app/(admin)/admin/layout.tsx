@@ -22,6 +22,7 @@ const adminNavItems = [
 
   // Assessments
   { href: "/admin/questions", icon: "ShieldQuestion", label: "Questions", group: "Assessments" },
+  { href: "/admin/engine/blueprints", icon: "Layers3", label: "Test blueprints", group: "Assessments" },
   { href: "/admin/mock-tests", icon: "ClipboardList", label: "Mock tests", group: "Assessments" },
   { href: "/admin/results", icon: "Trophy", label: "Results", group: "Assessments" },
 

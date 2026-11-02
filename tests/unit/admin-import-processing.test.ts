@@ -19,7 +19,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock("@/lib/auth", () => ({ requireAdminRole: mocks.requireAdminRole }));
 vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: mocks.createAdminClient }));
 
-import { POST } from "@/app/api/admin/imports/process/route";
+import { POST, processJob } from "@/app/api/admin/imports/process/route";
 
 function createRequest() {
   return new NextRequest("http://localhost/api/admin/imports/process", {
@@ -90,5 +90,53 @@ describe("admin import processing", () => {
     expect(response.status).toBe(409);
     expect(body.code).toBe("IMPORT_ALREADY_CLAIMED");
     expect(update).toHaveBeenCalledWith({ status: "IMPORTING" });
+  });
+
+  it("creates imported mock tests as drafts", async () => {
+    const insert = vi.fn().mockResolvedValue({ error: null });
+    const adminClient = {
+      from: vi.fn(() => ({ insert })),
+    } as unknown as Parameters<typeof processJob>[0];
+
+    await expect(processJob(adminClient, {
+      entity_type: "mock_tests",
+      user_id: "admin-1",
+      preview_data: [{ title: "Imported test", is_published: true }],
+    })).resolves.toBe(1);
+
+    expect(insert).toHaveBeenCalledWith([
+      expect.objectContaining({ title: "Imported test", is_published: false }),
+    ]);
+  });
+
+  it("fails instead of reporting question rows complete when option writes fail", async () => {
+    const questionsQuery = {
+      insert: vi.fn(() => questionsQuery),
+      select: vi.fn(() => questionsQuery),
+      maybeSingle: vi.fn().mockResolvedValue({
+        data: { id: "question-1" },
+        error: null,
+      }),
+    };
+    const optionsInsert = vi.fn().mockResolvedValue({ error: new Error("option write failed") });
+    const adminClient = {
+      from: vi.fn((table: string) => {
+        if (table === "questions") return questionsQuery;
+        if (table === "question_options") return { insert: optionsInsert };
+        throw new Error(`Unexpected table: ${table}`);
+      }),
+    } as unknown as Parameters<typeof processJob>[0];
+
+    await expect(processJob(adminClient, {
+      entity_type: "questions",
+      user_id: "admin-1",
+      preview_data: [{
+        question_type_id: "type-1",
+        question_text: "Question?",
+        option_a: "A",
+      }],
+    })).rejects.toThrow("option write failed");
+
+    expect(optionsInsert).toHaveBeenCalledOnce();
   });
 });

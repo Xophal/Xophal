@@ -47,3 +47,21 @@ Reviewed middleware, all route handlers under `src/app/api`, server actions, adm
 3. Test all Supabase Data API tables as anonymous, student, premium student, and admin users after migration.
 4. Add integration tests for profile privilege escalation, premium test access, test integrity, payment writes, and cross-user reads.
 5. Treat middleware as routing protection only; every future sensitive API route or server action must independently authenticate and authorize the caller.
+
+## Follow-up: engine attempt write permissions
+
+Date: 2026-11-02
+
+Repository review found that migration `013_mock_test_engine.sql` defined owner
+write policies for `attempts` and `attempt_answers`, including unrestricted
+updates to attempt state and answer grading columns. No later migration in the
+repository removed those policies or revoked authenticated DML. Whether this
+was exploitable through the deployed Data API depends on the live table ACL and
+which migrations have been applied; neither was available for verification.
+
+Migration `052_engine_attempt_write_hardening.sql` removes those write policies,
+revokes direct client writes, and retains server-role access. Existing owner-read
+policies and the submission RPC remain in place. The migration is additive and
+has not been applied to any database. Verify the migration against a staging
+backup, then test direct writes as an authenticated student and successful
+server-side save/submission before considering production rollout.

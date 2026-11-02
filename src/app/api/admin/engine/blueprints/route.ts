@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
 }
 
 /**
- * POST /api/admin/engine/blueprints/availability
+ * PUT /api/admin/engine/blueprints (availability check)
  * Body: { sections: BlueprintSectionInput[] }
  *
  * The builder's live "can this be filled?" check. Returns, per section, the

@@ -1,4 +1,6 @@
-﻿import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 
 import {
   BLUEPRINT_KINDS,
@@ -7,7 +9,7 @@ import {
   withSectionDefaults,
 } from "@/lib/engine/blueprint-schema";
 import type { BlueprintSectionInput } from "@/lib/engine/blueprint-schema";
-import { checkAvailability } from "@/lib/engine/blueprint-service";
+import { checkAvailability, deleteBlueprint } from "@/lib/engine/blueprint-service";
 import {
   createRng,
   dailySeed,
@@ -473,6 +475,61 @@ describe("checkAvailability", () => {
   it("reports a section as fillable when the exact match suffices", () => {
     const r = checkAvailability([section({ count: 3, id: "s1" })], poolOf(10));
     expect(r[0]).toMatchObject({ exact: 10, reachable: 10, canFill: true, shortfall: 0, wouldRelax: [] });
+  });
+
+  describe("deleteBlueprint", () => {
+    it("uses a database trigger to guard blueprint deletion atomically", () => {
+      const migration = readFileSync(
+        join(process.cwd(), "supabase/migrations/053_blueprint_instance_delete_guard.sql"),
+        "utf8"
+      );
+      expect(migration).toMatch(/BEFORE DELETE ON public\.blueprints/i);
+      expect(migration).toMatch(/FROM public\.test_instances instance/i);
+      expect(migration).toMatch(/instance\.blueprint_id = OLD\.id/i);
+      expect(migration).toMatch(/CONSTRAINT = 'blueprints_have_test_instances'/i);
+    });
+
+    it("refuses to delete a blueprint with generated test instances", async () => {
+      const eq = vi.fn().mockResolvedValue({ count: 1, error: null });
+      const select = vi.fn(() => ({ eq }));
+      const deleteQuery = { delete: vi.fn() };
+      const admin = {
+        from: vi.fn((table: string) => {
+          if (table === "test_instances") return { select };
+          if (table === "blueprints") return deleteQuery;
+          throw new Error(`Unexpected table: ${table}`);
+        }),
+      } as unknown as Parameters<typeof deleteBlueprint>[0];
+
+      await expect(deleteBlueprint(admin, "blueprint-id")).rejects.toMatchObject({
+        statusCode: 409,
+        code: "BLUEPRINT_HAS_INSTANCES",
+      });
+      expect(deleteQuery.delete).not.toHaveBeenCalled();
+    });
+
+    it("maps the database deletion guard to a conflict response", async () => {
+      const countQuery = { eq: vi.fn().mockResolvedValue({ count: 0, error: null }) };
+      const deleteEq = vi.fn().mockResolvedValue({
+        error: {
+          code: "23503",
+          message: "Blueprint has generated test instances and cannot be deleted.",
+        },
+      });
+      const deleteQuery = { delete: vi.fn(() => ({ eq: deleteEq })) };
+      const admin = {
+        from: vi.fn((table: string) => {
+          if (table === "test_instances") return { select: vi.fn(() => countQuery) };
+          if (table === "blueprints") return deleteQuery;
+          throw new Error(`Unexpected table: ${table}`);
+        }),
+      } as unknown as Parameters<typeof deleteBlueprint>[0];
+
+      await expect(deleteBlueprint(admin, "blueprint-id")).rejects.toMatchObject({
+        statusCode: 409,
+        code: "BLUEPRINT_HAS_INSTANCES",
+      });
+    });
   });
 
   it("reports a shortfall the bank cannot cover even fully relaxed", () => {
