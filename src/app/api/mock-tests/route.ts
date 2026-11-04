@@ -5,11 +5,12 @@ import { getPaginationParams, paginatedResponse, apiSuccess, apiError, handleApi
 import { checkRateLimit } from "@/lib/rate-limit";
 import { requireAdminRole } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { slugify } from "@/lib/utils";
 
 const mockTestCreateSchema = z.object({
   test_type_id: z.string().uuid().optional(),
   title: z.string().min(2).max(500),
-  slug: z.string().min(2).max(500),
+  slug: z.string().trim().max(500).optional().default(""),
   description: z.string().optional().or(z.literal("")),
   subject_id: z.string().uuid().nullable().optional(),
   chapter_id: z.string().uuid().nullable().optional(),
@@ -127,13 +128,18 @@ export async function POST(request: NextRequest) {
     await requireAdminRole(["super_admin", "admin", "content_manager"]);
     const body = await request.json();
     const payload = await validateBody(mockTestCreateSchema, body);
+    const slug = slugify(payload.slug || payload.title);
+    if (slug.length < 2) {
+      throw new ApiError(400, "Enter a title or slug containing at least two letters or numbers.", "INVALID_SLUG");
+    }
     const adminClient = createAdminClient();
 
-    const { data: duplicateSlug } = await adminClient
+    const { data: duplicateSlug, error: duplicateSlugError } = await adminClient
       .from("mock_tests")
       .select("id")
-      .eq("slug", payload.slug)
+      .eq("slug", slug)
       .maybeSingle();
+    if (duplicateSlugError) throw duplicateSlugError;
     if (duplicateSlug) {
       throw new ApiError(409, "A mock test with this slug already exists.", "DUPLICATE_SLUG");
     }
@@ -147,6 +153,21 @@ export async function POST(request: NextRequest) {
         .maybeSingle();
       if (testTypeError) throw testTypeError;
       testTypeId = testType?.id;
+
+      if (!testTypeId) {
+        const { data: createdTestType, error: createTestTypeError } = await adminClient
+          .from("test_types")
+          .upsert({
+            code: "full_mock",
+            name: "Full Mock Test",
+            description: "Complete syllabus mock test",
+            sort_order: 5,
+          }, { onConflict: "code" })
+          .select("id")
+          .single();
+        if (createTestTypeError) throw createTestTypeError;
+        testTypeId = createdTestType.id;
+      }
     }
     if (!testTypeId) {
       throw new ApiError(
@@ -162,7 +183,7 @@ export async function POST(request: NextRequest) {
         {
           test_type_id: testTypeId,
           title: payload.title,
-          slug: payload.slug,
+          slug,
           description: payload.description || null,
           subject_id: payload.subject_id || null,
           chapter_id: payload.chapter_id || null,
@@ -188,6 +209,9 @@ export async function POST(request: NextRequest) {
     if (error) throw error;
     return apiSuccess(data, 201);
   } catch (error) {
+    if (error && typeof error === "object" && "code" in error && error.code === "23505") {
+      return apiError("A mock test with this slug already exists.", 409, "DUPLICATE_SLUG");
+    }
     return handleApiError(error);
   }
 }

@@ -5,7 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { apiError, apiSuccess, handleApiError, validateBody } from "@/lib/api-utils";
 
 const submissionPatchSchema = z.object({
-  status: z.enum(["pending_verification", "approved", "rejected", "duplicate_flagged", "cancelled"]),
+  status: z.enum(["approved", "rejected", "duplicate_flagged", "cancelled"]),
   reason: z.string().max(1000).optional().nullable(),
   duplicate_of: z.string().uuid().optional().nullable(),
 });
@@ -17,41 +17,40 @@ export async function PATCH(request: NextRequest, { params }: Params) {
     const session = await requireAdminRole(["payment_verifier", "subscription_admin", "refund_approver", "school_eligibility_reviewer"]);
     const { id } = await params;
     const payload = await validateBody(submissionPatchSchema, await request.json());
+    const admin = createAdminClient();
 
-    const { data: existing, error: fetchError } = await createAdminClient()
-      .from("payment_submissions")
-      .select("id, status, reason, approved_by, approved_at, duplicate_of, metadata")
-      .eq("id", id)
-      .maybeSingle();
-
-    if (fetchError) throw fetchError;
-    if (!existing) {
-      return apiError("Payment submission not found", 404, "NOT_FOUND");
+    if (payload.status === "approved" || payload.status === "rejected") {
+      const { data, error } = await admin.rpc("resolve_manual_payment_submission", {
+        p_submission_id: id,
+        p_actor_id: session.user.id,
+        p_status: payload.status,
+        p_reason: payload.reason ?? null,
+      });
+      if (error) throw error;
+      if (!data) return apiError("Payment submission not found", 404, "NOT_FOUND");
+      return apiSuccess(data);
     }
 
     const updatePayload: Record<string, unknown> = {
       status: payload.status,
-      reason: payload.reason ?? existing.reason ?? null,
+      reason: payload.reason ?? null,
       approved_by: session.user.id,
       approved_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };
 
-    if (payload.status === "duplicate_flagged") {
-      updatePayload.duplicate_of = payload.duplicate_of ?? existing.duplicate_of ?? null;
-    } else {
-      updatePayload.duplicate_of = null;
-    }
+    updatePayload.duplicate_of = payload.status === "duplicate_flagged" ? payload.duplicate_of ?? null : null;
 
-    const { data, error } = await createAdminClient()
+    const { data, error } = await admin
       .from("payment_submissions")
       .update(updatePayload)
       .eq("id", id)
+      .eq("status", "pending_verification")
       .select()
       .maybeSingle();
 
     if (error) throw error;
-    if (!data) return apiError("Payment submission not found", 404, "NOT_FOUND");
+    if (!data) return apiError("Payment submission was not found or has already been reviewed", 409, "SUBMISSION_ALREADY_REVIEWED");
 
     return apiSuccess(data);
   } catch (error) {

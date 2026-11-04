@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
+import { slugify } from "@/lib/utils";
 
 type MockTest = {
   id: string;
@@ -22,13 +23,14 @@ const blankTest = {
   title: "",
   slug: "",
   duration_minutes: 45,
-  is_published: true,
+  is_published: false,
   is_premium: false,
 };
 
 export default function AdminMockTestsPage() {
   const [tests, setTests] = useState<MockTest[]>([]);
   const [form, setForm] = useState(blankTest);
+  const [slugEdited, setSlugEdited] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [sections, setSections] = useState<TestSection[]>([]);
@@ -36,13 +38,22 @@ export default function AdminMockTestsPage() {
   const [sectionDuration, setSectionDuration] = useState("");
 
   useEffect(() => {
-    loadTests();
+    void loadTests().catch((error) => {
+      toast({
+        title: "Mock tests failed to load",
+        description: error instanceof Error ? error.message : "Please refresh and try again.",
+        variant: "destructive",
+      });
+    });
   }, []);
 
   async function loadTests() {
-    const res = await fetch("/api/admin/mock-tests", { cache: "no-store" });
-    const json = await res.json();
-    if (res.ok && json.success) setTests(json.data || []);
+    const response = await fetch("/api/admin/mock-tests", { cache: "no-store" });
+    const result = await response.json().catch(() => null) as { success?: boolean; data?: MockTest[]; error?: string } | null;
+    if (!response.ok || !result?.success) {
+      throw new Error(result?.error || `Could not load mock tests (${response.status})`);
+    }
+    setTests(result.data || []);
   }
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -55,6 +66,7 @@ export default function AdminMockTestsPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...form,
+          slug: form.slug || slugify(form.title),
           subject_id: null,
           chapter_id: null,
           passing_marks: 30,
@@ -65,19 +77,28 @@ export default function AdminMockTestsPage() {
           is_active: editingId ? undefined : true,
         }),
       });
-      const result = await response.json();
+      const result = await response.json().catch(() => null) as { success?: boolean; error?: string } | null;
 
-      if (!response.ok || !result.success) {
-        throw new Error(result.error || "Could not create mock test");
+      if (!response.ok || !result?.success) {
+        throw new Error(result?.error || `Could not save mock test (${response.status})`);
       }
 
       toast({ title: editingId ? "Mock test updated" : "Mock test created", description: `${form.title} has been saved.` });
       setForm(blankTest);
+      setSlugEdited(false);
       setEditingId(null);
-      await loadTests();
+      try {
+        await loadTests();
+      } catch (error) {
+        toast({
+          title: "Mock test saved, but list refresh failed",
+          description: error instanceof Error ? error.message : "Refresh the page to see the saved test.",
+          variant: "destructive",
+        });
+      }
     } catch (error) {
       toast({
-        title: "Creation failed",
+        title: editingId ? "Update failed" : "Creation failed",
         description: error instanceof Error ? error.message : "Please try again.",
         variant: "destructive",
       });
@@ -88,7 +109,14 @@ export default function AdminMockTestsPage() {
 
   function editTest(item: MockTest) {
     setEditingId(item.id);
+    setSlugEdited(true);
     setForm({ title: item.title, slug: item.slug, duration_minutes: item.duration_minutes, is_published: item.is_published, is_premium: item.is_premium });
+  }
+
+  function resetForm() {
+    setEditingId(null);
+    setSlugEdited(false);
+    setForm(blankTest);
   }
 
   async function archiveTest(item: MockTest) {
@@ -136,11 +164,12 @@ export default function AdminMockTestsPage() {
             <form onSubmit={onSubmit} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="test-title">Title</Label>
-                <Input id="test-title" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="Class 10 Science Full Test" required />
+                <Input id="test-title" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value, ...(!slugEdited ? { slug: slugify(e.target.value) } : {}) })} placeholder="Class 10 Science Full Test" required />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="test-slug">Slug</Label>
-                <Input id="test-slug" value={form.slug} onChange={(e) => setForm({ ...form, slug: e.target.value })} placeholder="class-10-science-full-test" required />
+                <Label htmlFor="test-slug">URL slug</Label>
+                <Input id="test-slug" value={form.slug} onChange={(e) => { setSlugEdited(true); setForm({ ...form, slug: e.target.value }); }} placeholder="Generated from the title" />
+                <p className="text-xs text-muted-foreground">Generated from the title. You can edit it before saving.</p>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="test-duration">Duration (minutes)</Label>
@@ -154,10 +183,11 @@ export default function AdminMockTestsPage() {
                 <input type="checkbox" checked={form.is_published} onChange={(e) => setForm({ ...form, is_published: e.target.checked })} />
                 Published for students
               </label>
+              {!editingId && <p className="text-xs text-muted-foreground">New tests are drafts until you add questions and publish them.</p>}
               <Button type="submit" className="w-full" disabled={saving}>
                 {saving ? "Saving..." : editingId ? "Save test" : "Create test"}
               </Button>
-              {editingId && <Button type="button" variant="ghost" className="w-full" onClick={() => { setEditingId(null); setForm(blankTest); }}>Cancel edit</Button>}
+              {editingId && <Button type="button" variant="ghost" className="w-full" onClick={resetForm}>Cancel edit</Button>}
             </form>
           </CardContent>
         </Card>

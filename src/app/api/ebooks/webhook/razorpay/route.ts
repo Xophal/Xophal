@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { serverEnv } from "@/lib/env.server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { findOrderByProviderOrderId, markEbookOrderFulfilled, markEbookOrderPaid, recordVerifiedEbookPaymentCosts, refundEbookOrder } from "@/lib/ebooks/orders";
+import { findOrderByProviderOrderId, markEbookOrderFulfilled, markEbookOrderPaid, recordEbookRefund, recordVerifiedEbookPaymentCosts } from "@/lib/ebooks/orders";
 import { isValidRazorpayWebhookSignature } from "@/lib/ebooks/payments";
 
 type RazorpayWebhookPayload = {
@@ -73,15 +73,24 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  if (body.event === "refund.processed" || body.event === "refund.created") {
+  if (body.event === "refund.processed") {
     const refund = body.payload?.refund?.entity;
-    if (refund?.payment_id) {
-      const { data: order } = await admin
-        .from("ebook_transactions")
-        .select("id")
-        .eq("provider_transaction_id", refund.payment_id)
-        .maybeSingle();
-      if (order) await refundEbookOrder(order.id, `Provider refund ${refund.id ?? ""}`.trim());
+    if (!refund?.payment_id || !refund.id || !Number.isSafeInteger(refund.amount) || Number(refund.amount) <= 0) {
+      return NextResponse.json({ success: false, error: "Invalid processed refund payload." }, { status: 400 });
+    }
+
+    const { data: order, error } = await admin
+      .from("ebook_transactions")
+      .select("id")
+      .eq("provider_transaction_id", refund.payment_id)
+      .maybeSingle();
+    if (error) throw error;
+    if (order) {
+      await recordEbookRefund({
+        orderId: order.id,
+        providerRefundId: refund.id,
+        amountMinor: Number(refund.amount),
+      });
     }
   }
 

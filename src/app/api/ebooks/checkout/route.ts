@@ -6,7 +6,7 @@ import { checkRateLimit } from "@/lib/rate-limit";
 import { serverEnv } from "@/lib/env.server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getMarketplaceConfig } from "@/lib/ebooks/config";
-import { createPendingEbookOrder, hasVerifiedEbookPurchase, loadPurchasableEbook } from "@/lib/ebooks/orders";
+import { createPendingEbookOrder, findPendingEbookOrder, hasVerifiedEbookPurchase, loadPurchasableEbook } from "@/lib/ebooks/orders";
 import { isRazorpayRouteConfigured } from "@/lib/ebooks/razorpay-route";
 import { ebookCheckoutSchema } from "@/lib/ebooks/schema";
 
@@ -58,6 +58,22 @@ export async function POST(request: NextRequest) {
     const config = await getMarketplaceConfig();
     const Razorpay = (await import("razorpay")).default;
     const razorpay = new Razorpay({ key_id: serverEnv.RAZORPAY_KEY_ID, key_secret: serverEnv.RAZORPAY_KEY_SECRET });
+    const pendingOrder = await findPendingEbookOrder(session.user.id, ebook.id);
+    if (pendingOrder?.provider_order_id) {
+      const providerOrder = await razorpay.orders.fetch(pendingOrder.provider_order_id);
+      if (Number(providerOrder.amount_paid ?? 0) > 0) {
+        throw new ApiError(409, "A payment for this order is being processed. Please refresh before trying again.", "PAYMENT_PROCESSING");
+      }
+      return apiSuccess({
+        orderId: pendingOrder.id,
+        orderNumber: pendingOrder.order_number,
+        providerOrder,
+        keyId: serverEnv.RAZORPAY_KEY_ID,
+      });
+    }
+    if (pendingOrder) {
+      throw new ApiError(409, "Checkout is being prepared. Please try again shortly.", "CHECKOUT_IN_PROGRESS");
+    }
 
     const providerOrder = await razorpay.orders.create({
       amount: Math.round(Number(ebook.price) * 100),
@@ -66,23 +82,45 @@ export async function POST(request: NextRequest) {
       notes: { ebook_id: ebook.id, buyer_id: session.user.id, seller_id: ebook.user_id },
     });
 
-    const order = await createPendingEbookOrder({
+    const reservation = await createPendingEbookOrder({
       ebook,
       buyerUserId: session.user.id,
       providerOrderId: providerOrder.id,
       config,
       provider: "razorpay",
     });
+    if (reservation.outcome === "already_purchased") {
+      throw new ApiError(409, "You already own this eBook.", "ALREADY_PURCHASED");
+    }
+    if (!reservation.order) {
+      throw new ApiError(500, "Checkout could not be reserved.", "CHECKOUT_RESERVATION_FAILED");
+    }
+    if (reservation.outcome === "pending") {
+      const existingProviderOrderId = reservation.order.provider_order_id;
+      if (!existingProviderOrderId) {
+        throw new ApiError(409, "Checkout is being prepared. Please try again shortly.", "CHECKOUT_IN_PROGRESS");
+      }
+      const existingProviderOrder = await razorpay.orders.fetch(existingProviderOrderId);
+      if (Number(existingProviderOrder.amount_paid ?? 0) > 0) {
+        throw new ApiError(409, "A payment for this order is being processed. Please refresh before trying again.", "PAYMENT_PROCESSING");
+      }
+      return apiSuccess({
+        orderId: reservation.order.id,
+        orderNumber: reservation.order.order_number,
+        providerOrder: existingProviderOrder,
+        keyId: serverEnv.RAZORPAY_KEY_ID,
+      });
+    }
 
     await createAdminClient().from("ebook_events").insert({
       event_name: "ebook_purchase_started",
       ebook_id: ebook.id,
       user_id: session.user.id,
       source: "checkout",
-      metadata: { order_id: order.id },
+      metadata: { order_id: reservation.order.id },
     });
 
-    return apiSuccess({ orderId: order.id, orderNumber: order.order_number, providerOrder, keyId: serverEnv.RAZORPAY_KEY_ID }, 201);
+    return apiSuccess({ orderId: reservation.order.id, orderNumber: reservation.order.order_number, providerOrder, keyId: serverEnv.RAZORPAY_KEY_ID }, 201);
   } catch (error) {
     if (error instanceof Error && error.message === "RATE_LIMIT") {
       return new Response(JSON.stringify({ success: false, error: "Too many requests.", code: "RATE_LIMIT" }), {

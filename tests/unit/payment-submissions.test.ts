@@ -217,24 +217,18 @@ describe("manual payment submissions", () => {
   });
 
   it("allows a payment verifier to approve a pending submission", async () => {
-    const existing = { id: "submission-456", status: "pending_verification", reason: null };
-    const updated = { ...existing, status: "approved", approved_by: "admin-123" };
-
-    const fetchQuery = createQuery(existing);
-    const updateQuery = createQuery(updated);
-    let adminFromCallCount = 0;
+    const admin = {
+      rpc: vi.fn().mockResolvedValue({
+        data: { status: "approved", subscription_id: "subscription-456" },
+        error: null,
+      }),
+    };
 
     mocks.requireAdminRole.mockResolvedValue({
       user: { id: "admin-123" },
       profile: { id: "admin-123", email_verified: true, is_active: true },
     });
-    mocks.createAdminClient.mockReturnValue({
-      from: vi.fn((table: string) => {
-        if (table !== "payment_submissions") throw new Error(`Unexpected table: ${table}`);
-        adminFromCallCount += 1;
-        return adminFromCallCount === 1 ? fetchQuery : updateQuery;
-      }),
-    });
+    mocks.createAdminClient.mockReturnValue(admin);
 
     const response = await approveSubmission(new NextRequest("http://localhost/api/admin/payment-submissions/submission-456", {
       method: "PATCH",
@@ -243,9 +237,15 @@ describe("manual payment submissions", () => {
     }), { params: Promise.resolve({ id: "submission-456" }) });
 
     expect(response.status).toBe(200);
+    expect(admin.rpc).toHaveBeenCalledWith("resolve_manual_payment_submission", {
+      p_submission_id: "submission-456",
+      p_actor_id: "admin-123",
+      p_status: "approved",
+      p_reason: "Verified via UPI reference",
+    });
     await expect(response.json()).resolves.toMatchObject({
       success: true,
-      data: expect.objectContaining({ status: "approved" }),
+      data: expect.objectContaining({ status: "approved", subscription_id: "subscription-456" }),
     });
   });
 });

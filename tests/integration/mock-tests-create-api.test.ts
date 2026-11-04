@@ -25,7 +25,9 @@ function createAdminClient(
   const testTypeQuery = {
     select: vi.fn(() => testTypeQuery),
     eq: vi.fn(() => testTypeQuery),
+    upsert: vi.fn(() => testTypeQuery),
     maybeSingle: vi.fn().mockResolvedValue(testTypeResult),
+    single: vi.fn().mockResolvedValue({ data: { id: "created-full-mock-type" }, error: null }),
   };
   const insertQuery = {
     insert: vi.fn(() => insertQuery),
@@ -44,11 +46,11 @@ function createAdminClient(
   };
 }
 
-function createRequest() {
+function createRequest(body: { title: string; slug?: string } = { title: "Sample mock test", slug: "sample-mock-test" }) {
   return new NextRequest("http://localhost/api/mock-tests", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ title: "Sample mock test", slug: "sample-mock-test" }),
+    body: JSON.stringify(body),
   });
 }
 
@@ -71,15 +73,37 @@ describe("POST /api/mock-tests", () => {
     ]);
   });
 
-  it("returns a clear configuration error when the seeded test type is missing", async () => {
-    mocks.createAdminClient.mockReturnValue(createAdminClient({ data: null, error: null }));
+  it("generates a URL slug from the title when one is omitted", async () => {
+    const adminClient = createAdminClient();
+    mocks.createAdminClient.mockReturnValue(adminClient);
+
+    const response = await createMockTest(createRequest({ title: "Class 10 Science Full Test" }));
+
+    expect(response.status).toBe(201);
+    expect(adminClient.insertQuery.insert).toHaveBeenCalledWith([
+      expect.objectContaining({
+        title: "Class 10 Science Full Test",
+        slug: "class-10-science-full-test",
+        is_published: false,
+      }),
+    ]);
+  });
+
+  it("creates the default test type when the seeded row is missing", async () => {
+    const adminClient = createAdminClient({ data: null, error: null });
+    mocks.createAdminClient.mockReturnValue(adminClient);
 
     const response = await createMockTest(createRequest());
 
-    expect(response.status).toBe(503);
-    await expect(response.json()).resolves.toMatchObject({
-      success: false,
-      code: "TEST_TYPE_NOT_CONFIGURED",
-    });
+    expect(response.status).toBe(201);
+    expect(adminClient.testTypeQuery.upsert).toHaveBeenCalledWith({
+      code: "full_mock",
+      name: "Full Mock Test",
+      description: "Complete syllabus mock test",
+      sort_order: 5,
+    }, { onConflict: "code" });
+    expect(adminClient.insertQuery.insert).toHaveBeenCalledWith([
+      expect.objectContaining({ test_type_id: "created-full-mock-type" }),
+    ]);
   });
 });

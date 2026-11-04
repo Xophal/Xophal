@@ -21,7 +21,7 @@ Follow this runbook for a full-feature production launch. Production credentials
    - Create a production Supabase project separate from development and staging.
    - Review and back up the production database before applying migrations.
    - Link the Supabase CLI to the intended project and apply all pending repository migrations with `supabase db push`.
-   - Confirm the latest migration is applied, including question/test access, exam integrity, ebook marketplace, and security hardening migration `040`. Migration `040` enforces active-account checks in role/entitlement helpers and restricts attempt RPC access.
+   - Confirm the latest migration is applied, including question/test access, exam integrity, ebook marketplace, and security hardening migration `040`. Migration `048` adds transactional subscription fulfillment support, serialized eBook checkout reservations, and idempotent partial/full refund accounting. Migration `040` enforces active-account checks in role/entitlement helpers and restricts attempt RPC access.
    - Verify RLS policies with anon, active-user, and deactivated-user clients; confirm disabled accounts lose admin/reviewer privileges and premium entitlements, and attempt RPCs reject anonymous and non-owner callers.
    - Seed production only with approved, non-test content; do not copy local test users or payment data.
 

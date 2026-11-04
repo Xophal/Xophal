@@ -58,42 +58,44 @@ export async function createPendingEbookOrder(input: {
   config: MarketplacePricingRules;
   provider: string;
   metadata?: Record<string, unknown>;
-}): Promise<EbookOrderRow> {
-  const admin = createAdminClient();
+}): Promise<{ outcome: "created" | "pending" | "already_purchased"; order: EbookOrderRow | null }> {
   const settlement = splitVerifiedSale(Number(input.ebook.price), input.config.commissionPercent);
-
-  const { data, error } = await admin
-    .from("ebook_transactions")
-    .insert({
-      order_number: orderNumber(),
-      ebook_id: input.ebook.id,
-      buyer_user_id: input.buyerUserId,
-      seller_user_id: input.ebook.user_id,
-      provider: input.provider,
-      provider_order_id: input.providerOrderId,
-      status: "PENDING",
-      order_status: "CREATED",
-      currency: (input.ebook.currency || "INR").toUpperCase(),
-      gross_amount: settlement.grossAmount,
-      commission_percent: input.config.commissionPercent,
-      commission_amount: settlement.commissionAmount,
-      seller_amount: settlement.sellerAmount,
-      payment_fee: null,
-      tax_amount: null,
-      seller_net_amount: null,
-      payout_status: "NOT_AVAILABLE",
-      provider_metadata: {
-        ...(input.metadata ?? {}),
-        ebook_title: input.ebook.title,
-        ebook_slug: input.ebook.slug,
-        price_snapshot: roundMoney(Number(input.ebook.price)),
-      },
-    })
-    .select("*")
-    .single();
-
+  const { data, error } = await createAdminClient().rpc("reserve_ebook_checkout", {
+    p_order_number: orderNumber(),
+    p_ebook_id: input.ebook.id,
+    p_buyer_user_id: input.buyerUserId,
+    p_seller_user_id: input.ebook.user_id,
+    p_provider: input.provider,
+    p_provider_order_id: input.providerOrderId,
+    p_currency: (input.ebook.currency || "INR").toUpperCase(),
+    p_gross_amount: settlement.grossAmount,
+    p_commission_percent: input.config.commissionPercent,
+    p_commission_amount: settlement.commissionAmount,
+    p_seller_amount: settlement.sellerAmount,
+    p_provider_metadata: {
+      ...(input.metadata ?? {}),
+      ebook_title: input.ebook.title,
+      ebook_slug: input.ebook.slug,
+      price_snapshot: roundMoney(Number(input.ebook.price)),
+    },
+  });
   if (error) throw error;
-  return data as EbookOrderRow;
+  const result = data as { outcome: "created" | "pending" | "already_purchased"; order?: EbookOrderRow };
+  return { outcome: result.outcome, order: result.order ?? null };
+}
+
+export async function findPendingEbookOrder(buyerUserId: string, ebookId: string) {
+  const { data, error } = await createAdminClient()
+    .from("ebook_transactions")
+    .select("*")
+    .eq("buyer_user_id", buyerUserId)
+    .eq("ebook_id", ebookId)
+    .eq("status", "PENDING")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) throw error;
+  return (data as EbookOrderRow) ?? null;
 }
 
 /** Idempotently finalises an order after server-side payment verification. */
@@ -170,25 +172,26 @@ export async function recordVerifiedEbookPaymentCosts(input: {
 }
 
 /** Records a refund. Refunded orders stop counting toward seller earnings. */
-export async function refundEbookOrder(orderId: string, reason: string) {
-  const admin = createAdminClient();
-  const now = new Date().toISOString();
-  const { data, error } = await admin
-    .from("ebook_transactions")
-    .update({
-      status: "REFUNDED",
-      order_status: "REFUNDED",
-      refund_status: "REFUNDED",
-      payout_status: "FAILED",
-      refunded_at: now,
-      updated_at: now,
-      provider_metadata: { refund_reason: reason.slice(0, 500) },
-    })
-    .eq("id", orderId)
-    .select("*")
-    .maybeSingle();
+export async function recordEbookRefund(input: {
+  orderId: string;
+  providerRefundId: string;
+  amountMinor: number;
+}) {
+  if (!Number.isSafeInteger(input.amountMinor) || input.amountMinor <= 0) {
+    throw new Error("Refund amount must be a positive number of minor currency units.");
+  }
+  const { data, error } = await createAdminClient().rpc("record_ebook_refund", {
+    p_transaction_id: input.orderId,
+    p_provider_refund_id: input.providerRefundId,
+    p_amount_minor: input.amountMinor,
+  });
   if (error) throw error;
-  return data as EbookOrderRow | null;
+  return data as {
+    refund_total_minor: number;
+    gross_amount_minor: number;
+    fully_refunded: boolean;
+    already_recorded: boolean;
+  };
 }
 
 /**
