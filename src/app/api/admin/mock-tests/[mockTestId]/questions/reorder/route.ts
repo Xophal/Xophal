@@ -1,31 +1,31 @@
 import { NextRequest } from "next/server";
 import { z } from "zod";
-import { requireAdminAuth } from "@/lib/auth";
+import { requireAdminRole } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { apiSuccess, handleApiError, validateBody } from "@/lib/api-utils";
+import { ApiError, apiSuccess, handleApiError, validateBody } from "@/lib/api-utils";
 
 const reorderSchema = z.object({
-  order: z.array(z.object({ questionId: z.string().uuid(), sortOrder: z.number().int() }))
+  order: z.array(z.object({ questionId: z.string().uuid(), sortOrder: z.number().int().min(0) }))
 });
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ mockTestId: string }> }) {
   try {
-    await requireAdminAuth();
+    await requireAdminRole(["super_admin", "admin", "content_manager"]);
     const { mockTestId } = await params;
     const body = await request.json();
     const payload = await validateBody(reorderSchema, body);
     const admin = createAdminClient();
 
-    const qIds = payload.order.map((o: any) => o.questionId);
-    // verify all questions belong to this mock test
+    const qIds = payload.order.map((item) => item.questionId);
     const { data: existing, error: existErr } = await admin.from("mock_test_questions").select("question_id").eq("mock_test_id", mockTestId).in("question_id", qIds);
     if (existErr) throw existErr;
-    const existingIds = (existing || []).map((r: any) => r.question_id);
+    const existingIds = new Set((existing || []).map((row) => row.question_id));
     for (const q of payload.order) {
-      if (!existingIds.includes(q.questionId)) throw new Error("One or more questions do not belong to the specified mock test");
+      if (!existingIds.has(q.questionId)) {
+        throw new ApiError(400, "One or more questions do not belong to the specified mock test.", "INVALID_QUESTION_SELECTION");
+      }
     }
 
-    // update each row
     for (const item of payload.order) {
       const { error } = await admin.from("mock_test_questions").update({ sort_order: item.sortOrder }).match({ mock_test_id: mockTestId, question_id: item.questionId });
       if (error) throw error;

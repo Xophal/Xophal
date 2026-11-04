@@ -13,6 +13,8 @@ type MockTest = {
   id: string;
   title: string;
   slug: string;
+  description: string | null;
+  instructions: string | null;
   duration_minutes: number;
   total_questions?: number;
   total_marks?: number;
@@ -21,6 +23,12 @@ type MockTest = {
   is_active: boolean;
 };
 type TestSection = { id: string; name: string; duration_minutes: number | null };
+type TestQuestion = {
+  question_id: string;
+  section_id: string | null;
+  sort_order: number;
+  questions: { stem: string | null; question_text: string | null } | null;
+};
 type BankQuestion = {
   id: string;
   stem: string | null;
@@ -95,6 +103,7 @@ export default function AdminMockTestsPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [sectionTestId, setSectionTestId] = useState<string | null>(null);
   const [sections, setSections] = useState<TestSection[]>([]);
+  const [sectionQuestions, setSectionQuestions] = useState<TestQuestion[]>([]);
   const [sectionName, setSectionName] = useState("");
   const [sectionDuration, setSectionDuration] = useState("");
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -293,6 +302,7 @@ export default function AdminMockTestsPage() {
           body: JSON.stringify({
             title: body.title,
             slug: body.slug,
+            description: body.description,
             duration_minutes: Number(form.durationOverride || calculatedDuration),
             is_published: form.isPublished,
             is_premium: form.isPremium,
@@ -339,6 +349,7 @@ export default function AdminMockTestsPage() {
       ...EMPTY_FORM,
       title: test.title,
       slug: test.slug,
+      description: test.description ?? "",
       durationOverride: String(test.duration_minutes),
       isPublished: test.is_published,
       isPremium: test.is_premium,
@@ -361,11 +372,32 @@ export default function AdminMockTestsPage() {
 
   async function loadSections(testId: string) {
     try {
-      const response = await getData<TestSection[]>(`/api/admin/mock-tests/${testId}/sections`);
+      const [loadedSections, loadedQuestions] = await Promise.all([
+        getData<TestSection[]>(`/api/admin/mock-tests/${testId}/sections`),
+        getData<TestQuestion[]>(`/api/admin/mock-tests/${testId}/questions`),
+      ]);
       setSectionTestId(testId);
-      setSections(response);
+      setSections(loadedSections);
+      setSectionQuestions(loadedQuestions);
     } catch (error) {
       toast({ title: "Sections could not be loaded", description: error instanceof Error ? error.message : String(error), variant: "destructive" });
+    }
+  }
+
+  async function assignQuestionToSection(testId: string, questionId: string, sectionId: string) {
+    try {
+      const response = await fetch(`/api/admin/mock-tests/${testId}/questions`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ question_id: questionId, section_id: sectionId || null }),
+      });
+      const result = await response.json();
+      if (!response.ok || !result.success) throw new Error(result.error || "Could not assign this question.");
+      setSectionQuestions((current) => current.map((question) => (
+        question.question_id === questionId ? { ...question, section_id: sectionId || null } : question
+      )));
+    } catch (error) {
+      toast({ title: "Question assignment failed", description: error instanceof Error ? error.message : String(error), variant: "destructive" });
     }
   }
 
@@ -628,6 +660,27 @@ export default function AdminMockTestsPage() {
                       <Button type="button" size="sm" variant="ghost" onClick={() => void deleteSection(test.id, section.id)}>Remove</Button>
                     </div>
                   ))}
+                  <div className="space-y-2 border-t pt-3">
+                    <p className="text-sm font-medium">Assign questions to sections</p>
+                    {sectionQuestions.length === 0 ? (
+                      <p className="text-sm text-muted-foreground">This test has no questions.</p>
+                    ) : sectionQuestions.map((question) => (
+                      <div key={question.question_id} className="flex flex-wrap items-center justify-between gap-3 text-sm">
+                        <span className="min-w-0 flex-1">
+                          {question.questions?.stem || question.questions?.question_text || `Question ${question.sort_order + 1}`}
+                        </span>
+                        <select
+                          className="glass-input rounded-md px-3 py-2"
+                          aria-label={`Section for question ${question.sort_order + 1}`}
+                          value={question.section_id ?? ""}
+                          onChange={(event) => void assignQuestionToSection(test.id, question.question_id, event.target.value)}
+                        >
+                          <option value="">Unassigned</option>
+                          {sections.map((section) => <option key={section.id} value={section.id}>{section.name}</option>)}
+                        </select>
+                      </div>
+                    ))}
+                  </div>
                   <div className="grid gap-2 sm:grid-cols-[1fr_110px_auto]">
                     <Input value={sectionName} onChange={(event) => setSectionName(event.target.value)} placeholder="Section name" />
                     <Input type="number" min={1} value={sectionDuration} onChange={(event) => setSectionDuration(event.target.value)} placeholder="Minutes" />

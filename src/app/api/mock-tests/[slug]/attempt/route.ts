@@ -73,13 +73,35 @@ export async function POST(_: Request, { params }: { params: Promise<{ slug: str
       .order("position", { ascending: true });
     if (paperError) throw paperError;
 
-    const questions = (paperRows ?? []).map((row) =>
-      sanitizeMockTestAttemptQuestion(
+    const { data: sectionAssignments, error: sectionAssignmentsError } = await adminClient
+      .from("mock_test_questions")
+      .select("question_id, section_id")
+      .eq("mock_test_id", test.id);
+    if (sectionAssignmentsError) throw sectionAssignmentsError;
+
+    const sectionIds = [...new Set((sectionAssignments ?? []).flatMap((row) => row.section_id ? [row.section_id] : []))];
+    const sectionNames = new Map<string, string>();
+    if (sectionIds.length > 0) {
+      const { data: sectionRows, error: sectionsError } = await adminClient
+        .from("mock_test_sections")
+        .select("id, name")
+        .eq("mock_test_id", test.id)
+        .in("id", sectionIds);
+      if (sectionsError) throw sectionsError;
+      for (const section of sectionRows ?? []) sectionNames.set(section.id, section.name);
+    }
+
+    const sectionByQuestionId = new Map(
+      (sectionAssignments ?? []).map((assignment) => [assignment.question_id, assignment.section_id])
+    );
+    const questions = (paperRows ?? []).map((row) => ({
+      ...sanitizeMockTestAttemptQuestion(
         row.question_snapshot,
         Number(row.marks ?? 0),
         Number(row.negative_marks ?? 0)
-      )
-    );
+      ),
+      section_name: sectionNames.get(sectionByQuestionId.get(row.question_id) ?? "") ?? null,
+    }));
     if (questions.length === 0) throw new ApiError(400, "This mock test has no questions yet", "TEST_EMPTY");
 
     const { data: savedResponses, error: responseError } = await adminClient

@@ -96,6 +96,7 @@ export interface Question {
   explanation: string | null;
   explanation_html: string | null;
   image_url: string | null;
+  section_name?: string | null;
   marks: number;
   negative_marks: number;
   time_seconds: number;

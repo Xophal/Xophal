@@ -15,7 +15,11 @@ function createAdminClient(
   testTypeResult: {
     data: { id: string } | null;
     error: { code: string; message: string } | null;
-  } = { data: { id: "full-mock-type" }, error: null }
+  } = { data: { id: "full-mock-type" }, error: null },
+  insertResult: {
+    data: { id: string } | null;
+    error: { code: string; message: string } | null;
+  } = { data: { id: "new-mock-test" }, error: null }
 ) {
   const duplicateQuery = {
     select: vi.fn(() => duplicateQuery),
@@ -30,7 +34,7 @@ function createAdminClient(
   const insertQuery = {
     insert: vi.fn(() => insertQuery),
     select: vi.fn(() => insertQuery),
-    single: vi.fn().mockResolvedValue({ data: { id: "new-mock-test" }, error: null }),
+    single: vi.fn().mockResolvedValue(insertResult),
   };
   const mockTestQueries = [duplicateQuery, insertQuery];
 
@@ -80,6 +84,21 @@ describe("POST /api/mock-tests", () => {
     await expect(response.json()).resolves.toMatchObject({
       success: false,
       code: "TEST_TYPE_NOT_CONFIGURED",
+    });
+  });
+
+  it("returns a conflict when the unique slug index rejects a concurrent duplicate", async () => {
+    mocks.createAdminClient.mockReturnValue(createAdminClient(
+      { data: { id: "full-mock-type" }, error: null },
+      { data: null, error: { code: "23505", message: "duplicate key value violates unique constraint" } }
+    ));
+
+    const response = await createMockTest(createRequest());
+
+    expect(response.status).toBe(409);
+    await expect(response.json()).resolves.toMatchObject({
+      success: false,
+      code: "DUPLICATE_SLUG",
     });
   });
 });

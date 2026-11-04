@@ -136,11 +136,12 @@ export async function POST(request: NextRequest) {
     const payload = await validateBody(mockTestCreateSchema, body);
     const adminClient = createAdminClient();
 
-    const { data: duplicateSlug } = await adminClient
+    const { data: duplicateSlug, error: duplicateSlugError } = await adminClient
       .from("mock_tests")
       .select("id")
       .eq("slug", payload.slug)
       .maybeSingle();
+    if (duplicateSlugError) throw duplicateSlugError;
     if (duplicateSlug) {
       throw new ApiError(409, "A mock test with this slug already exists.", "DUPLICATE_SLUG");
     }
@@ -325,6 +326,9 @@ export async function POST(request: NextRequest) {
       .select()
       .single();
 
+    if (error?.code === "23505") {
+      throw new ApiError(409, "A mock test with this slug already exists.", "DUPLICATE_SLUG");
+    }
     if (error) throw error;
     if (!questionIds.length) return apiSuccess(data, 201);
 

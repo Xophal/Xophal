@@ -293,6 +293,11 @@ export default function MockRunner({ slug }: { slug: string }) {
                     </span>
                   </div>
 
+                  {question.section_name && (
+                    <p className="mt-3 text-xs font-semibold uppercase tracking-wide text-primary">
+                      {question.section_name}
+                    </p>
+                  )}
                   <h1 className="mt-3 text-lg font-bold leading-snug sm:text-xl">
                     {question.question_text}
                   </h1>

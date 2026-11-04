@@ -7,8 +7,9 @@ import { ApiError, apiSuccess, handleApiError, validateBody } from "@/lib/api-ut
 const updateSchema = z.object({
   title: z.string().min(2).max(500).optional(),
   slug: z.string().min(2).max(500).optional(),
+  description: z.string().optional().or(z.literal("")),
   duration_minutes: z.number().int().positive().optional(),
-    access_price: z.number().min(0).finite().optional(),
+  access_price: z.number().min(0).finite().optional(),
   passing_marks: z.number().optional(),
   is_premium: z.boolean().optional(),
   is_published: z.boolean().optional(),
@@ -26,9 +27,12 @@ export async function PATCH(request: NextRequest, { params }: Params) {
     const admin = createAdminClient();
     const { data, error } = await admin.from("mock_tests").update({
       ...payload,
-      instructions: payload.instructions || null,
+      ...(payload.instructions !== undefined ? { instructions: payload.instructions || null } : {}),
       published_at: payload.is_published === true ? new Date().toISOString() : payload.is_published === false ? null : undefined,
     }).eq("id", mockTestId).select().maybeSingle();
+    if (error?.code === "23505") {
+      throw new ApiError(409, "A mock test with this slug already exists.", "DUPLICATE_SLUG");
+    }
     if (error) throw error;
     if (!data) throw new ApiError(404, "Mock test not found", "NOT_FOUND");
     return apiSuccess(data);
