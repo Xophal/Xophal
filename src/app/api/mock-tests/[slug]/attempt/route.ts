@@ -21,6 +21,50 @@ export async function POST(_: Request, { params }: { params: Promise<{ slug: str
     if (testError) throw testError;
     if (!test) throw new ApiError(404, "Mock test not found", "TEST_NOT_FOUND");
 
+    const { data: currentAttempt, error: currentAttemptError } = await adminClient
+      .from("test_attempts")
+      .select("id")
+      .eq("user_id", session.user.id)
+      .eq("mock_test_id", test.id)
+      .eq("status", "in_progress")
+      .order("started_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (currentAttemptError) throw currentAttemptError;
+
+    let hasFrozenPaper = false;
+    if (currentAttempt) {
+      const { data: savedPaper, error: savedPaperError } = await adminClient
+        .from("test_attempt_papers")
+        .select("question_id")
+        .eq("attempt_id", currentAttempt.id)
+        .limit(1)
+        .maybeSingle();
+      if (savedPaperError) throw savedPaperError;
+      hasFrozenPaper = Boolean(savedPaper);
+    }
+
+    const { data: questionLinks, error: questionLinksError } = await adminClient
+      .from("mock_test_questions")
+      .select("question_id")
+      .eq("mock_test_id", test.id);
+    if (questionLinksError) throw questionLinksError;
+    if (!questionLinks?.length) throw new ApiError(400, "This mock test has no questions yet.", "TEST_EMPTY");
+
+    if (!hasFrozenPaper) {
+      const questionIds = questionLinks.map((link) => link.question_id);
+      const { data: publishedQuestions, error: publishedQuestionsError } = await adminClient
+        .from("questions")
+        .select("id")
+        .in("id", questionIds)
+        .eq("status", "published")
+        .eq("is_active", true);
+      if (publishedQuestionsError) throw publishedQuestionsError;
+      if (publishedQuestions?.length !== questionIds.length) {
+        throw new ApiError(400, "This test is being updated and is not ready to start.", "TEST_NOT_READY");
+      }
+    }
+
     const entitlement = await getUserEntitlement(session.user.id);
 
     const { data: grant } = await adminClient

@@ -13,11 +13,19 @@ type MockTest = {
   title: string;
   slug: string;
   duration_minutes: number;
+  total_questions: number;
+  total_marks: number;
   is_published: boolean;
   is_premium: boolean;
   is_active: boolean;
 };
 type TestSection = { id: string; name: string; duration_minutes: number | null };
+type TestQuestion = { id: string; question_text: string; marks: number | string | null; sort_order?: number };
+type QuestionManagerResponse = {
+  success: boolean;
+  error?: string;
+  data?: { attachedQuestions: TestQuestion[]; availableQuestions: TestQuestion[] };
+};
 
 const blankTest = {
   title: "",
@@ -34,8 +42,15 @@ export default function AdminMockTestsPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [sections, setSections] = useState<TestSection[]>([]);
+  const [sectionsTestId, setSectionsTestId] = useState<string | null>(null);
   const [sectionName, setSectionName] = useState("");
   const [sectionDuration, setSectionDuration] = useState("");
+  const [managingTestId, setManagingTestId] = useState<string | null>(null);
+  const [availableQuestions, setAvailableQuestions] = useState<TestQuestion[]>([]);
+  const [attachedQuestions, setAttachedQuestions] = useState<TestQuestion[]>([]);
+  const [questionSearch, setQuestionSearch] = useState("");
+  const [questionsLoading, setQuestionsLoading] = useState(false);
+  const [questionActionId, setQuestionActionId] = useState<string | null>(null);
 
   useEffect(() => {
     void loadTests().catch((error) => {
@@ -129,7 +144,9 @@ export default function AdminMockTestsPage() {
   async function loadSections(testId: string) {
     const response = await fetch(`/api/admin/mock-tests/${testId}/sections`, { cache: "no-store" });
     const result = await response.json();
-    if (response.ok && result.success) setSections(result.data ?? []);
+    if (!response.ok || !result.success) throw new Error(result.error || "Could not load test sections.");
+    setSectionsTestId(testId);
+    setSections(result.data ?? []);
   }
 
   async function addSection(testId: string) {
@@ -138,6 +155,99 @@ export default function AdminMockTestsPage() {
     const result = await response.json();
     if (!response.ok || !result.success) return toast({ title: "Section creation failed", description: result.error || "Please try again.", variant: "destructive" });
     setSectionName(""); setSectionDuration(""); await loadSections(testId);
+  }
+
+  async function loadTestQuestions(testId: string, search = questionSearch) {
+    setQuestionsLoading(true);
+    try {
+      const params = new URLSearchParams();
+      if (search.trim()) params.set("search", search.trim());
+      const response = await fetch(`/api/admin/mock-tests/${testId}/questions?${params}`, { cache: "no-store" });
+      const result = await response.json() as QuestionManagerResponse;
+      if (!response.ok || !result.success || !result.data) {
+        throw new Error(result.error || "Could not load questions.");
+      }
+      setAttachedQuestions(result.data.attachedQuestions);
+      setAvailableQuestions(result.data.availableQuestions);
+    } finally {
+      setQuestionsLoading(false);
+    }
+  }
+
+  async function manageQuestions(testId: string) {
+    setManagingTestId(managingTestId === testId ? null : testId);
+    setQuestionSearch("");
+    try {
+      await loadTestQuestions(testId, "");
+    } catch (error) {
+      toast({
+        title: "Questions could not be loaded",
+        description: error instanceof Error ? error.message : "Please try again.",
+        variant: "destructive",
+      });
+    }
+  }
+
+  async function attachQuestion(testId: string, questionId: string) {
+    setQuestionActionId(questionId);
+    try {
+      const response = await fetch(`/api/admin/mock-tests/${testId}/questions`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ question_ids: [questionId] }),
+      });
+      const result = await response.json();
+      if (!response.ok || !result.success) throw new Error(result.error || "Could not add question.");
+      await Promise.all([loadTestQuestions(testId), loadTests()]);
+      toast({ title: "Question added to test" });
+    } catch (error) {
+      toast({
+        title: "Could not add question",
+        description: error instanceof Error ? error.message : "Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setQuestionActionId(null);
+    }
+  }
+
+  async function removeQuestion(testId: string, questionId: string) {
+    setQuestionActionId(questionId);
+    try {
+      const response = await fetch(`/api/admin/mock-tests/${testId}/questions?questionId=${questionId}`, { method: "DELETE" });
+      const result = await response.json();
+      if (!response.ok || !result.success) throw new Error(result.error || "Could not remove question.");
+      await Promise.all([loadTestQuestions(testId), loadTests()]);
+      toast({ title: "Question removed from test" });
+    } catch (error) {
+      toast({
+        title: "Could not remove question",
+        description: error instanceof Error ? error.message : "Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setQuestionActionId(null);
+    }
+  }
+
+  async function togglePublished(item: MockTest) {
+    try {
+      const response = await fetch(`/api/admin/mock-tests/${item.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ is_published: !item.is_published }),
+      });
+      const result = await response.json();
+      if (!response.ok || !result.success) throw new Error(result.error || "Could not update publication.");
+      await loadTests();
+      toast({ title: item.is_published ? "Test unpublished" : "Test published" });
+    } catch (error) {
+      toast({
+        title: "Publication update failed",
+        description: error instanceof Error ? error.message : "Please try again.",
+        variant: "destructive",
+      });
+    }
   }
 
   async function deleteSection(testId: string, sectionId: string) {
@@ -179,11 +289,7 @@ export default function AdminMockTestsPage() {
                 <input type="checkbox" checked={form.is_premium} onChange={(e) => setForm({ ...form, is_premium: e.target.checked })} />
                 Premium test
               </label>
-              <label className="flex items-center gap-2 text-sm">
-                <input type="checkbox" checked={form.is_published} onChange={(e) => setForm({ ...form, is_published: e.target.checked })} />
-                Published for students
-              </label>
-              {!editingId && <p className="text-xs text-muted-foreground">New tests are drafts until you add questions and publish them.</p>}
+              <p className="text-xs text-muted-foreground">Tests stay in draft until they contain published questions and you publish them.</p>
               <Button type="submit" className="w-full" disabled={saving}>
                 {saving ? "Saving..." : editingId ? "Save test" : "Create test"}
               </Button>
@@ -204,12 +310,64 @@ export default function AdminMockTestsPage() {
                   <div className="flex items-center justify-between gap-3">
                     <p className="font-semibold">{item.title}</p>
                     <span className="rounded-full bg-primary/10 px-2 py-1 text-xs font-medium text-primary">
-                      {item.is_premium ? "Premium" : "Free"}
+                      {item.is_published ? "Published" : "Draft"}{item.is_premium ? " • Premium" : " • Free"}
                     </span>
                   </div>
-                  <p className="mt-1 text-sm text-muted-foreground">{item.duration_minutes} mins • /{item.slug}</p>
-                  <div className="mt-3 flex flex-wrap gap-2"><Button type="button" size="sm" variant="outline" onClick={() => editTest(item)}>Edit</Button><Button type="button" size="sm" variant="outline" onClick={() => void archiveTest(item)}>Archive</Button><Button type="button" size="sm" variant="outline" asChild><a href={`/test/${item.slug}`} target="_blank" rel="noreferrer">Preview</a></Button><Button type="button" size="sm" variant="outline" onClick={() => void loadSections(item.id)}>Sections</Button></div>
-                  {sections.length > 0 && <div className="mt-3 space-y-2 rounded-lg bg-muted/40 p-3"><p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Sections</p>{sections.map((section) => <div key={section.id} className="flex items-center justify-between text-sm"><span>{section.name}{section.duration_minutes ? ` • ${section.duration_minutes} min` : ""}</span><Button type="button" size="sm" variant="ghost" onClick={() => void deleteSection(item.id, section.id)}>Remove</Button></div>)}<div className="grid gap-2 sm:grid-cols-[1fr_110px_auto]"><Input value={sectionName} onChange={(e) => setSectionName(e.target.value)} placeholder="Section name" /><Input type="number" min={1} value={sectionDuration} onChange={(e) => setSectionDuration(e.target.value)} placeholder="Minutes" /><Button type="button" size="sm" onClick={() => void addSection(item.id)}>Add section</Button></div></div>}
+                  <p className="mt-1 text-sm text-muted-foreground">{item.duration_minutes} mins • {item.total_questions} questions • /{item.slug}</p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <Button type="button" size="sm" variant="outline" onClick={() => editTest(item)}>Edit</Button>
+                    <Button type="button" size="sm" variant="outline" onClick={() => void manageQuestions(item.id)}>Questions</Button>
+                    <Button type="button" size="sm" variant="outline" onClick={() => void loadSections(item.id).catch((error) => toast({ title: "Sections could not be loaded", description: error instanceof Error ? error.message : "Please try again.", variant: "destructive" }))}>Sections</Button>
+                    <Button type="button" size="sm" variant={item.is_published ? "outline" : "default"} disabled={!item.is_published && item.total_questions === 0} onClick={() => void togglePublished(item)}>
+                      {item.is_published ? "Unpublish" : "Publish"}
+                    </Button>
+                    <Button type="button" size="sm" variant="outline" onClick={() => void archiveTest(item)}>Archive</Button>
+                    <Button type="button" size="sm" variant="outline" asChild><a href={`/test/${item.slug}`} target="_blank" rel="noreferrer">Preview</a></Button>
+                  </div>
+                  {managingTestId === item.id && (
+                    <div className="mt-3 space-y-4 rounded-lg bg-muted/40 p-3">
+                      <div>
+                        <p className="text-sm font-semibold">Questions in this test</p>
+                        <p className="mt-1 text-xs text-muted-foreground">Only published, active multiple-choice questions with answer keys can be added.</p>
+                      </div>
+                      {attachedQuestions.length > 0 ? (
+                        <div className="space-y-2">
+                          {attachedQuestions.map((question) => (
+                            <div key={question.id} className="flex items-start justify-between gap-2 text-sm">
+                              <span>{question.question_text}<span className="ml-2 text-xs text-muted-foreground">({question.marks ?? 0} marks)</span></span>
+                              <Button type="button" size="sm" variant="ghost" disabled={questionActionId === question.id} onClick={() => void removeQuestion(item.id, question.id)}>Remove</Button>
+                            </div>
+                          ))}
+                        </div>
+                      ) : <p className="text-sm text-muted-foreground">No questions have been added.</p>}
+                      <Input
+                        value={questionSearch}
+                        onChange={(event) => {
+                          const search = event.target.value;
+                          setQuestionSearch(search);
+                          void loadTestQuestions(item.id, search).catch((error) => toast({ title: "Question search failed", description: error instanceof Error ? error.message : "Please try again.", variant: "destructive" }));
+                        }}
+                        placeholder="Search published question bank"
+                      />
+                      {questionsLoading ? <p className="text-sm text-muted-foreground">Loading questions…</p> : availableQuestions.length > 0 ? (
+                        <div className="max-h-64 space-y-2 overflow-y-auto">
+                          {availableQuestions.map((question) => (
+                            <div key={question.id} className="flex items-start justify-between gap-2 text-sm">
+                              <span>{question.question_text}<span className="ml-2 text-xs text-muted-foreground">({question.marks ?? 0} marks)</span></span>
+                              <Button type="button" size="sm" variant="outline" disabled={questionActionId === question.id} onClick={() => void attachQuestion(item.id, question.id)}>Add</Button>
+                            </div>
+                          ))}
+                        </div>
+                      ) : <p className="text-sm text-muted-foreground">No eligible published questions found. <a className="font-medium text-primary underline" href="/admin/questions">Create and publish questions</a>, then return here.</p>}
+                    </div>
+                  )}
+                  {sectionsTestId === item.id && (
+                    <div className="mt-3 space-y-2 rounded-lg bg-muted/40 p-3">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Sections</p>
+                      {sections.map((section) => <div key={section.id} className="flex items-center justify-between text-sm"><span>{section.name}{section.duration_minutes ? ` • ${section.duration_minutes} min` : ""}</span><Button type="button" size="sm" variant="ghost" onClick={() => void deleteSection(item.id, section.id)}>Remove</Button></div>)}
+                      <div className="grid gap-2 sm:grid-cols-[1fr_110px_auto]"><Input value={sectionName} onChange={(e) => setSectionName(e.target.value)} placeholder="Section name" /><Input type="number" min={1} value={sectionDuration} onChange={(e) => setSectionDuration(e.target.value)} placeholder="Minutes" /><Button type="button" size="sm" onClick={() => void addSection(item.id)}>Add section</Button></div>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
