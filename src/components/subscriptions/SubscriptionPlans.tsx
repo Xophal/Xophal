@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { Check, Copy, ExternalLink, LoaderCircle, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -37,6 +38,8 @@ type PaymentSettings = {
   payee_name: string | null;
   instructions: string | null;
 };
+const QR_PAYMENT_UPI_ID = "lukumoniborah533-1@oksbi";
+
 type Submission = {
   id: string;
   product_id: string;
@@ -137,10 +140,12 @@ export default function SubscriptionPlans({ isStudent = false }: { isStudent?: b
     () => new Set(submissions.filter((submission) => submission.status === "pending_verification").map((submission) => submission.product_id)),
     [submissions]
   );
+  const qrMatchesConfiguredUpi = payment?.upi_id?.trim().toLowerCase() === QR_PAYMENT_UPI_ID;
+  const recipientName = qrMatchesConfiguredUpi ? "Lukumoni Borah" : payment?.payee_name || "Xophol";
   const upiUri = selectedProduct && payment?.upi_id
     ? `upi://pay?${new URLSearchParams({
       pa: payment.upi_id,
-      pn: payment.payee_name || "Xophol",
+      pn: recipientName,
       am: (selectedPrice / 100).toFixed(2),
       cu: "INR",
       tn: selectedProduct.name,
@@ -314,9 +319,28 @@ export default function SubscriptionPlans({ isStudent = false }: { isStudent?: b
                 <div>
                   <p className="text-sm font-semibold">Pay using UPI</p>
                   <p className="mt-1 text-sm text-muted-foreground">
-                    Pay {formatPaiseAsInr(selectedPrice)} to {payment.payee_name || "Xophol"}.
+                    Pay {formatPaiseAsInr(selectedPrice)} to {recipientName}.
                   </p>
                 </div>
+                {qrMatchesConfiguredUpi ? (
+                  <figure className="space-y-2 rounded-xl bg-white p-3 text-center">
+                    <Image
+                      src="/images/manual-upi-qr.jpg"
+                      alt="UPI payment QR code for Lukumoni Borah"
+                      width={352}
+                      height={352}
+                      unoptimized
+                      className="mx-auto h-auto w-full max-w-[280px]"
+                    />
+                    <figcaption className="text-xs text-muted-foreground">
+                      Scan with a UPI app, enter the exact amount shown above, and confirm the recipient before paying.
+                    </figcaption>
+                  </figure>
+                ) : (
+                  <p role="status" className="text-sm text-muted-foreground">
+                    The QR code is for {QR_PAYMENT_UPI_ID}, which differs from the configured payment UPI ID. Use the UPI ID shown below or contact support.
+                  </p>
+                )}
                 <div className="flex flex-wrap items-center gap-3">
                   <code className="rounded-lg bg-muted px-3 py-2 text-sm">{payment.upi_id}</code>
                   <Button type="button" variant="outline" size="sm" onClick={() => void copyUpiId()}>

@@ -23,20 +23,36 @@ type Payment = {
   coupons?: { code?: string | null } | null;
 };
 
+type ManualSubmission = {
+  id: string;
+  amount_minor: number;
+  final_amount_minor: number;
+  currency: string;
+  status: string;
+  reference_code: string;
+  evidence_url?: string | null;
+  created_at: string;
+  reason?: string | null;
+  profiles?: { full_name?: string | null; email?: string | null } | null;
+  product_catalog?: { name?: string | null; code?: string | null } | null;
+};
+
 type Summary = { revenue: number; paid: number; pending: number; failed: number; refunded: number };
 
-const STATUSES = ["", "paid", "pending", "failed", "refunded"] as const;
+const STATUSES = ["", "paid", "pending", "refund_pending", "failed", "refunded"] as const;
 
 const STATUS_TONES: Record<string, "success" | "warning" | "danger" | "violet" | "neutral"> = {
   paid: "success",
   pending: "warning",
   failed: "danger",
   refunded: "violet",
+  refund_pending: "warning",
   cancelled: "neutral",
 };
 
 export default function AdminPaymentsPage() {
   const [payments, setPayments] = useState<Payment[]>([]);
+  const [manualSubmissions, setManualSubmissions] = useState<ManualSubmission[]>([]);
   const [summary, setSummary] = useState<Summary | null>(null);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -45,12 +61,16 @@ export default function AdminPaymentsPage() {
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [workingId, setWorkingId] = useState<string | null>(null);
+  const [workingSubmissionId, setWorkingSubmissionId] = useState<string | null>(null);
   const limit = 12;
 
   useEffect(() => {
     load(page, query, status);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, query, status]);
+
+  useEffect(() => {
+    loadManualSubmissions();
+  }, []);
 
   async function load(current: number, q: string, statusFilter: string) {
     setLoading(true);
@@ -72,6 +92,17 @@ export default function AdminPaymentsPage() {
     }
   }
 
+  async function loadManualSubmissions() {
+    try {
+      const res = await fetch("/api/admin/payment-submissions?page=1&limit=100", { cache: "no-store" });
+      const json = await res.json();
+      if (!res.ok || !json.success) throw new Error(json.error || "Failed to load manual payment submissions");
+      setManualSubmissions(readList<ManualSubmission>(json).items);
+    } catch (error) {
+      toast({ title: "Manual payments unavailable", description: error instanceof Error ? error.message : "Please try again.", variant: "destructive" });
+    }
+  }
+
   function onSearch(e: React.FormEvent) {
     e.preventDefault();
     setPage(1);
@@ -79,6 +110,7 @@ export default function AdminPaymentsPage() {
   }
 
   async function markStatus(payment: Payment, next: string) {
+    if (!window.confirm(`Issue a full refund for ${formatMoney(payment.final_amount, payment.currency)}? Access will be revoked only after the refund is confirmed.`)) return;
     setWorkingId(payment.id);
     try {
       const res = await fetch(`/api/admin/payments/${payment.id}`, {
@@ -88,12 +120,48 @@ export default function AdminPaymentsPage() {
       });
       const json = await res.json();
       if (!res.ok || !json.success) throw new Error(json.error || "Could not update payment");
-      toast({ title: "Payment updated", description: `Marked as ${next}.` });
+      toast({
+        title: json.data?.status === "refund_pending" ? "Refund requested" : "Refund completed",
+        description: json.data?.status === "refund_pending"
+          ? "Access remains active until Razorpay confirms the full refund."
+          : "The full refund was confirmed and associated access was revoked.",
+      });
       await load(page, query, status);
     } catch (error) {
       toast({ title: "Update failed", description: error instanceof Error ? error.message : "Please try again.", variant: "destructive" });
     } finally {
       setWorkingId(null);
+    }
+  }
+
+  async function resolveManualSubmission(submission: ManualSubmission, next: "approved" | "rejected" | "refunded") {
+    const isRefund = next === "refunded";
+    const confirmation = isRefund
+      ? `Confirm the full external UPI refund of ${formatMoney(submission.final_amount_minor / 100, submission.currency)} has already been sent. This will revoke its subscription access.`
+      : `${next === "approved" ? "Approve" : "Reject"} this UPI payment submission for ${formatMoney(submission.final_amount_minor / 100, submission.currency)}?`;
+    if (!window.confirm(confirmation)) return;
+
+    setWorkingSubmissionId(submission.id);
+    try {
+      const res = await fetch(`/api/admin/payment-submissions/${submission.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          status: next,
+          ...(isRefund ? { confirm_external_refund: true, reason: "Full external UPI refund confirmed by staff" } : {}),
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok || !json.success) throw new Error(json.error || "Could not update the UPI submission");
+      toast({
+        title: isRefund ? "External refund recorded" : `Payment ${next}`,
+        description: isRefund ? "The subscription access has been revoked." : `The payment was ${next}.`,
+      });
+      await loadManualSubmissions();
+    } catch (error) {
+      toast({ title: "Manual payment update failed", description: error instanceof Error ? error.message : "Please try again.", variant: "destructive" });
+    } finally {
+      setWorkingSubmissionId(null);
     }
   }
 
@@ -106,7 +174,7 @@ export default function AdminPaymentsPage() {
       <AdminPageHeader
         eyebrow="Commerce"
         title="Payments"
-        description="Track every Razorpay order from creation to settlement and correct statuses when needed."
+        description="Track provider payments and issue full refunds. Payment status is confirmed by the provider."
         actions={
           <AdminToolbar>
             {STATUSES.map((it) => (
@@ -195,12 +263,7 @@ export default function AdminPaymentsPage() {
                           <td className="text-slate-400">{new Date(payment.created_at).toLocaleDateString()}</td>
                           <td>
                             <div className="flex justify-end gap-2">
-                              {payment.status !== "paid" && (
-                                <Button type="button" size="sm" variant="outline" disabled={workingId === payment.id} onClick={() => void markStatus(payment, "paid")}>
-                                  Mark paid
-                                </Button>
-                              )}
-                              {payment.status !== "refunded" && (
+                              {["paid", "completed"].includes(payment.status) && payment.razorpay_payment_id && (
                                 <Button
                                   type="button"
                                   size="sm"
@@ -220,6 +283,59 @@ export default function AdminPaymentsPage() {
                 </div>
                 <AdminPagination page={page} total={total} limit={limit} onPage={setPage} busy={loading} />
               </>
+            )}
+          </div>
+        </AdminPanel>
+      </div>
+
+      <div className="mt-6">
+        <AdminPanel eyebrow="Manual UPI" title="Payment submissions" icon={Banknote} flush>
+          <div className="admin-panel-body">
+            {manualSubmissions.length === 0 ? (
+              <AdminEmpty icon={Banknote} title="No manual payment submissions" hint="UPI submissions will appear here for review." />
+            ) : (
+              <div className="admin-table-wrap">
+                <table className="admin-table">
+                  <thead>
+                    <tr>
+                      <th>Customer / reference</th>
+                      <th>Product</th>
+                      <th>Amount</th>
+                      <th>Status</th>
+                      <th className="text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {manualSubmissions.map((submission) => (
+                      <tr key={submission.id}>
+                        <td>
+                          <p className="font-semibold text-white">{submission.profiles?.full_name || "—"}</p>
+                          <p className="font-mono text-xs text-slate-400">{submission.reference_code}</p>
+                          {submission.evidence_url ? (
+                            <a className="text-xs text-cyan-300 underline" href={submission.evidence_url} target="_blank" rel="noreferrer">View evidence</a>
+                          ) : null}
+                        </td>
+                        <td className="text-slate-300">{submission.product_catalog?.name || "—"}</td>
+                        <td className="is-num">{formatMoney(submission.final_amount_minor / 100, submission.currency)}</td>
+                        <td><AdminChip tone={STATUS_TONES[submission.status] || "neutral"}>{submission.status}</AdminChip></td>
+                        <td>
+                          <div className="flex justify-end gap-2">
+                            {submission.status === "pending_verification" ? (
+                              <>
+                                <Button type="button" size="sm" disabled={workingSubmissionId === submission.id} onClick={() => void resolveManualSubmission(submission, "approved")}>Approve</Button>
+                                <Button type="button" size="sm" variant="outline" disabled={workingSubmissionId === submission.id} onClick={() => void resolveManualSubmission(submission, "rejected")}>Reject</Button>
+                              </>
+                            ) : null}
+                            {submission.status === "approved" ? (
+                              <Button type="button" size="sm" variant="outline" disabled={workingSubmissionId === submission.id} onClick={() => void resolveManualSubmission(submission, "refunded")}>Record external refund</Button>
+                            ) : null}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             )}
           </div>
         </AdminPanel>

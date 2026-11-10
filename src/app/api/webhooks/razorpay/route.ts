@@ -16,88 +16,103 @@ export async function POST(request: NextRequest) {
       return apiError("Invalid webhook signature", 401, "INVALID_WEBHOOK_SIGNATURE");
     }
 
-    const body = JSON.parse(rawBody) as {
+    let body: {
       event?: string;
-      payload?: { payment?: { entity?: { id?: string; order_id?: string; status?: string } } };
-      payment_id?: string;
-      order_id?: string;
-      status?: string;
+      payload?: {
+        payment?: { entity?: { id?: string; order_id?: string; status?: string; amount?: number; currency?: string } };
+        refund?: { entity?: { id?: string; payment_id?: string; amount?: number } };
+      };
     };
-    const supabase = createAdminClient();
-
-    const paymentId = body?.payload?.payment?.entity?.id ?? body?.payment_id;
-    const orderId = body?.payload?.payment?.entity?.order_id ?? body?.order_id;
-    const status = body?.payload?.payment?.entity?.status ?? body?.status;
-
-    if (!paymentId || !orderId) {
-      return apiError("Missing payment identifiers", 400, "INVALID_WEBHOOK");
+    try {
+      body = JSON.parse(rawBody);
+    } catch {
+      return apiError("Invalid webhook body", 400, "INVALID_WEBHOOK");
     }
 
-    const { data: payment, error: paymentError } = await supabase
-      .from("payments")
-      .select("id, user_id, plan_id, status")
-      .eq("razorpay_order_id", orderId)
-      .maybeSingle();
+    if (["refund.created", "refund.processed", "refund.failed"].includes(body.event ?? "")) {
+      const refund = body.payload?.refund?.entity;
+      if (!refund?.id || !refund.payment_id) {
+        return apiError("Missing refund identifiers", 400, "INVALID_WEBHOOK");
+      }
 
-    if (paymentError) throw paymentError;
-    if (!payment) return apiError("Payment record not found", 404, "PAYMENT_NOT_FOUND");
+      const admin = createAdminClient();
+      const { data: payment, error: paymentError } = await admin
+        .from("payments")
+        .select("id, final_amount, amount")
+        .eq("razorpay_payment_id", refund.payment_id)
+        .maybeSingle();
+      if (paymentError) throw paymentError;
+      if (!payment) return apiSuccess({ received: true, ignored: true });
 
-    const nextStatus = status === "captured" ? "completed" : status === "failed" ? "failed" : "pending";
+      if (body.event === "refund.created") {
+        const { error } = await admin.rpc("attach_razorpay_payment_refund", {
+          p_payment_id: payment.id,
+          p_refund_id: refund.id,
+        });
+        if (error) throw error;
+        return apiSuccess({ received: true, status: "refund_pending" });
+      }
 
-    if (body.event && !["payment.captured", "payment.failed"].includes(body.event)) {
+      if (body.event === "refund.failed") {
+        const { data, error } = await admin.rpc("fail_razorpay_payment_refund", {
+          p_payment_id: payment.id,
+          p_refund_id: refund.id,
+        });
+        if (error) throw error;
+        return apiSuccess({ received: true, ...(data as Record<string, unknown>) });
+      }
+
+      if (!Number.isSafeInteger(refund.amount)) {
+        return apiError("Refund is missing its amount", 400, "INVALID_WEBHOOK");
+      }
+      const expectedAmountMinor = Math.round(Number(payment.final_amount ?? payment.amount) * 100);
+      if (refund.amount !== expectedAmountMinor) {
+        const { error } = await admin.rpc("attach_razorpay_payment_refund", {
+          p_payment_id: payment.id,
+          p_refund_id: refund.id,
+        });
+        if (error) throw error;
+        return apiSuccess({ received: true, ignored: true, reason: "A full refund has not been confirmed" });
+      }
+
+      const { data, error } = await admin.rpc("complete_razorpay_payment_refund", {
+        p_payment_id: payment.id,
+        p_refund_id: refund.id,
+        p_amount_minor: refund.amount,
+        p_actor_id: null,
+      });
+      if (error) throw error;
+      return apiSuccess({ received: true, ...(data as Record<string, unknown>) });
+    }
+
+    if (!["payment.captured", "payment.failed"].includes(body.event ?? "")) {
       return apiSuccess({ received: true, ignored: true });
     }
 
-    if (nextStatus === "completed" && (payment as { status?: string }).status === "completed") {
-      return apiSuccess({ received: true, status: nextStatus, duplicate: true });
+    const payment = body.payload?.payment?.entity;
+    if (!payment?.id || !payment.order_id || !payment.status) {
+      return apiError("Missing payment identifiers", 400, "INVALID_WEBHOOK");
     }
 
-    const { error } = await supabase
-      .from("payments")
-      .update({
-        razorpay_payment_id: paymentId,
-        razorpay_signature: signature,
-        status: nextStatus,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", payment.id);
+    const captured = body.event === "payment.captured";
+    if ((captured && payment.status !== "captured") || (!captured && payment.status !== "failed")) {
+      return apiError("Webhook event does not match the payment status", 400, "PAYMENT_STATUS_MISMATCH");
+    }
 
+    if (captured && (!Number.isSafeInteger(payment.amount) || !payment.currency)) {
+      return apiError("Captured payment is missing amount or currency", 400, "INVALID_WEBHOOK");
+    }
+
+    const { data, error } = await createAdminClient().rpc("finalize_razorpay_payment", {
+      p_order_id: payment.order_id,
+      p_payment_id: payment.id,
+      p_amount_minor: captured ? payment.amount! : 0,
+      p_currency: captured ? payment.currency! : "INR",
+      p_event: body.event!,
+    });
     if (error) throw error;
 
-    if (nextStatus === "completed") {
-      const { data: plan } = await supabase
-        .from("subscription_plans")
-        .select("duration_days")
-        .eq("id", payment.plan_id)
-        .maybeSingle();
-      if (!plan) return apiError("Subscription plan not found", 404, "PLAN_NOT_FOUND");
-
-      const startsAt = new Date();
-      const expiresAt = new Date(startsAt.getTime() + Number(plan.duration_days) * 24 * 60 * 60 * 1000);
-      const { data: existingSubscription } = await supabase
-        .from("subscriptions")
-        .select("id")
-        .eq("user_id", payment.user_id)
-        .eq("plan_id", payment.plan_id)
-        .eq("status", "active")
-        .gt("expires_at", startsAt.toISOString())
-        .limit(1)
-        .maybeSingle();
-
-      if (!existingSubscription) {
-        const { error: subscriptionError } = await supabase.from("subscriptions").insert([{
-          user_id: payment.user_id,
-          plan_id: payment.plan_id,
-          status: "active",
-          starts_at: startsAt.toISOString(),
-          expires_at: expiresAt.toISOString(),
-          auto_renew: false,
-        }]);
-        if (subscriptionError) throw subscriptionError;
-      }
-    }
-
-    return apiSuccess({ received: true, status: nextStatus });
+    return apiSuccess({ received: true, ...(data as Record<string, unknown>) });
   } catch (error) {
     return handleApiError(error);
   }

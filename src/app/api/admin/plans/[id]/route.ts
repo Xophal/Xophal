@@ -1,8 +1,8 @@
 import { NextRequest } from "next/server";
 import { z } from "zod";
-import { requireAdminAuth } from "@/lib/auth";
+import { requireAdminRole } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { apiSuccess, apiError, handleApiError, validateBody } from "@/lib/api-utils";
+import { apiSuccess, apiError, assertTrustedOrigin, handleApiError, validateBody } from "@/lib/api-utils";
 
 const planPatchSchema = z.object({
   name: z.string().min(2).max(200).optional(),
@@ -18,7 +18,8 @@ type Params = { params: Promise<{ id: string }> };
 
 export async function PATCH(request: NextRequest, { params }: Params) {
   try {
-    await requireAdminAuth();
+    assertTrustedOrigin(request);
+    await requireAdminRole(["super_admin", "admin", "subscription_admin"]);
     const { id } = await params;
     const payload = await validateBody(planPatchSchema, await request.json());
 

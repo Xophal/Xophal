@@ -185,6 +185,7 @@ export async function refundEbookOrder(orderId: string, reason: string) {
       provider_metadata: { refund_reason: reason.slice(0, 500) },
     })
     .eq("id", orderId)
+    .eq("status", "VERIFIED")
     .select("*")
     .maybeSingle();
   if (error) throw error;

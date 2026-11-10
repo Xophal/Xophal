@@ -1,8 +1,8 @@
 import { NextRequest } from "next/server";
 import { z } from "zod";
-import { requireAdminAuth } from "@/lib/auth";
+import { requireAdminRole } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { apiSuccess, handleApiError, validateBody } from "@/lib/api-utils";
+import { apiSuccess, assertTrustedOrigin, handleApiError, validateBody } from "@/lib/api-utils";
 
 const planSchema = z.object({
   code: z.string().min(2).max(50),
@@ -18,7 +18,7 @@ const planSchema = z.object({
 
 export async function GET() {
   try {
-    await requireAdminAuth();
+    await requireAdminRole(["super_admin", "admin", "subscription_admin"]);
     const { data, error } = await createAdminClient()
       .from("subscription_plans")
       .select("*")
@@ -32,7 +32,8 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
-    await requireAdminAuth();
+    assertTrustedOrigin(request);
+    await requireAdminRole(["super_admin", "admin", "subscription_admin"]);
     const payload = await validateBody(planSchema, await request.json());
     const { data, error } = await createAdminClient()
       .from("subscription_plans")

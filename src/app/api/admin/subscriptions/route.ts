@@ -1,11 +1,11 @@
 import { NextRequest } from "next/server";
-import { requireAdminAuth } from "@/lib/auth";
+import { requireAdminRole } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { apiSuccess, handleApiError, getPaginationParams, paginatedResponse } from "@/lib/api-utils";
 
 export async function GET(request: NextRequest) {
   try {
-    await requireAdminAuth();
+    await requireAdminRole(["super_admin", "admin", "payment_verifier", "subscription_admin", "refund_approver"]);
     const { searchParams } = request.nextUrl;
     const { page, limit, offset } = getPaginationParams(searchParams);
     const status = searchParams.get("status");

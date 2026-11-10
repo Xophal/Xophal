@@ -71,7 +71,7 @@ export async function POST(request: NextRequest) {
     const { error: updateError } = await admin.from("payments").update({
       razorpay_payment_id: payload.razorpay_payment_id,
       razorpay_signature: payload.razorpay_signature,
-      status: "completed",
+      status: "paid",
       updated_at: new Date().toISOString(),
     }).eq("id", payment.id).eq("status", "pending");
     if (updateError) throw updateError;

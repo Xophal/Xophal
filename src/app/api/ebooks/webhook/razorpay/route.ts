@@ -73,15 +73,33 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  if (body.event === "refund.processed" || body.event === "refund.created") {
+  if (body.event === "refund.processed" || body.event === "refund.created" || body.event === "refund.failed") {
     const refund = body.payload?.refund?.entity;
-    if (refund?.payment_id) {
+    if (body.event === "refund.created" && refund?.payment_id && refund.id) {
+      const { error } = await admin
+        .from("ebook_transactions")
+        .update({ refund_status: "REQUESTED", updated_at: new Date().toISOString() })
+        .eq("provider_transaction_id", refund.payment_id)
+        .neq("status", "REFUNDED");
+      if (error) return NextResponse.json({ success: false, error: "Refund request status could not be saved." }, { status: 500 });
+    }
+    if (body.event === "refund.failed" && refund?.payment_id && refund.id) {
+      const { error } = await admin
+        .from("ebook_transactions")
+        .update({ refund_status: "NONE", updated_at: new Date().toISOString() })
+        .eq("provider_transaction_id", refund.payment_id)
+        .eq("refund_status", "REQUESTED");
+      if (error) return NextResponse.json({ success: false, error: "Failed refund status could not be saved." }, { status: 500 });
+    }
+    if (body.event === "refund.processed" && refund?.payment_id && refund.id && Number.isSafeInteger(refund.amount)) {
       const { data: order } = await admin
         .from("ebook_transactions")
-        .select("id")
+        .select("id, gross_amount")
         .eq("provider_transaction_id", refund.payment_id)
         .maybeSingle();
-      if (order) await refundEbookOrder(order.id, `Provider refund ${refund.id ?? ""}`.trim());
+      if (order && Number(refund.amount) === Math.round(Number(order.gross_amount) * 100)) {
+        await refundEbookOrder(order.id, `Provider refund ${refund.id}`.trim());
+      }
     }
   }
 

@@ -121,7 +121,7 @@ describe("POST /api/verify-payment", () => {
     expect(mocks.unlockTestForUser).toHaveBeenCalledWith("user-123", testId);
     expect(admin.payments.update).toHaveBeenCalledWith(expect.objectContaining({
       razorpay_payment_id: paymentId,
-      status: "completed",
+      status: "paid",
     }));
   });
 });
