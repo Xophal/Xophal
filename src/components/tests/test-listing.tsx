@@ -15,6 +15,7 @@ type Test = {
   total_questions: number;
   total_marks: number;
   duration_minutes: number;
+  is_premium: boolean;
   test_types: RelatedName & { code?: string };
   subjects: RelatedName;
   chapters: RelatedName;
@@ -275,6 +276,11 @@ export function TestListing() {
                   <span className="rounded-full bg-primary/10 px-2.5 py-1 text-[0.6875rem] font-bold text-primary">
                     {type || "Mock test"}
                   </span>
+                  {test.is_premium && (
+                    <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-2.5 py-1 text-[0.6875rem] font-bold text-amber-700 dark:text-amber-300">
+                      Premium
+                    </span>
+                  )}
                   {subject && (
                     <span className="text-[0.6875rem] font-semibold text-muted-foreground">{subject}</span>
                   )}

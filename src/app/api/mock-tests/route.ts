@@ -48,31 +48,6 @@ export async function GET(request: NextRequest) {
     const sort = searchParams.get("sort") || "newest";
 
     const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    let hasPremiumAccess = false;
-    const grantedTestIds = new Set<string>();
-
-    if (user?.email_confirmed_at) {
-      const { data: subscription } = await supabase
-        .from("subscriptions")
-        .select("id")
-        .eq("user_id", user.id)
-        .eq("status", "active")
-        .gt("expires_at", new Date().toISOString())
-        .limit(1)
-        .maybeSingle();
-      hasPremiumAccess = !!subscription;
-      if (!hasPremiumAccess) {
-        const { data: grants } = await supabase
-          .from("test_access_grants")
-          .select("mock_test_id")
-          .eq("user_id", user.id);
-        for (const grant of grants ?? []) grantedTestIds.add(grant.mock_test_id);
-      }
-    }
-
     let query = supabase
       .from("mock_tests")
       .select(
@@ -83,11 +58,6 @@ export async function GET(request: NextRequest) {
       .eq("is_active", true)
       .gt("total_questions", 0)
       .gt("duration_minutes", 0);
-
-    if (!hasPremiumAccess && grantedTestIds.size === 0) query = query.eq("is_premium", false);
-    if (!hasPremiumAccess && grantedTestIds.size > 0) {
-      query = query.or(`is_premium.eq.false,id.in.(${Array.from(grantedTestIds).join(",")})`);
-    }
 
     if (testTypeCode) {
       const { data: testType } = await supabase

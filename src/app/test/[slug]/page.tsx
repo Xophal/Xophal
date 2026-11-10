@@ -21,7 +21,7 @@ export default async function TestDetailPage({ params }: PageProps) {
   const { data: test } = await supabase
     .from("mock_tests")
     .select(
-      "title, slug, description, total_questions, total_marks, duration_minutes, passing_marks, negative_marking, negative_marks_ratio, max_attempts, instructions, test_types(name), subjects(name), chapters(name)"
+      "title, slug, description, total_questions, total_marks, duration_minutes, passing_marks, negative_marking, negative_marks_ratio, max_attempts, instructions, is_premium, test_types(name), subjects(name), chapters(name)"
     )
     .eq("slug", slug)
     .eq("is_published", true)
@@ -57,6 +57,11 @@ export default async function TestDetailPage({ params }: PageProps) {
           <div>
             <p className="exam-eyebrow">{testType || "Mock test"}</p>
             <h1 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">{test.title}</h1>
+            {test.is_premium && (
+              <span className="mt-3 inline-flex rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-1 text-xs font-semibold text-amber-700 dark:text-amber-300">
+                Premium test
+              </span>
+            )}
             {test.description && (
               <p className="mt-4 max-w-prose text-base leading-7 text-muted-foreground">
                 {test.description}

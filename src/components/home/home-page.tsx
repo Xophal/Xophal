@@ -23,6 +23,7 @@ type MockTest = {
   description: string | null;
   total_questions: number;
   duration_minutes: number;
+  is_premium: boolean;
   test_types: { name: string; code: string } | { name: string; code: string }[] | null;
 };
 
@@ -123,6 +124,11 @@ export function HomePage() {
                     <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
                       {getTestType(test)}
                     </span>
+                    {test.is_premium && (
+                      <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-1 text-xs font-semibold text-amber-700 dark:text-amber-300">
+                        Premium
+                      </span>
+                    )}
                     <span className="text-sm text-muted-foreground">{test.total_questions} questions</span>
                   </div>
                   <h3 className="mt-5 text-xl font-bold">{test.title}</h3>
@@ -230,6 +236,11 @@ export function HomePage() {
                   <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
                     {getTestType(test)}
                   </span>
+                  {test.is_premium && (
+                    <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-1 text-xs font-semibold text-amber-700 dark:text-amber-300">
+                      Premium
+                    </span>
+                  )}
                   <span className="text-sm text-muted-foreground">{test.total_questions} questions</span>
                 </div>
                 <h3 className="mt-5 text-xl font-bold">{test.title}</h3>
