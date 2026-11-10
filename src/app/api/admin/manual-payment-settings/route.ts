@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { z } from "zod";
-import { apiError, apiSuccess, handleApiError, validateBody } from "@/lib/api-utils";
+import { apiError, apiSuccess, assertTrustedOrigin, handleApiError, validateBody } from "@/lib/api-utils";
 import { requireAdminRole } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -29,6 +29,7 @@ export async function GET() {
 
 export async function PUT(request: NextRequest) {
   try {
+    assertTrustedOrigin(request);
     const session = await requireAdminRole(["super_admin", "admin", "subscription_admin"]);
     const payload = await validateBody(settingsSchema, await request.json());
     const { data, error } = await createAdminClient()

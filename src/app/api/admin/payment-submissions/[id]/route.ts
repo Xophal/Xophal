@@ -2,18 +2,27 @@ import { NextRequest } from "next/server";
 import { z } from "zod";
 import { requireAdminRole } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { apiError, apiSuccess, handleApiError, validateBody } from "@/lib/api-utils";
+import { apiError, apiSuccess, assertTrustedOrigin, handleApiError, validateBody } from "@/lib/api-utils";
 
 const submissionPatchSchema = z.object({
   status: z.enum(["approved", "rejected"]),
-  reason: z.string().max(1000).optional().nullable(),
+  reason: z.string().trim().min(1).max(1000).optional().nullable(),
+}).superRefine((payload, context) => {
+  if (payload.status === "rejected" && !payload.reason) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["reason"],
+      message: "A reason is required when rejecting a payment.",
+    });
+  }
 });
 
 type Params = { params: Promise<{ id: string }> };
 
 export async function PATCH(request: NextRequest, { params }: Params) {
   try {
-    const session = await requireAdminRole(["payment_verifier", "subscription_admin"]);
+    assertTrustedOrigin(request);
+    const session = await requireAdminRole(["admin", "super_admin", "payment_verifier", "subscription_admin"]);
     const { id } = await params;
     const payload = await validateBody(submissionPatchSchema, await request.json());
     const { data, error } = await createAdminClient().rpc("resolve_manual_payment_submission", {

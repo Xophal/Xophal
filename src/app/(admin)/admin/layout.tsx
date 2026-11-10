@@ -41,6 +41,7 @@ const adminNavItems = [
 
   // Commerce
   { href: "/admin/payments", icon: "Wallet", label: "Payments", group: "Commerce" },
+  { href: "/admin/manual-payments", icon: "ShieldCheck", label: "Manual UPI", group: "Commerce" },
   { href: "/admin/subscriptions", icon: "CreditCard", label: "Subscriptions", group: "Commerce" },
   { href: "/admin/coupons", icon: "Ticket", label: "Coupons", group: "Commerce" },
 
@@ -62,12 +63,20 @@ export default async function AdminLayout({ children }: { children: ReactNode })
 
   if (!session) return null;
 
+  const role = normalizeRoleCode(session.profile);
+  const paymentOnlyRoles = ["payment_verifier", "refund_approver", "school_eligibility_reviewer"];
+  const visibleNavItems = paymentOnlyRoles.includes(role ?? "")
+    ? adminNavItems.filter((item) => item.href === "/admin/manual-payments")
+    : role === "subscription_admin"
+    ? adminNavItems.filter((item) => ["/admin", "/admin/manual-payments", "/admin/subscriptions", "/admin/settings"].includes(item.href))
+    : adminNavItems;
+
   try {
     assertAccess(session.profile, session.user, {
       requireAuth: true,
       requireActive: true,
       requireEmailVerified: true,
-      allowRoles: ["admin", "super_admin", "content_manager", "reviewer"],
+      allowRoles: ["admin", "super_admin", "content_manager", "reviewer", "payment_verifier", "subscription_admin", "refund_approver", "school_eligibility_reviewer"],
     });
   } catch {
     redirect("/dashboard");
@@ -75,7 +84,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
 
   return (
     <div className="flex min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(14,165,233,0.12),transparent_24%),radial-gradient(circle_at_bottom_right,_rgba(168,85,247,0.12),transparent_20%),hsl(var(--background))]">
-      <Sidenav items={adminNavItems} profile={session.profile} variant="admin" />
+      <Sidenav items={visibleNavItems} profile={session.profile} variant="admin" />
 
       <div className="flex flex-1 flex-col">
         <header className="flex h-16 items-center justify-between border-b border-border/80 bg-[linear-gradient(135deg,rgba(15,23,42,0.82),rgba(15,23,42,0.68))] px-4 shadow-[0_18px_50px_rgba(15,23,42,0.08)] backdrop-blur-xl md:px-6">

@@ -28,6 +28,7 @@ vi.mock("@/lib/rate-limit", () => ({
 
 import { POST as submitPayment } from "@/app/api/payments/submissions/route";
 import { PATCH as approveSubmission } from "@/app/api/admin/payment-submissions/[id]/route";
+import { GET as listAdminSubmissions } from "@/app/api/admin/payment-submissions/route";
 
 const REQUEST_ID = "33333333-3333-4333-8333-333333333333";
 
@@ -52,6 +53,7 @@ function createStorageMock() {
   const bucket = {
     upload: vi.fn().mockResolvedValue({ data: { path: "user/receipt.png" }, error: null }),
     remove: vi.fn().mockResolvedValue({ data: [], error: null }),
+    createSignedUrl: vi.fn().mockResolvedValue({ data: { signedUrl: "https://storage.example/receipt?token=short-lived" }, error: null }),
   };
   return { from: vi.fn(() => bucket), bucket };
 }
@@ -175,6 +177,7 @@ describe("manual payment submissions", () => {
       school_id: "22222222-2222-4222-8222-222222222222",
       student_id: "user-123",
     });
+
     const schoolQuery = createQuery({
       is_verified: true,
       class_10_total_students: 100,
@@ -225,6 +228,100 @@ describe("manual payment submissions", () => {
         status: "pending_verification",
       }),
     ]);
+  });
+
+  it("does not accept a Class 10 payment after the configured season has ended", async () => {
+    const product = {
+      id: "11111111-1111-4111-8111-111111111111",
+      code: "seba_class_10_premium",
+      product_type: "premium",
+      board_code: "seba",
+      class_number: 10,
+      name: "HSLC 2027 Premium",
+      price_paise: 19900,
+      duration_days: null,
+      early_bird_price_paise: null,
+      school_price_paise: null,
+      validity_starts_at: "2020-01-01T00:00:00.000Z",
+      validity_ends_at: "2020-12-31T23:59:59.000Z",
+      is_active: true,
+    };
+    const productQuery = createQuery(product);
+    const settingsQuery = createQuery({ upi_id: "merchant@bank", is_enabled: true });
+
+    mocks.requireAuth.mockResolvedValue({
+      user: { id: "user-123" },
+      profile: { id: "user-123", email_verified: true, is_active: true },
+    });
+    mocks.requireVerifiedSession.mockReturnValue({ isAuthenticated: true });
+    mocks.createAdminClient.mockReturnValue({
+      from: vi.fn((table: string) => {
+        if (table === "manual_payment_settings") return settingsQuery;
+        if (table === "product_catalog") return productQuery;
+        throw new Error(`Unexpected table: ${table}`);
+      }),
+    });
+
+    const response = await submitPayment(createPaymentRequest({ product_id: product.id }));
+
+    expect(response.status).toBe(409);
+    await expect(response.json()).resolves.toMatchObject({
+      success: false,
+      code: "SEASON_EXPIRED",
+    });
+  });
+
+  it("returns private signed receipt links to authorized payment reviewers without exposing storage paths", async () => {
+    const receiptPath = "user-123/request-456-proof.png";
+    const query: Record<string, ReturnType<typeof vi.fn>> = {};
+    query.select = vi.fn(() => query);
+    query.order = vi.fn(() => query);
+    query.eq = vi.fn(() => query);
+    query.range = vi.fn().mockResolvedValue({
+      data: [{
+        id: "request-456",
+        user_id: "user-123",
+        product_id: "product-123",
+        amount_minor: 4900,
+        final_amount_minor: 4900,
+        claimed_amount_minor: 4900,
+        payment_paid_at: "2026-10-24T06:30:00.000Z",
+        status: "pending_verification",
+        receipt_path: receiptPath,
+        profiles: { full_name: "Student", email: "student@example.test" },
+      }],
+      count: 1,
+      error: null,
+    });
+    const storage = createStorageMock();
+    mocks.requireAdminRole.mockResolvedValue({
+      user: { id: "reviewer-123" },
+      profile: { roles: { code: "payment_verifier" } },
+    });
+    mocks.createAdminClient.mockReturnValue({
+      from: vi.fn(() => query),
+      storage,
+    });
+
+    const response = await listAdminSubmissions(new NextRequest("http://localhost/api/admin/payment-submissions"));
+
+    expect(response.status).toBe(200);
+    expect(mocks.requireAdminRole).toHaveBeenCalledWith([
+      "admin",
+      "super_admin",
+      "payment_verifier",
+      "subscription_admin",
+      "refund_approver",
+      "school_eligibility_reviewer",
+    ]);
+    expect(storage.bucket.createSignedUrl).toHaveBeenCalledWith(receiptPath, 300);
+    const body = await response.json();
+    expect(body.data.data[0]).toMatchObject({
+      id: "request-456",
+      receipt_url: "https://storage.example/receipt?token=short-lived",
+      claimed_amount_minor: 4900,
+    });
+    expect(body.data.data[0]).not.toHaveProperty("receipt_path");
   });
 
   it("rejects school pricing when the user has no verified eligibility record", async () => {
@@ -296,7 +393,7 @@ describe("manual payment submissions", () => {
     }), { params: Promise.resolve({ id: "submission-456" }) });
 
     expect(response.status).toBe(200);
-    expect(mocks.requireAdminRole).toHaveBeenCalledWith(["payment_verifier", "subscription_admin"]);
+    expect(mocks.requireAdminRole).toHaveBeenCalledWith(["admin", "super_admin", "payment_verifier", "subscription_admin"]);
     expect(rpc).toHaveBeenCalledWith("resolve_manual_payment_submission", {
       p_submission_id: "submission-456",
       p_actor_id: "admin-123",
@@ -327,6 +424,22 @@ describe("manual payment submissions", () => {
       p_status: "rejected",
       p_reason: "Reference not found",
     });
+
+  });
+
+  it("requires a reason before a reviewer can reject a payment", async () => {
+    mocks.requireAdminRole.mockResolvedValue({ user: { id: "admin-123" } });
+    const rpc = vi.fn();
+    mocks.createAdminClient.mockReturnValue({ rpc });
+
+    const response = await approveSubmission(new NextRequest("http://localhost/api/admin/payment-submissions/submission-456", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: "rejected" }),
+    }), { params: Promise.resolve({ id: "submission-456" }) });
+
+    expect(response.status).toBe(400);
+    expect(rpc).not.toHaveBeenCalled();
   });
 
   it("does not silently accept payment requests when manual UPI settings are missing", async () => {

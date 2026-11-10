@@ -210,6 +210,12 @@ export async function POST(request: NextRequest) {
     if (Number(product.class_number) === 10 && (!product.validity_starts_at || !product.validity_ends_at)) {
       return apiError("Class 10 season dates have not been configured yet.", 503, "SEASON_DATES_NOT_CONFIGURED");
     }
+    if (Number(product.class_number) === 10) {
+      const seasonEnd = new Date(product.validity_ends_at as string).getTime();
+      if (!Number.isFinite(seasonEnd) || seasonEnd <= Date.now()) {
+        return apiError("This Class 10 season has ended and is no longer available for purchase.", 409, "SEASON_EXPIRED");
+      }
+    }
 
     let isSchoolEligible = false;
     if (payload.school_id) {

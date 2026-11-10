@@ -21,7 +21,9 @@ Follow this runbook for a full-feature production launch. Production credentials
    - Create a production Supabase project separate from development and staging.
    - Review and back up the production database before applying migrations.
    - Link the Supabase CLI to the intended project and apply all pending repository migrations with `supabase db push`.
-   - Confirm the latest migration is applied, including question/test access, exam integrity, ebook marketplace, and security hardening migration `040`. Migration `040` enforces active-account checks in role/entitlement helpers and restricts attempt RPC access.
+   - Confirm all repository migrations are applied, including manual UPI migrations `047` and `048`, rejection audit migration `056`, and the latest database hardening migrations. Migration `040` enforces active-account checks in role/entitlement helpers and restricts attempt RPC access.
+   - For manual UPI sales, open Admin > Commerce > Manual UPI. Verify the receiving UPI ID and payee name, set student instructions and an optional same-site QR image path, then enable submissions only after testing that account. Configure Class 10 season dates there before advertising those plans; Class 10 plans remain unavailable until valid dates are set.
+   - Assign `payment_verifier` or `subscription_admin` to staff who will review UPI submissions. Review each private receipt and confirm the payment in the UPI/bank account before using **Verify & activate**. Student-submitted references and screenshots are claims only; they do not prove settlement. Test one staging payment through receipt submission, reviewer approval, and student entitlement before launch.
    - Verify RLS policies with anon, active-user, and deactivated-user clients; confirm disabled accounts lose admin/reviewer privileges and premium entitlements, and attempt RPCs reject anonymous and non-owner callers.
    - Seed production only with approved, non-test content; do not copy local test users or payment data.
 
@@ -61,6 +63,7 @@ Follow this runbook for a full-feature production launch. Production credentials
    - Verify student registration, OTP delivery/verification, login, logout, password reset, and protected-route behavior using non-production test accounts first.
     - Verify admin approval emails go only to the two configured main administrators and that unapproved users cannot access admin routes.
     - Verify a Razorpay test transaction end-to-end in staging, including signature verification, provider-confirmed capture, and subscription fulfillment, before switching production to live keys.
+    - Verify manual UPI end-to-end in staging: student pays the configured account, submits the actual reference and receipt, an authorized reviewer verifies the received funds, and the subscription is active for the correct dates. Confirm the receipt URL is inaccessible without an authorized reviewer session and expires.
     - Confirm database reads/writes, RLS behavior, admin operations, and content access in production with least-privilege test accounts.
     - Confirm both Upstash credentials are set together; production auth endpoints intentionally fail closed with `503 RATE_LIMIT_NOT_CONFIGURED` otherwise.
 
