@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
     assertTrustedOrigin(request);
     const parsed = forgotPasswordSchema.safeParse(await request.json());
     if (!parsed.success) {
-      throw new ApiError(400, parsed.error.errors[0]?.message || "Enter a valid email address", "VALIDATION_ERROR");
+      throw new ApiError(400, parsed.error.issues[0]?.message || "Enter a valid email address", "VALIDATION_ERROR");
     }
 
     const supabase = await createRouteHandlerClient();

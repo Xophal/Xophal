@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
     assertTrustedOrigin(request);
     const body = await request.json();
     const parsed = loginSchema.safeParse(body);
-    if (!parsed.success) throw new ApiError(400, parsed.error.errors[0]?.message || "Invalid credentials", "VALIDATION_ERROR");
+    if (!parsed.success) throw new ApiError(400, parsed.error.issues[0]?.message || "Invalid credentials", "VALIDATION_ERROR");
 
     // Apply rate limit per-IP + email key
     try {

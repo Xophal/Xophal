@@ -22,7 +22,7 @@ const productSchema = z.object({
   early_bird_ends_at: z.string().optional().nullable(),
   is_active: z.boolean().optional().default(true),
   is_public: z.boolean().optional().default(true),
-  metadata: z.record(z.any()).optional().default({}),
+  metadata: z.record(z.string(), z.json()).optional().default({}),
 });
 
 export async function GET() {

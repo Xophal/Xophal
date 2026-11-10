@@ -63,7 +63,7 @@ export async function PUT(request: NextRequest) {
     const parsed = rawRows.map((r, i) => {
       const res = bulkEngineQuestionRowSchema.safeParse(r);
       if (!res.success) {
-        throw new ApiError(400, `Row ${i + 2}: ${res.error.errors[0]?.message ?? "invalid row"}`, "VALIDATION_ERROR");
+        throw new ApiError(400, `Row ${i + 2}: ${res.error.issues[0]?.message ?? "invalid row"}`, "VALIDATION_ERROR");
       }
       return res.data;
     });

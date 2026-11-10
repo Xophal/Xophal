@@ -44,7 +44,7 @@ export function handleApiError(error: unknown) {
 export async function validateBody<T>(schema: ZodSchema<T>, body: unknown): Promise<T> {
   const result = schema.safeParse(body);
   if (!result.success) {
-    throw new ApiError(400, result.error.errors[0]?.message || "Validation failed", "VALIDATION_ERROR");
+    throw new ApiError(400, result.error.issues[0]?.message || "Validation failed", "VALIDATION_ERROR");
   }
   return result.data;
 }

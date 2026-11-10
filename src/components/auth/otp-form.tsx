@@ -73,7 +73,7 @@ export function OtpForm({ intent, initialEmail = "", initialSendFailed = false, 
     });
 
     if (!parsed.success) {
-      toast({ title: "Check your details", description: parsed.error.errors[0]?.message || "Enter a valid email address.", variant: "destructive" });
+      toast({ title: "Check your details", description: parsed.error.issues[0]?.message || "Enter a valid email address.", variant: "destructive" });
       return;
     }
 
@@ -100,7 +100,7 @@ export function OtpForm({ intent, initialEmail = "", initialSendFailed = false, 
   async function verifyCode() {
     const parsed = otpVerifySchema.safeParse({ email, token: code, intent });
     if (!parsed.success) {
-      toast({ title: "Invalid code", description: parsed.error.errors[0]?.message || "Enter the 6-digit code.", variant: "destructive" });
+      toast({ title: "Invalid code", description: parsed.error.issues[0]?.message || "Enter the 6-digit code.", variant: "destructive" });
       return;
     }
 

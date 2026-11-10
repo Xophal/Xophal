@@ -10,7 +10,7 @@ export async function POST(request: NextRequest) {
     assertTrustedOrigin(request);
     const body = await request.json();
     const parsed = bodySchema.safeParse(body);
-    if (!parsed.success) throw new ApiError(400, parsed.error.errors[0]?.message || "Invalid payload", "VALIDATION_ERROR");
+    if (!parsed.success) throw new ApiError(400, parsed.error.issues[0]?.message || "Invalid payload", "VALIDATION_ERROR");
 
     // Rate limit resend requests by IP+email
     try {

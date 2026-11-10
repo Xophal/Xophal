@@ -11,7 +11,7 @@ const uploadSchema = z.object({
   path: z.string().optional(),
   size: z.number().optional(),
   contentType: z.string().optional(),
-  metadata: z.record(z.unknown()).optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
 });
 
 export async function POST(request: NextRequest) {

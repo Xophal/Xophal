@@ -22,7 +22,7 @@ const productPatchSchema = z.object({
   early_bird_ends_at: z.string().optional().nullable(),
   is_active: z.boolean().optional(),
   is_public: z.boolean().optional(),
-  metadata: z.record(z.any()).optional(),
+  metadata: z.record(z.string(), z.json()).optional(),
 });
 
 type Params = { params: Promise<{ id: string }> };

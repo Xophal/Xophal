@@ -43,7 +43,7 @@ export const ebookEventSchema = z.object({
   ]),
   ebookId: z.string().uuid().optional(),
   source: z.string().trim().max(100).optional(),
-  metadata: z.record(z.unknown()).optional().default({}),
+  metadata: z.record(z.string(), z.unknown()).optional().default({}),
 });
 
 export function slugifyEbookTitle(value: string) {

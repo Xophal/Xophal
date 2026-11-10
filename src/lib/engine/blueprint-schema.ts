@@ -72,7 +72,7 @@ export type SectionFilter = z.infer<typeof sectionFilterSchema>;
  * section. The generator fills as close to this as the bank allows, then relaxes
  * (see RELAXATION_ORDER) if a band is short.
  */
-export const difficultyMixSchema = z.record(z.enum(["1", "2", "3"]), z.number().int().min(0).max(200)).default({});
+export const difficultyMixSchema = z.partialRecord(z.enum(["1", "2", "3"]), z.number().int().min(0).max(200)).default({});
 
 export type DifficultyMix = z.infer<typeof difficultyMixSchema>;
 
@@ -82,7 +82,7 @@ export const blueprintSectionInputSchema = z.object({
   id: z.string().uuid().optional(),
   title: z.string().trim().min(1).max(200),
   position: z.number().int().min(0).max(200).default(0),
-  filter: sectionFilterSchema.default({}),
+  filter: sectionFilterSchema.prefault({}),
   count: z.number().int().min(0).max(200).default(5),
   marks_per_q: z.number().min(0).max(100).default(1),
   neg_marks: z.number().min(0).max(100).default(0),
