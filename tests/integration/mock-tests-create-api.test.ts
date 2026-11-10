@@ -46,7 +46,7 @@ function createAdminClient(
   };
 }
 
-function createRequest(body: { title: string; slug?: string } = { title: "Sample mock test", slug: "sample-mock-test" }) {
+function createRequest(body: Record<string, unknown> = { title: "Sample mock test", slug: "sample-mock-test" }) {
   return new NextRequest("http://localhost/api/mock-tests", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -104,6 +104,42 @@ describe("POST /api/mock-tests", () => {
     }, { onConflict: "code" });
     expect(adminClient.insertQuery.insert).toHaveBeenCalledWith([
       expect.objectContaining({ test_type_id: "created-full-mock-type" }),
+    ]);
+  });
+
+  it("persists the selected exam settings when creating a test", async () => {
+    const adminClient = createAdminClient();
+    mocks.createAdminClient.mockReturnValue(adminClient);
+
+    const response = await createMockTest(createRequest({
+      title: "Negative marking mock test",
+      slug: "negative-marking-mock-test",
+      description: "A student-facing test description.",
+      instructions: "Read every question carefully.",
+      passing_marks: 12,
+      negative_marking: true,
+      negative_marks_ratio: 0.25,
+      shuffle_questions: false,
+      shuffle_options: false,
+      show_solutions: false,
+      allow_review: false,
+      max_attempts: 2,
+    }));
+
+    expect(response.status).toBe(201);
+    expect(adminClient.insertQuery.insert).toHaveBeenCalledWith([
+      expect.objectContaining({
+        description: "A student-facing test description.",
+        instructions: "Read every question carefully.",
+        passing_marks: 12,
+        negative_marking: true,
+        negative_marks_ratio: 0.25,
+        shuffle_questions: false,
+        shuffle_options: false,
+        show_solutions: false,
+        allow_review: false,
+        max_attempts: 2,
+      }),
     ]);
   });
 });

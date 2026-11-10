@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 type Result = {
+  show_solutions: boolean;
   status: string;
   marks_obtained: number;
   total_marks: number;
@@ -253,7 +254,9 @@ export default function ResultPageClient({ attemptId }: { attemptId: string }) {
               Question review
             </h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              Every answer with its correct option and explanation.
+              {result.show_solutions
+                ? "Review your answers, correct options, and explanations."
+                : "Review your answers and score. Solutions are hidden for this test."}
             </p>
           </div>
           <div className="flex flex-wrap gap-1.5" role="group" aria-label="Filter questions">

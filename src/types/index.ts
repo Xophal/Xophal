@@ -102,6 +102,7 @@ export interface Question {
   is_active: boolean;
   status?: "draft" | "review" | "approved" | "published" | "rejected" | "archived";
   tags?: string[] | null;
+  section_name?: string | null;
   difficulty_level?: DifficultyLevel;
   options?: QuestionOption[];
 }
@@ -122,6 +123,8 @@ export interface MockTest {
   negative_marks_ratio: number;
   shuffle_questions: boolean;
   shuffle_options: boolean;
+  show_solutions?: boolean;
+  allow_review?: boolean;
   is_premium: boolean;
   is_published: boolean;
   year: number | null;

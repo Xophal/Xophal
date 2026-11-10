@@ -8,7 +8,7 @@ export async function GET() {
     const adminClient = createAdminClient();
     const { data, error } = await adminClient
       .from("mock_tests")
-      .select("id, title, slug, duration_minutes, total_questions, total_marks, access_price, is_published, is_premium, is_active, created_at")
+      .select("id, title, slug, description, instructions, duration_minutes, passing_marks, negative_marking, negative_marks_ratio, shuffle_questions, shuffle_options, show_solutions, allow_review, max_attempts, total_questions, total_marks, access_price, is_published, is_premium, is_active, created_at")
       .order("created_at", { ascending: false });
 
     if (error) throw error;

@@ -3,13 +3,20 @@ import { z } from "zod";
 import { ApiError, apiSuccess, handleApiError, validateBody } from "@/lib/api-utils";
 import { requireAdminRole } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { isUsableMockTestQuestion } from "@/lib/mock-tests/question-readiness";
 
 const questionSelectionSchema = z.object({
   question_ids: z.array(z.string().uuid()).min(1).max(100),
+  section_id: z.string().uuid().nullable().optional(),
+});
+
+const questionSectionSchema = z.object({
+  question_id: z.string().uuid(),
+  section_id: z.string().uuid().nullable(),
 });
 
 type Params = { params: Promise<{ mockTestId: string }> };
-type QuestionOption = { id: string; is_correct: boolean };
+type QuestionOption = { id: string; option_text: string | null; is_correct: boolean };
 type QuestionType = { code: string } | { code: string }[] | null;
 type QuestionRow = {
   id: string;
@@ -24,22 +31,9 @@ type AttachedRow = {
   question_id: string;
   sort_order: number;
   marks_override: number | string | null;
+  section_id: string | null;
   questions: QuestionRow | QuestionRow[] | null;
 };
-
-function isUsableQuestion(question: QuestionRow) {
-  const type = Array.isArray(question.question_types)
-    ? question.question_types[0]?.code
-    : question.question_types?.code;
-  const options = question.question_options ?? [];
-  const correctCount = options.filter((option) => option.is_correct).length;
-  return question.status === "published"
-    && question.is_active
-    && (type === "single_correct" || type === "multiple_correct")
-    && options.length >= 2
-    && correctCount >= 1
-    && (type === "multiple_correct" || correctCount === 1);
-}
 
 async function getTest(admin: ReturnType<typeof createAdminClient>, mockTestId: string) {
   if (!z.string().uuid().safeParse(mockTestId).success) {
@@ -92,14 +86,14 @@ export async function GET(request: NextRequest, { params }: Params) {
 
     const { data: links, error: linksError } = await admin
       .from("mock_test_questions")
-      .select("question_id, sort_order, marks_override, questions(id, question_text, status, is_active, marks, question_types(code), question_options(id, is_correct))")
+      .select("question_id, sort_order, marks_override, section_id, questions(id, question_text, status, is_active, marks, question_types(code), question_options(id, option_text, is_correct))")
       .eq("mock_test_id", mockTestId)
       .order("sort_order", { ascending: true });
     if (linksError) throw linksError;
 
     let availableQuery = admin
       .from("questions")
-      .select("id, question_text, status, is_active, marks, question_types(code), question_options(id, is_correct)")
+      .select("id, question_text, status, is_active, marks, question_types(code), question_options(id, option_text, is_correct)")
       .eq("status", "published")
       .eq("is_active", true)
       .order("created_at", { ascending: false })
@@ -110,14 +104,31 @@ export async function GET(request: NextRequest, { params }: Params) {
 
     const attachedRows = (links ?? []) as AttachedRow[];
     const attachedIds = new Set(attachedRows.map((row) => row.question_id));
+    const sectionIds = [...new Set(attachedRows.flatMap((row) => row.section_id ? [row.section_id] : []))];
+    let sectionNames = new Map<string, string>();
+    if (sectionIds.length > 0) {
+      const { data: testSections, error: sectionsError } = await admin
+        .from("mock_test_sections")
+        .select("id, name")
+        .eq("mock_test_id", mockTestId)
+        .in("id", sectionIds);
+      if (sectionsError) throw sectionsError;
+      sectionNames = new Map((testSections ?? []).map((section) => [section.id, section.name]));
+    }
     const attachedQuestions = attachedRows.flatMap((row) => {
       const question = Array.isArray(row.questions) ? row.questions[0] : row.questions;
       return question
-        ? [{ ...question, sort_order: row.sort_order, marks_override: row.marks_override }]
+        ? [{
+          ...question,
+          sort_order: row.sort_order,
+          marks_override: row.marks_override,
+          section_id: row.section_id,
+          section_name: row.section_id ? sectionNames.get(row.section_id) ?? null : null,
+        }]
         : [];
     });
     const availableQuestions = ((availableRows ?? []) as QuestionRow[])
-      .filter((question) => !attachedIds.has(question.id) && isUsableQuestion(question))
+      .filter((question) => !attachedIds.has(question.id) && isUsableMockTestQuestion(question))
       .map((question) => ({
         id: question.id,
         question_text: question.question_text,
@@ -141,16 +152,26 @@ export async function POST(request: NextRequest, { params }: Params) {
     const admin = createAdminClient();
     const test = await getTest(admin, mockTestId);
     const uniqueQuestionIds = [...new Set(payload.question_ids)];
+    if (payload.section_id) {
+      const { data: section, error: sectionError } = await admin
+        .from("mock_test_sections")
+        .select("id")
+        .eq("id", payload.section_id)
+        .eq("mock_test_id", mockTestId)
+        .maybeSingle();
+      if (sectionError) throw sectionError;
+      if (!section) throw new ApiError(400, "The selected section does not belong to this test.", "INVALID_TEST_SECTION");
+    }
 
     const { data: questions, error: questionsError } = await admin
       .from("questions")
-      .select("id, question_text, status, is_active, marks, question_types(code), question_options(id, is_correct)")
+      .select("id, question_text, status, is_active, marks, question_types(code), question_options(id, option_text, is_correct)")
       .in("id", uniqueQuestionIds);
     if (questionsError) throw questionsError;
     const questionsById = new Map(((questions ?? []) as QuestionRow[]).map((question) => [question.id, question]));
     const invalidQuestion = uniqueQuestionIds.find((id) => {
       const question = questionsById.get(id);
-      return !question || !isUsableQuestion(question);
+      return !question || !isUsableMockTestQuestion(question);
     });
     if (invalidQuestion) {
       throw new ApiError(
@@ -174,6 +195,7 @@ export async function POST(request: NextRequest, { params }: Params) {
     const { error: insertError } = await admin.from("mock_test_questions").insert(
       newQuestions.map((questionId, index) => ({
         mock_test_id: mockTestId,
+        section_id: payload.section_id ?? null,
         question_id: questionId,
         sort_order: startOrder + index,
       }))
@@ -181,6 +203,48 @@ export async function POST(request: NextRequest, { params }: Params) {
     if (insertError) throw insertError;
 
     return apiSuccess({ added: newQuestions.length }, 201);
+  } catch (error) {
+    return handleApiError(error);
+  }
+}
+
+export async function PATCH(request: NextRequest, { params }: Params) {
+  try {
+    await requireAdminRole(["super_admin", "admin", "content_manager"]);
+    const { mockTestId } = await params;
+    const payload = await validateBody(questionSectionSchema, await request.json());
+    const admin = createAdminClient();
+    const test = await getTest(admin, mockTestId);
+
+    const { data: existingLink, error: linkError } = await admin
+      .from("mock_test_questions")
+      .select("question_id")
+      .eq("mock_test_id", mockTestId)
+      .eq("question_id", payload.question_id)
+      .maybeSingle();
+    if (linkError) throw linkError;
+    if (!existingLink) throw new ApiError(404, "Question is not attached to this test.", "QUESTION_NOT_ATTACHED");
+
+    if (payload.section_id) {
+      const { data: section, error: sectionError } = await admin
+        .from("mock_test_sections")
+        .select("id")
+        .eq("id", payload.section_id)
+        .eq("mock_test_id", mockTestId)
+        .maybeSingle();
+      if (sectionError) throw sectionError;
+      if (!section) throw new ApiError(400, "The selected section does not belong to this test.", "INVALID_TEST_SECTION");
+    }
+
+    await unpublishForQuestionChanges(admin, mockTestId, test.is_published);
+    const { error } = await admin
+      .from("mock_test_questions")
+      .update({ section_id: payload.section_id })
+      .eq("mock_test_id", mockTestId)
+      .eq("question_id", payload.question_id);
+    if (error) throw error;
+
+    return apiSuccess({ updated: true });
   } catch (error) {
     return handleApiError(error);
   }

@@ -279,6 +279,7 @@ export default function MockRunner({ slug }: { slug: string }) {
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <p className="exam-eyebrow">
                       Question {currentIndex + 1} of {questions.length}
+                      {question.section_name ? ` • ${question.section_name}` : ""}
                     </p>
                     <span
                       className="rounded-full border border-border px-2.5 py-1 text-[0.6875rem] font-semibold text-muted-foreground"
@@ -324,26 +325,30 @@ export default function MockRunner({ slug }: { slug: string }) {
                 </div>
 
                 <div className="mt-4 flex flex-wrap items-center gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => toggleReviewLater(question.id)}
-                    aria-pressed={Boolean(response?.is_review_later)}
-                    className={cn(response?.is_review_later && "border-warning text-warning")}
-                  >
-                    <Flag className="h-4 w-4" />
-                    {response?.is_review_later ? "Marked for review" : "Mark for review"}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => toggleBookmark(question.id)}
-                    aria-pressed={Boolean(response?.is_bookmarked)}
-                    className={cn(response?.is_bookmarked && "border-primary text-primary")}
-                  >
-                    <Bookmark className="h-4 w-4" />
-                    {response?.is_bookmarked ? "Bookmarked" : "Bookmark"}
-                  </Button>
+                  {mockTest.allow_review !== false ? (
+                    <>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => toggleReviewLater(question.id)}
+                        aria-pressed={Boolean(response?.is_review_later)}
+                        className={cn(response?.is_review_later && "border-warning text-warning")}
+                      >
+                        <Flag className="h-4 w-4" />
+                        {response?.is_review_later ? "Marked for review" : "Mark for review"}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => toggleBookmark(question.id)}
+                        aria-pressed={Boolean(response?.is_bookmarked)}
+                        className={cn(response?.is_bookmarked && "border-primary text-primary")}
+                      >
+                        <Bookmark className="h-4 w-4" />
+                        {response?.is_bookmarked ? "Bookmarked" : "Bookmark"}
+                      </Button>
+                    </>
+                  ) : null}
                   <Button
                     type="button"
                     variant="ghost"

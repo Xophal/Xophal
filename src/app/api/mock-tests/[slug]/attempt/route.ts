@@ -12,7 +12,7 @@ export async function POST(_: Request, { params }: { params: Promise<{ slug: str
     const adminClient = createAdminClient();
     const { data: test, error: testError } = await adminClient
       .from("mock_tests")
-      .select("id, test_type_id, title, slug, description, subject_id, chapter_id, total_questions, total_marks, duration_minutes, passing_marks, negative_marking, negative_marks_ratio, shuffle_questions, shuffle_options, is_premium, is_published, year, instructions")
+      .select("id, test_type_id, title, slug, description, subject_id, chapter_id, total_questions, total_marks, duration_minutes, passing_marks, negative_marking, negative_marks_ratio, shuffle_questions, shuffle_options, show_solutions, allow_review, is_premium, is_published, year, instructions")
       .eq("slug", slug)
       .eq("is_published", true)
       .eq("is_active", true)
@@ -46,7 +46,7 @@ export async function POST(_: Request, { params }: { params: Promise<{ slug: str
 
     const { data: questionLinks, error: questionLinksError } = await adminClient
       .from("mock_test_questions")
-      .select("question_id")
+      .select("question_id, section_id")
       .eq("mock_test_id", test.id);
     if (questionLinksError) throw questionLinksError;
     if (!questionLinks?.length) throw new ApiError(400, "This mock test has no questions yet.", "TEST_EMPTY");
@@ -67,12 +67,13 @@ export async function POST(_: Request, { params }: { params: Promise<{ slug: str
 
     const entitlement = await getUserEntitlement(session.user.id);
 
-    const { data: grant } = await adminClient
+    const { data: grant, error: grantError } = await adminClient
       .from("test_access_grants")
       .select("id")
       .eq("user_id", session.user.id)
       .eq("mock_test_id", test.id)
       .maybeSingle();
+    if (grantError) throw grantError;
 
     const hasEntitlement = test.is_premium
       ? entitlement.isPaid && isProductEntitled(entitlement.productType, "premium")
@@ -116,14 +117,41 @@ export async function POST(_: Request, { params }: { params: Promise<{ slug: str
       .order("position", { ascending: true });
     if (paperError) throw paperError;
 
+    const sectionIds = [...new Set(questionLinks.flatMap((link) => link.section_id ? [link.section_id] : []))];
+    let sectionNames = new Map<string, string>();
+    if (sectionIds.length > 0) {
+      const { data: testSections, error: sectionsError } = await adminClient
+        .from("mock_test_sections")
+        .select("id, name")
+        .eq("mock_test_id", test.id)
+        .in("id", sectionIds);
+      if (sectionsError) throw sectionsError;
+      sectionNames = new Map((testSections ?? []).map((section) => [section.id, section.name]));
+    }
+    const sectionByQuestion = new Map(questionLinks.map((link) => [
+      link.question_id,
+      link.section_id ? sectionNames.get(link.section_id) ?? null : null,
+    ]));
+
     const questions = (paperRows ?? []).map((row) => {
       const question = row.question_snapshot as Record<string, unknown> & {
+        explanation?: unknown;
         question_options?: Array<Record<string, unknown>>;
         options?: Array<Record<string, unknown>>;
       };
       const options = question.options ?? question.question_options ?? [];
       return {
-        ...question,
+        id: question.id,
+        question_text: question.question_text,
+        question_html: question.question_html,
+        image_url: question.image_url,
+        negative_marks: question.negative_marks,
+        time_seconds: question.time_seconds,
+        topic_id: question.topic_id,
+        chapter_id: question.chapter_id,
+        subject_id: question.subject_id,
+        question_type: question.question_type,
+        section_name: sectionByQuestion.get(row.question_id) ?? null,
         marks: row.marks,
         options: options.map((option) => ({ ...option, is_correct: false })),
       };

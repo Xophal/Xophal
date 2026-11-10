@@ -11,6 +11,7 @@ vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: mocks.createAdminCli
 
 import {
   GET as getTestQuestions,
+  PATCH as assignQuestionSection,
   POST as addTestQuestions,
 } from "@/app/api/admin/mock-tests/[mockTestId]/questions/route";
 import { PATCH as updateMockTest } from "@/app/api/admin/mock-tests/[mockTestId]/route";
@@ -26,7 +27,10 @@ function query(result: QueryResult, singleResult: QueryResult = result) {
     limit: () => builder,
     ilike: () => builder,
     insert: vi.fn(() => builder),
-    update: vi.fn(() => builder),
+    update: vi.fn((payload: unknown) => {
+      void payload;
+      return builder;
+    }),
     delete: () => builder,
     maybeSingle: vi.fn().mockResolvedValue(singleResult),
     then: (resolve: (value: QueryResult) => unknown, reject: (reason: unknown) => unknown) =>
@@ -57,8 +61,8 @@ const readyQuestion = {
   marks: 1,
   question_types: { code: "single_correct" },
   question_options: [
-    { id: "option-1", is_correct: true },
-    { id: "option-2", is_correct: false },
+    { id: "option-1", option_text: "Option one", is_correct: true },
+    { id: "option-2", option_text: "Option two", is_correct: false },
   ],
 };
 
@@ -96,7 +100,7 @@ describe("admin mock-test question management", () => {
 
     expect(response.status).toBe(201);
     expect(builders.get("mock_test_questions")?.[1].insert).toHaveBeenCalledWith([
-      { mock_test_id: "00000000-0000-4000-8000-000000000010", question_id: readyQuestion.id, sort_order: 0 },
+      { mock_test_id: "00000000-0000-4000-8000-000000000010", section_id: null, question_id: readyQuestion.id, sort_order: 0 },
     ]);
   });
 
@@ -165,6 +169,44 @@ describe("admin mock-test question management", () => {
     await expect(response.json()).resolves.toMatchObject({ code: "TEST_NOT_READY" });
   });
 
+  it("preserves descriptions and instructions when publishing a test", async () => {
+    const { admin, builders } = setupAdminClient({
+      mock_test_questions: [{
+        data: [{
+          question_id: readyQuestion.id,
+          questions: {
+            status: "published",
+            is_active: true,
+            question_types: { code: "single_correct" },
+            question_options: [
+              { id: "option-1", option_text: "Option one", is_correct: true },
+              { id: "option-2", option_text: "Option two", is_correct: false },
+            ],
+          },
+        }],
+        error: null,
+      }],
+    }, {
+      mock_tests: [{ data: { id: "test-1" }, error: null }],
+    });
+    mocks.createAdminClient.mockReturnValue(admin);
+
+    const response = await updateMockTest(
+      new NextRequest("http://localhost/api/admin/mock-tests/test-1", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ is_published: true }),
+      }),
+      context()
+    );
+
+    expect(response.status).toBe(200);
+    const updatePayload = builders.get("mock_tests")?.[0].update.mock.calls[0][0];
+    expect(updatePayload).toMatchObject({ is_published: true });
+    expect(updatePayload).not.toHaveProperty("description");
+    expect(updatePayload).not.toHaveProperty("instructions");
+  });
+
   it("returns only eligible question-bank items for a test", async () => {
     const attachedQuestion = { ...readyQuestion, id: "00000000-0000-4000-8000-000000000002" };
     const { admin } = setupAdminClient({
@@ -203,5 +245,34 @@ describe("admin mock-test question management", () => {
         availableQuestions: [{ id: readyQuestion.id }],
       },
     });
+  });
+
+  it("assigns an attached question to a section in the same test", async () => {
+    const sectionId = "00000000-0000-4000-8000-000000000011";
+    const { admin, builders } = setupAdminClient({
+      mock_test_questions: [
+        { data: null, error: null },
+        { data: null, error: null },
+      ],
+      mock_test_sections: [{ data: null, error: null }],
+      test_attempts: [{ data: [], error: null }],
+    }, {
+      mock_tests: [{ data: { id: "test-1", is_published: false }, error: null }],
+      mock_test_questions: [{ data: { question_id: readyQuestion.id }, error: null }],
+      mock_test_sections: [{ data: { id: sectionId }, error: null }],
+    });
+    mocks.createAdminClient.mockReturnValue(admin);
+
+    const response = await assignQuestionSection(
+      new NextRequest("http://localhost/api/admin/mock-tests/test-1/questions", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ question_id: readyQuestion.id, section_id: sectionId }),
+      }),
+      context()
+    );
+
+    expect(response.status).toBe(200);
+    expect(builders.get("mock_test_questions")?.[1].update).toHaveBeenCalledWith({ section_id: sectionId });
   });
 });

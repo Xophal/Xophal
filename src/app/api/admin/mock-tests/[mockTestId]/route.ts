@@ -2,18 +2,27 @@ import { NextRequest } from "next/server";
 import { z } from "zod";
 import { requireAdminRole } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { isUsableMockTestQuestion } from "@/lib/mock-tests/question-readiness";
 import { ApiError, apiSuccess, handleApiError, validateBody } from "@/lib/api-utils";
 
 const updateSchema = z.object({
   title: z.string().min(2).max(500).optional(),
   slug: z.string().min(2).max(500).optional(),
+  description: z.string().max(10000).optional().or(z.literal("")),
   duration_minutes: z.number().int().positive().optional(),
-    access_price: z.number().min(0).finite().optional(),
-  passing_marks: z.number().optional(),
+  access_price: z.number().min(0).finite().optional(),
+  passing_marks: z.number().min(0).finite().optional(),
+  negative_marking: z.boolean().optional(),
+  negative_marks_ratio: z.number().min(0).max(1).optional(),
+  shuffle_questions: z.boolean().optional(),
+  shuffle_options: z.boolean().optional(),
+  show_solutions: z.boolean().optional(),
+  allow_review: z.boolean().optional(),
+  max_attempts: z.number().int().min(0).optional(),
   is_premium: z.boolean().optional(),
   is_published: z.boolean().optional(),
   is_active: z.boolean().optional(),
-  instructions: z.string().optional().or(z.literal("")),
+  instructions: z.string().max(10000).optional().or(z.literal("")),
 });
 
 type Params = { params: Promise<{ mockTestId: string }> };
@@ -30,27 +39,31 @@ export async function PATCH(request: NextRequest, { params }: Params) {
     if (payload.is_published === true) {
       const { data: links, error: linksError } = await admin
         .from("mock_test_questions")
-        .select("question_id, questions!inner(status, is_active)")
+        .select("question_id, questions!inner(status, is_active, question_types(code), question_options(id, option_text, is_correct))")
         .eq("mock_test_id", mockTestId);
       if (linksError) throw linksError;
       const linkedQuestions = (links ?? []).flatMap((link) => {
         const questions = link.questions;
         return Array.isArray(questions) ? questions : questions ? [questions] : [];
       });
-      if (linkedQuestions.length === 0 || linkedQuestions.some((question) => question.status !== "published" || !question.is_active)) {
+      if (linkedQuestions.length === 0 || linkedQuestions.some((question) => !isUsableMockTestQuestion(question))) {
         throw new ApiError(
           400,
-          "Add at least one active, published question and remove any unfinished questions before publishing.",
+          "Add at least one active, published multiple-choice question with a valid answer key before publishing.",
           "TEST_NOT_READY"
         );
       }
     }
 
-    const { data, error } = await admin.from("mock_tests").update({
+    const updatePayload = {
       ...payload,
-      instructions: payload.instructions || null,
-      published_at: payload.is_published === true ? new Date().toISOString() : payload.is_published === false ? null : undefined,
-    }).eq("id", mockTestId).select().maybeSingle();
+      ...(payload.description !== undefined ? { description: payload.description || null } : {}),
+      ...(payload.instructions !== undefined ? { instructions: payload.instructions || null } : {}),
+      ...(payload.is_published !== undefined
+        ? { published_at: payload.is_published ? new Date().toISOString() : null }
+        : {}),
+    };
+    const { data, error } = await admin.from("mock_tests").update(updatePayload).eq("id", mockTestId).select().maybeSingle();
     if (error?.code === "23505") throw new ApiError(409, "A mock test with this slug already exists.", "DUPLICATE_SLUG");
     if (error) throw error;
     if (!data) throw new ApiError(404, "Mock test not found", "NOT_FOUND");

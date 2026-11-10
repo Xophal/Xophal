@@ -35,6 +35,8 @@ export async function GET(_: Request, { params }: { params: Promise<{ attemptId:
     if (paperError) throw paperError;
 
     const responseByQuestion = new Map((responses ?? []).map((response) => [response.question_id, response]));
+    const test = Array.isArray(data.mock_tests) ? data.mock_tests[0] : data.mock_tests;
+    const showSolutions = test?.show_solutions ?? true;
     const testResponses = (papers ?? []).map((paper) => {
       const question = paper.question_snapshot as {
         question_text?: string;
@@ -54,11 +56,14 @@ export async function GET(_: Request, { params }: { params: Promise<{ attemptId:
         marks_awarded: response?.marks_awarded ?? 0,
         questions: {
           question_text: question.question_text ?? "",
-          explanation: question.explanation ?? null,
+          explanation: showSolutions ? question.explanation ?? null : null,
           image_url: question.image_url ?? null,
           topic_id: question.topic_id ?? null,
           chapter_id: question.chapter_id ?? null,
-          question_options: question.options ?? [],
+          question_options: (question.options ?? []).map((option) => ({
+            ...option,
+            is_correct: showSolutions && option.is_correct,
+          })),
         },
       };
     });
@@ -80,6 +85,7 @@ export async function GET(_: Request, { params }: { params: Promise<{ attemptId:
     }
     return apiSuccess({
       ...data,
+      show_solutions: showSolutions,
       test_responses: testResponses,
       accuracy: answeredForAccuracy > 0 ? Number(((data.correct_count / answeredForAccuracy) * 100).toFixed(2)) : 0,
       topicBreakdown: Array.from(topicBreakdown, ([topicId, values]) => ({ topicId, ...values, accuracy: values.attempted ? Number(((values.correct / values.attempted) * 100).toFixed(2)) : 0 })),

@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { z } from "zod";
-import { requireAdminAuth } from "@/lib/auth";
+import { requireAdminRole } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { ApiError, apiSuccess, handleApiError, validateBody } from "@/lib/api-utils";
 
@@ -15,9 +15,13 @@ type Params = { params: Promise<{ mockTestId: string }> };
 
 export async function GET(_: NextRequest, { params }: Params) {
   try {
-    await requireAdminAuth();
+    await requireAdminRole(["super_admin", "admin", "content_manager"]);
     const { mockTestId } = await params;
+    if (!z.string().uuid().safeParse(mockTestId).success) throw new ApiError(400, "A valid mock test ID is required.", "INVALID_TEST_ID");
     const admin = createAdminClient();
+    const { data: test, error: testError } = await admin.from("mock_tests").select("id").eq("id", mockTestId).maybeSingle();
+    if (testError) throw testError;
+    if (!test) throw new ApiError(404, "Mock test not found.", "NOT_FOUND");
     const { data, error } = await admin.from("mock_test_sections").select("*").eq("mock_test_id", mockTestId).order("sort_order");
     if (error) throw error;
     return apiSuccess(data ?? []);
@@ -28,10 +32,14 @@ export async function GET(_: NextRequest, { params }: Params) {
 
 export async function POST(request: NextRequest, { params }: Params) {
   try {
-    await requireAdminAuth();
+    await requireAdminRole(["super_admin", "admin", "content_manager"]);
     const { mockTestId } = await params;
+    if (!z.string().uuid().safeParse(mockTestId).success) throw new ApiError(400, "A valid mock test ID is required.", "INVALID_TEST_ID");
     const payload = await validateBody(sectionSchema, await request.json());
     const admin = createAdminClient();
+    const { data: test, error: testError } = await admin.from("mock_tests").select("id").eq("id", mockTestId).maybeSingle();
+    if (testError) throw testError;
+    if (!test) throw new ApiError(404, "Mock test not found.", "NOT_FOUND");
     const { data, error } = await admin.from("mock_test_sections").insert([{
       mock_test_id: mockTestId,
       name: payload.name,
@@ -48,11 +56,40 @@ export async function POST(request: NextRequest, { params }: Params) {
 
 export async function DELETE(request: NextRequest, { params }: Params) {
   try {
-    await requireAdminAuth();
+    await requireAdminRole(["super_admin", "admin", "content_manager"]);
     const { mockTestId } = await params;
+    if (!z.string().uuid().safeParse(mockTestId).success) throw new ApiError(400, "A valid mock test ID is required.", "INVALID_TEST_ID");
     const sectionId = new URL(request.url).searchParams.get("sectionId");
-    if (!sectionId) throw new ApiError(400, "sectionId is required", "MISSING_SECTION_ID");
+    if (!sectionId || !z.string().uuid().safeParse(sectionId).success) throw new ApiError(400, "A valid sectionId is required.", "INVALID_SECTION_ID");
     const admin = createAdminClient();
+    const { data: test, error: testError } = await admin.from("mock_tests").select("id, is_published").eq("id", mockTestId).maybeSingle();
+    if (testError) throw testError;
+    if (!test) throw new ApiError(404, "Mock test not found.", "NOT_FOUND");
+    const { data: section, error: sectionError } = await admin
+      .from("mock_test_sections")
+      .select("id")
+      .eq("id", sectionId)
+      .eq("mock_test_id", mockTestId)
+      .maybeSingle();
+    if (sectionError) throw sectionError;
+    if (!section) throw new ApiError(404, "Section not found.", "NOT_FOUND");
+    const { data: activeAttempts, error: attemptsError } = await admin
+      .from("test_attempts")
+      .select("id")
+      .eq("mock_test_id", mockTestId)
+      .eq("status", "in_progress")
+      .limit(1);
+    if (attemptsError) throw attemptsError;
+    if (activeAttempts?.length) {
+      throw new ApiError(409, "Sections cannot be changed while students have an in-progress attempt.", "TEST_HAS_ACTIVE_ATTEMPTS");
+    }
+    if (test.is_published) {
+      const { error: unpublishError } = await admin
+        .from("mock_tests")
+        .update({ is_published: false, published_at: null })
+        .eq("id", mockTestId);
+      if (unpublishError) throw unpublishError;
+    }
     const { data, error } = await admin.from("mock_test_sections").delete().eq("id", sectionId).eq("mock_test_id", mockTestId).select().maybeSingle();
     if (error) throw error;
     if (!data) throw new ApiError(404, "Section not found", "NOT_FOUND");
