@@ -134,6 +134,13 @@ export async function POST(request: NextRequest) {
     await requireAdminRole(["super_admin", "admin", "content_manager"]);
     const body = await request.json();
     const payload = await validateBody(mockTestCreateSchema, body);
+    const questionIds = payload.question_ids ? [...new Set(payload.question_ids)] : [];
+    if (questionIds.length === 0 && payload.is_published) {
+      throw new ApiError(400, "A mock test must include questions before it can be published.", "TEST_EMPTY");
+    }
+    if (payload.question_ids && questionIds.length !== payload.question_ids.length) {
+      throw new ApiError(400, "A question can only be selected once.", "DUPLICATE_QUESTION");
+    }
     const adminClient = createAdminClient();
 
     const { data: duplicateSlug, error: duplicateSlugError } = await adminClient
@@ -144,11 +151,6 @@ export async function POST(request: NextRequest) {
     if (duplicateSlugError) throw duplicateSlugError;
     if (duplicateSlug) {
       throw new ApiError(409, "A mock test with this slug already exists.", "DUPLICATE_SLUG");
-    }
-
-    const questionIds = payload.question_ids ? [...new Set(payload.question_ids)] : [];
-    if (payload.question_ids && questionIds.length !== payload.question_ids.length) {
-      throw new ApiError(400, "A question can only be selected once.", "DUPLICATE_QUESTION");
     }
 
     let totalQuestions = 0;
@@ -354,6 +356,13 @@ export async function POST(request: NextRequest) {
         .eq("id", data.id)
         .select()
         .single();
+      if (finalizeError?.code === "23514") {
+        throw new ApiError(
+          409,
+          "The mock test could not be published because its questions or totals changed while it was being saved.",
+          "TEST_PUBLISH_REJECTED"
+        );
+      }
       if (finalizeError) throw finalizeError;
       return apiSuccess(finalized, 201);
     } catch (error) {

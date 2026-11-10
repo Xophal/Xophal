@@ -78,6 +78,50 @@ describe("admin mock-test builder routes", () => {
     await expect(response.json()).resolves.toMatchObject({ code: "DUPLICATE_SLUG" });
   });
 
+  it("refuses to publish a mock test whose active published question count is zero", async () => {
+    const testQuery = {
+      select: vi.fn(() => testQuery),
+      eq: vi.fn(() => testQuery),
+      maybeSingle: vi.fn().mockResolvedValue({
+        data: { id: "test-1", is_active: true, total_questions: 1, duration_minutes: 20 },
+        error: null,
+      }),
+    };
+    const questionsQuery = {
+      select: vi.fn(() => questionsQuery),
+      eq: vi.fn(),
+    };
+    questionsQuery.eq
+      .mockReturnValueOnce(questionsQuery)
+      .mockReturnValueOnce(questionsQuery)
+      .mockResolvedValueOnce({ count: 0, error: null });
+    const mockTestsUpdateQuery = {
+      update: vi.fn(() => mockTestsUpdateQuery),
+      eq: vi.fn(() => mockTestsUpdateQuery),
+      select: vi.fn(() => mockTestsUpdateQuery),
+      maybeSingle: vi.fn(),
+    };
+    let mockTestQueryCount = 0;
+    mocks.createAdminClient.mockReturnValue({
+      from: vi.fn((table: string) => {
+        if (table === "mock_tests") {
+          mockTestQueryCount += 1;
+          return mockTestQueryCount === 1 ? testQuery : mockTestsUpdateQuery;
+        }
+        return questionsQuery;
+      }),
+    });
+
+    const response = await updateMockTest(
+      createRequest("http://localhost/api/admin/mock-tests/test-1", "PATCH", { is_published: true }),
+      { params: Promise.resolve({ mockTestId: "test-1" }) }
+    );
+
+    expect(response.status).toBe(409);
+    await expect(response.json()).resolves.toMatchObject({ code: "INVALID_QUESTION_SELECTION" });
+    expect(mockTestsUpdateQuery.update).not.toHaveBeenCalled();
+  });
+
   it("limits section creation to content-authoring admin roles", async () => {
     const insertQuery = {
       insert: vi.fn(() => insertQuery),

@@ -16,7 +16,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${base}/register`, changeFrequency: "monthly", priority: 0.7 },
     { url: `${base}/pricing`, changeFrequency: "monthly", priority: 0.8 },
     { url: `${base}/blog`, changeFrequency: "weekly", priority: 0.7 },
-    { url: `${base}/leaderboard`, changeFrequency: "weekly", priority: 0.7 },
     { url: `${base}/contact`, changeFrequency: "monthly", priority: 0.7 },
     { url: `${base}/faq`, changeFrequency: "monthly", priority: 0.6 },
     { url: `${base}/help-center`, changeFrequency: "monthly", priority: 0.6 },
@@ -34,8 +33,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
    */
   try {
     const supabase = await createClient();
-    const [boardsResult, booksResult, categoriesResult, contributorsResult] = await Promise.all([
-      supabase.from("boards").select("slug").eq("is_active", true),
+    const [booksResult, categoriesResult, contributorsResult] = await Promise.all([
       supabase
         .from("ebook_listings")
         .select("slug, updated_at")
@@ -46,11 +44,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       supabase.from("ebook_contributors").select("slug").limit(1000),
     ]);
 
-    const boardRoutes: MetadataRoute.Sitemap = (boardsResult.data ?? []).map((board) => ({
-      url: `${base}/learn?boardSlug=${encodeURIComponent(board.slug)}`,
-      changeFrequency: "weekly" as const,
-      priority: 0.9,
-    }));
     const bookRoutes: MetadataRoute.Sitemap = (booksResult.data ?? []).map((book) => ({
       url: `${base}/ebooks/${book.slug}`,
       lastModified: book.updated_at ? new Date(book.updated_at) : undefined,
@@ -68,7 +61,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.5,
     }));
 
-    return [...staticRoutes, ...boardRoutes, ...bookRoutes, ...categoryRoutes, ...authorRoutes];
+    return [...staticRoutes, ...bookRoutes, ...categoryRoutes, ...authorRoutes];
   } catch {
     return staticRoutes;
   }

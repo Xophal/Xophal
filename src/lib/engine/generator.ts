@@ -306,14 +306,11 @@ export function fillSection(
   for (const level of RELAXATION_ORDER) {
     if (chosen.length >= section.count) break;
 
-    // Recency is the constraint to give up last. A short paper that never repeats
-    // a question the student just sat is better than a full one that does, so
-    // "recent" is only relaxed when nothing unseen is left at all - otherwise the
-    // section stays short and reports a SHORTFALL.
+    // Reuse recent questions only when unseen questions cannot fill the section.
     if (level === "recent" && !relaxed.has("recent") && !ctx.allowRepeat) {
       const withoutRecency = new Set(relaxed);
       withoutRecency.delete("recent");
-      if (eligibleAt(pool, section.filter, withoutRecency, recentSet, ctx).length > 0) continue;
+      if (eligibleAt(pool, section.filter, withoutRecency, recentSet, ctx).length >= section.count - chosen.length) continue;
     }
 
     const before = chosen.length;

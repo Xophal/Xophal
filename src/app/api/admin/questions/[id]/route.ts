@@ -107,7 +107,10 @@ export async function DELETE(_: Request, { params }: { params: Promise<{ id: str
     if (refErr) throw refErr;
     if (refs && refs.length > 0) {
       // cannot hard-delete, archive instead
-      const { error: updErr } = await admin.from("questions").update({ is_active: false }).eq("id", id);
+      const { error: updErr } = await admin
+        .from("questions")
+        .update({ is_active: false, status: "archived" })
+        .eq("id", id);
       if (updErr) throw updErr;
       return apiSuccess({ archived: true });
     }

@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { ensureProfile } from "@/lib/auth";
-import { ADMIN_ROLES } from "@/constants";
 import { apiSuccess, handleApiError } from "@/lib/api-utils";
+import { isAdminRole, normalizeRoleCode } from "@/lib/roles";
 
 export async function GET() {
   try {
@@ -24,7 +24,7 @@ export async function GET() {
       return apiSuccess({ user: null, profile: null, isAdmin: false });
     }
 
-    const roleCode = (profile as { roles?: { code?: string } } | null)?.roles?.code;
+    const roleCode = normalizeRoleCode(profile);
 
     return apiSuccess({
       user: {
@@ -33,7 +33,8 @@ export async function GET() {
         full_name: user.user_metadata?.full_name || user.email,
       },
       profile,
-      isAdmin: !!roleCode && ADMIN_ROLES.includes(roleCode as (typeof ADMIN_ROLES)[number]),
+      isAdmin: isAdminRole(profile),
+      roleCode,
     });
   } catch (error) {
     return handleApiError(error);

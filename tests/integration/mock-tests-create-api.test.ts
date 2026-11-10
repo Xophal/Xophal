@@ -48,11 +48,11 @@ function createAdminClient(
   };
 }
 
-function createRequest() {
+function createRequest(body: Record<string, unknown> = { title: "Sample mock test", slug: "sample-mock-test" }) {
   return new NextRequest("http://localhost/api/mock-tests", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ title: "Sample mock test", slug: "sample-mock-test" }),
+    body: JSON.stringify(body),
   });
 }
 
@@ -100,5 +100,20 @@ describe("POST /api/mock-tests", () => {
       success: false,
       code: "DUPLICATE_SLUG",
     });
+  });
+
+  it("rejects publishing a test without questions", async () => {
+    const response = await createMockTest(createRequest({
+      title: "Empty mock test",
+      slug: "empty-mock-test",
+      is_published: true,
+    }));
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toMatchObject({
+      success: false,
+      code: "TEST_EMPTY",
+    });
+    expect(mocks.createAdminClient).not.toHaveBeenCalled();
   });
 });

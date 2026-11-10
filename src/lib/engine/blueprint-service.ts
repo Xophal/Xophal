@@ -12,7 +12,7 @@ import type {
 import { sectionFilterSchema, withSectionDefaults } from "./blueprint-schema";
 import type { BlueprintKind } from "./blueprint-schema";
 import type { Candidate } from "./generator";
-import { matchesFilter, matchesTags, RELAXATION_ORDER } from "./generator";
+import { generateStatic, matchesFilter, matchesTags, RELAXATION_ORDER } from "./generator";
 import type { Relaxation } from "./generator";
 
 type Admin = SupabaseClient;
@@ -129,6 +129,26 @@ export async function getBlueprint(admin: Admin, id: string) {
 
 export type ResolvedBlueprint = Awaited<ReturnType<typeof getBlueprint>>;
 
+export function assertBlueprintCanBePublic(
+  sections: readonly BlueprintSectionDefaults[],
+  pool: readonly Candidate[],
+  shuffleQuestions: boolean
+) {
+  const expectedCount = sections.reduce((total, section) => total + section.count, 0);
+  if (expectedCount === 0) {
+    throw new ApiError(400, "A public blueprint must request at least one question.", "EMPTY_BLUEPRINT");
+  }
+
+  const generated = generateStatic(sections, pool, 1, { allowRepeat: true }, shuffleQuestions);
+  if (generated.picks.length !== expectedCount) {
+    throw new ApiError(
+      400,
+      `The published question bank can fill only ${generated.picks.length} of ${expectedCount} requested questions. Adjust the sections or publish more questions first.`,
+      "INSUFFICIENT_QUESTION_BANK"
+    );
+  }
+}
+
 /* --------------------------------------------------------------- write */
 
 function sectionRows(blueprintId: string, sections: BlueprintSectionInput[]) {
@@ -163,7 +183,7 @@ export async function createBlueprint(admin: Admin, userId: string | null, input
         marking_scheme_json: input.marking_scheme,
         shuffle_questions: input.shuffle_questions,
         shuffle_options: input.shuffle_options,
-        is_public: input.is_public,
+        is_public: input.is_public ?? false,
         chapter_id: input.chapter_id ?? null,
         subject_id: input.subject_id ?? null,
         created_by: userId,
@@ -313,6 +333,8 @@ export async function loadPool(admin: Admin, limit = 2000): Promise<Candidate[]>
       "id,engine_type,topic_id,subtopic_id,parent_id,difficulty,skill,board_pattern,pyq_year,lang,est_time_sec,question_tags(tag)"
     )
     .eq("engine_status", "published")
+    .eq("status", "published")
+    .eq("is_active", true)
     .order("id", { ascending: true })
     .limit(limit);
   if (error) throw error;

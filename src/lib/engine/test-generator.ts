@@ -76,6 +76,10 @@ export async function generateInstance(
   if (sections.length === 0) {
     throw new ApiError(400, "This blueprint has no sections, so no paper can be generated.", "NO_SECTIONS");
   }
+  const expectedQuestionCount = sections.reduce((count, section) => count + section.count, 0);
+  if (expectedQuestionCount === 0) {
+    throw new ApiError(400, "This blueprint requests no questions.", "EMPTY_BLUEPRINT");
+  }
 
   const seed = opts.seed ?? dailySeed(opts.dateISO ?? new Date().toISOString().slice(0, 10), blueprint.slug);
   const fixedQuestions = blueprint.fixedQuestions;
@@ -128,6 +132,13 @@ export async function generateInstance(
         400,
         "No published questions match this blueprint's filters.",
         "NO_MATCHING_QUESTIONS"
+      );
+    }
+    if (result.picks.length !== expectedQuestionCount) {
+      throw new ApiError(
+        409,
+        `This blueprint can currently generate only ${result.picks.length} of ${expectedQuestionCount} requested questions.`,
+        "INSUFFICIENT_QUESTION_BANK"
       );
     }
 

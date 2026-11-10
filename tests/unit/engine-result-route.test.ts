@@ -138,6 +138,6 @@ describe("engine attempt result route", () => {
 
     expect(response.status).toBe(409);
     expect(body.code).toBe("RESULT_NOT_READY");
-    expect(mocks.createAdminClient).not.toHaveBeenCalled();
+    expect(mocks.createAdminClient).toHaveBeenCalledOnce();
   });
 });

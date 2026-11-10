@@ -85,7 +85,7 @@ function newBlueprintForm(): BlueprintForm {
     description: "",
     kind: "custom",
     duration_sec: 1800,
-    is_public: true,
+    is_public: false,
     shuffle_questions: true,
     shuffle_options: true,
   };

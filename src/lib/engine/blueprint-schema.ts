@@ -142,7 +142,7 @@ export const createBlueprintSchema = z.object({
   marking_scheme: markingSchemeSchema,
   shuffle_questions: z.boolean().default(true),
   shuffle_options: z.boolean().default(true),
-  is_public: z.boolean().default(true),
+  is_public: z.boolean().default(false),
   chapter_id: z.string().uuid().nullable().optional(),
   subject_id: z.string().uuid().nullable().optional(),
   sections: z.array(blueprintSectionInputSchema).min(1).max(30).default([]),

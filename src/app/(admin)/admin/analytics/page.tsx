@@ -7,6 +7,15 @@ import { AdminChip, AdminEmpty, AdminLoading, AdminPage, AdminPageHeader, AdminP
 
 type RangeKey = "today" | "7d" | "30d" | "90d" | "all";
 
+type AnalyticsPayload = {
+  users: { total: number; active: number };
+  tests: { total: number; published: number };
+  attempts: { total: number; completed: number };
+  averages: { averageScore: number; averagePercentage: number; averageAccuracy: number };
+  topTests: Array<{ id: string; title: string; attempts: number }>;
+  trends: Array<{ date: string; completed_count: number }>;
+};
+
 const RANGES: Array<{ key: RangeKey; label: string }> = [
   { key: "today", label: "Today" },
   { key: "7d", label: "7 days" },
@@ -16,21 +25,29 @@ const RANGES: Array<{ key: RangeKey; label: string }> = [
 ];
 
 export default function AdminAnalyticsPage() {
-  const [data, setData] = useState<any>(null);
+  const [data, setData] = useState<AnalyticsPayload | null>(null);
   const [range, setRange] = useState<RangeKey>("30d");
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => { load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [range]);
-
-  async function load() {
-    setLoading(true);
-    try {
-      const res = await fetch(`/api/admin/analytics?range=${range}`);
-      const json = await res.json();
-      if (!res.ok || !json.success) throw new Error(json.error || "Failed");
-      setData(json.data);
-    } catch (e) { console.error(e); } finally { setLoading(false); }
-  }
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const res = await fetch(`/api/admin/analytics?range=${range}`, { cache: "no-store" });
+        const json = await res.json();
+        if (!res.ok || !json.success) throw new Error(json.error || "Failed to load analytics");
+        if (!cancelled) setData(json.data);
+      } catch (error) {
+        console.error("Failed to load admin analytics", error);
+        if (!cancelled) setData(null);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [range]);
 
   const stats: Array<{ label: string; value: React.ReactNode; icon: LucideIcon; tone: "cyan" | "emerald" | "violet" | "amber" }> = [
     { label: "Total users", value: data?.users?.total, icon: Users, tone: "cyan" },
@@ -56,7 +73,12 @@ export default function AdminAnalyticsPage() {
               <button
                 key={it.key}
                 type="button"
-                onClick={() => setRange(it.key)}
+                onClick={() => {
+                  if (range !== it.key) {
+                    setLoading(true);
+                    setRange(it.key);
+                  }
+                }}
                 className={
                   range === it.key
                     ? "rounded-full border border-cyan-400/40 bg-cyan-400/10 px-3 py-1 text-xs font-semibold text-cyan-200"
@@ -93,7 +115,7 @@ export default function AdminAnalyticsPage() {
                 <AdminEmpty icon={Target} title="No ranked tests yet" hint="Once students attempt tests, popularity rankings appear here." />
               ) : (
                 <ol className="space-y-3">
-                  {data.topTests.map((t: any) => (
+                  {data.topTests.map((t) => (
                     <li key={t.id} className="admin-row">
                       <span className="admin-row-title">{t.title}</span>
                       <AdminChip tone="info">{t.attempts} attempts</AdminChip>
@@ -108,7 +130,7 @@ export default function AdminAnalyticsPage() {
                 <AdminEmpty icon={TrendingUp} title="No trend data" hint="Daily completion trends appear once attempts exist in this range." />
               ) : (
                 <ul className="space-y-2 text-sm">
-                  {data.trends.slice(-10).map((point: any) => (
+                  {data.trends.slice(-10).map((point) => (
                     <li key={point.date} className="admin-row">
                       <span className="text-slate-400">{new Date(point.date).toLocaleDateString()}</span>
                       <span className="font-semibold text-white">{point.completed_count} completed</span>
@@ -123,4 +145,3 @@ export default function AdminAnalyticsPage() {
     </AdminPage>
   );
 }
-

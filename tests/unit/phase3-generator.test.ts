@@ -9,7 +9,7 @@ import {
   withSectionDefaults,
 } from "@/lib/engine/blueprint-schema";
 import type { BlueprintSectionInput } from "@/lib/engine/blueprint-schema";
-import { checkAvailability, deleteBlueprint } from "@/lib/engine/blueprint-service";
+import { assertBlueprintCanBePublic, checkAvailability, deleteBlueprint } from "@/lib/engine/blueprint-service";
 import {
   createRng,
   dailySeed,
@@ -268,6 +268,15 @@ describe("fillSection", () => {
     expect(r.usedRelaxations).toContain("recent");
   });
 
+  it("repeats recently seen questions when that is necessary to fill the paper", () => {
+    const pool = poolOf(4);
+    const seen = IDS(pool).slice(0, 3);
+    const r = fillSection(pool, section({ count: 4 }), createRng(1), { recentlySeen: seen });
+    expect(r.picked).toHaveLength(4);
+    expect(r.usedRelaxations).toContain("recent");
+    expect(r.picked.some((question) => seen.includes(question.question.id))).toBe(true);
+  });
+
   it("honours allowRepeat without relaxing", () => {
     const pool = poolOf(4);
     const r = fillSection(pool, section({ count: 4 }), createRng(1), {
@@ -477,6 +486,28 @@ describe("checkAvailability", () => {
     expect(r[0]).toMatchObject({ exact: 10, reachable: 10, canFill: true, shortfall: 0, wouldRelax: [] });
   });
 
+  describe("public blueprint validation", () => {
+    it("rejects a blueprint when sections cannot be filled with distinct questions", () => {
+      expect(() =>
+        assertBlueprintCanBePublic(
+          [section({ count: 2 }), section({ count: 2 })],
+          poolOf(3),
+          true
+        )
+      ).toThrow(/can fill only 3 of 4 requested questions/);
+    });
+
+    it("accepts a blueprint when its complete paper can be generated", () => {
+      expect(() =>
+        assertBlueprintCanBePublic(
+          [section({ count: 2 }), section({ count: 2 })],
+          poolOf(4),
+          true
+        )
+      ).not.toThrow();
+    });
+  });
+
   describe("deleteBlueprint", () => {
     it("uses a database trigger to guard blueprint deletion atomically", () => {
       const migration = readFileSync(
@@ -579,6 +610,11 @@ describe("blueprint schema", () => {
     const base = { name: "T", sections: [{ title: "S" }] };
     expect(createBlueprintSchema.safeParse({ ...base, slug: "good-slug" }).success).toBe(true);
     expect(createBlueprintSchema.safeParse({ ...base, slug: "Bad Slug" }).success).toBe(false);
+  });
+
+  it("defaults new blueprints to private until they pass publication validation", () => {
+    const result = createBlueprintSchema.parse({ name: "T", slug: "t", sections: [{ title: "S" }] });
+    expect(result.is_public).toBe(false);
   });
 
   it("requires at least one section", () => {

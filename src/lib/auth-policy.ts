@@ -24,6 +24,11 @@ function getRoleCode(profileOrRole: unknown): string | null {
   if (normalized) return normalized;
 
   const roleRecord = profileOrRole as Record<string, unknown>;
+
+  if (Array.isArray(roleRecord?.roles)) {
+    return roleRecord.roles.map((entry) => getRoleCode(entry)).find(Boolean) ?? null;
+  }
+
   if (roleRecord?.roles && typeof roleRecord.roles === "object") {
     return getRoleCode(roleRecord.roles);
   }
@@ -48,9 +53,6 @@ export function getAccessState(profile: any, session: any, options: AuthAccessOp
   } else if (options.requireActive && !isActive) {
     reason = "Account inactive";
   } else if (options.allowRoles && (!roleCode || !options.allowRoles.includes(roleCode))) {
-    // A missing/unresolvable role must fail closed. Previously the `roleCode &&`
-    // guard let a profile with no role skip this check entirely and be granted
-    // access to role-restricted routes.
     reason = "Access denied";
   } else if (options.allowAdmin && !isAdmin) {
     reason = "Access denied";

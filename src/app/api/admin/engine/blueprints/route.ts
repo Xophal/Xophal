@@ -8,7 +8,13 @@ import {
   createBlueprintSchema,
   withSectionDefaults,
 } from "@/lib/engine/blueprint-schema";
-import { checkAvailability, createBlueprint, listBlueprints, loadPool } from "@/lib/engine/blueprint-service";
+import {
+  assertBlueprintCanBePublic,
+  checkAvailability,
+  createBlueprint,
+  listBlueprints,
+  loadPool,
+} from "@/lib/engine/blueprint-service";
 
 /** Admin blueprint CRUD. Phase 3: the visual builder writes through this router. */
 
@@ -29,7 +35,20 @@ export async function POST(request: NextRequest) {
     const { user } = await requireAdminAuth();
     const payload = await validateBody(createBlueprintSchema, await request.json());
     const admin = createAdminClient();
-    return apiSuccess(await createBlueprint(admin, user.id, payload), 201);
+    const isPublic = payload.is_public ?? false;
+    const sections = (payload.sections ?? []).map((section) => withSectionDefaults(section));
+    if (isPublic) {
+      if (sections.reduce((total, section) => total + section.count, 0) === 0) {
+        throw new ApiError(400, "A public blueprint must request at least one question.", "EMPTY_BLUEPRINT");
+      }
+      const pool = await loadPool(admin);
+      assertBlueprintCanBePublic(
+        sections,
+        pool,
+        payload.shuffle_questions ?? true
+      );
+    }
+    return apiSuccess(await createBlueprint(admin, user.id, { ...payload, is_public: isPublic }), 201);
   } catch (error) {
     return handleApiError(error);
   }
