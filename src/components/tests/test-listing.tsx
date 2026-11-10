@@ -15,6 +15,8 @@ type Test = {
   total_questions: number;
   total_marks: number;
   duration_minutes: number;
+  is_premium: boolean;
+  access_price: number;
   test_types: RelatedName & { code?: string };
   subjects: RelatedName;
   chapters: RelatedName;
@@ -275,6 +277,13 @@ export function TestListing() {
                   <span className="rounded-full bg-primary/10 px-2.5 py-1 text-[0.6875rem] font-bold text-primary">
                     {type || "Mock test"}
                   </span>
+                  {test.is_premium ? (
+                    <span className="rounded-full bg-amber-500/10 px-2.5 py-1 text-[0.6875rem] font-bold text-amber-700 dark:text-amber-300">
+                      {Number(test.access_price) > 0
+                        ? `UPI ${new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 2 }).format(Number(test.access_price))}`
+                        : "Premium"}
+                    </span>
+                  ) : null}
                   {subject && (
                     <span className="text-[0.6875rem] font-semibold text-muted-foreground">{subject}</span>
                   )}

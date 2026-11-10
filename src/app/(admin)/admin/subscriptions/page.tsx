@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { CreditCard, Layers3, Plus, Search, Users } from "lucide-react";
+import { CreditCard, Layers3, Plus, QrCode, Search, Users } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -33,6 +33,9 @@ type Subscription = {
 };
 
 const blankPlan = { code: "", name: "", description: "", price: 0, duration_days: 30, features: "" };
+const blankPaymentSettings = { upi_id: "", payee_name: "", instructions: "", is_enabled: false };
+
+type ManualPaymentSettings = typeof blankPaymentSettings;
 
 const SUB_TONES: Record<string, "success" | "warning" | "danger" | "neutral" | "info"> = {
   active: "success",
@@ -46,6 +49,8 @@ export default function AdminSubscriptionsPage() {
   const [plans, setPlans] = useState<Plan[]>([]);
   const [planForm, setPlanForm] = useState(blankPlan);
   const [savingPlan, setSavingPlan] = useState(false);
+  const [paymentSettings, setPaymentSettings] = useState<ManualPaymentSettings>(blankPaymentSettings);
+  const [savingPaymentSettings, setSavingPaymentSettings] = useState(false);
 
   const [subs, setSubs] = useState<Subscription[]>([]);
   const [total, setTotal] = useState(0);
@@ -58,6 +63,7 @@ export default function AdminSubscriptionsPage() {
 
   useEffect(() => {
     loadPlans();
+    loadPaymentSettings();
   }, []);
 
   useEffect(() => {
@@ -74,6 +80,49 @@ export default function AdminSubscriptionsPage() {
       setPlans(items);
     } catch (error) {
       toast({ title: "Load failed", description: error instanceof Error ? error.message : "Please try again.", variant: "destructive" });
+    }
+  }
+
+  async function loadPaymentSettings() {
+    try {
+      const res = await fetch("/api/admin/manual-payment-settings", { cache: "no-store" });
+      const json = await res.json();
+      if (!res.ok || !json.success) throw new Error(json.error || "Failed to load UPI settings");
+      const settings = json.data as Partial<ManualPaymentSettings> | null;
+      setPaymentSettings({
+        upi_id: settings?.upi_id ?? "",
+        payee_name: settings?.payee_name ?? "",
+        instructions: settings?.instructions ?? "",
+        is_enabled: settings?.is_enabled ?? false,
+      });
+    } catch (error) {
+      toast({ title: "UPI settings unavailable", description: error instanceof Error ? error.message : "Please try again.", variant: "destructive" });
+    }
+  }
+
+  async function onSavePaymentSettings(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setSavingPaymentSettings(true);
+    try {
+      const res = await fetch("/api/admin/manual-payment-settings", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(paymentSettings),
+      });
+      const json = await res.json();
+      if (!res.ok || !json.success) throw new Error(json.error || "Could not save UPI settings");
+      const settings = json.data as Partial<ManualPaymentSettings>;
+      setPaymentSettings({
+        upi_id: settings.upi_id ?? "",
+        payee_name: settings.payee_name ?? "",
+        instructions: settings.instructions ?? "",
+        is_enabled: settings.is_enabled ?? false,
+      });
+      toast({ title: "UPI settings saved", description: "Students will see a QR for each plan's exact amount." });
+    } catch (error) {
+      toast({ title: "Save failed", description: error instanceof Error ? error.message : "Please try again.", variant: "destructive" });
+    } finally {
+      setSavingPaymentSettings(false);
     }
   }
 
@@ -152,6 +201,62 @@ export default function AdminSubscriptionsPage() {
         description="Define the plans students can buy and monitor every subscription lifecycle from one screen."
         actions={<AdminChip tone="info">{plans.length} plans · {activePlans} live</AdminChip>}
       />
+
+      <div className="mt-6">
+        <AdminPanel eyebrow="Checkout" title="Manual UPI payment" icon={QrCode}>
+          <form onSubmit={onSavePaymentSettings} className="space-y-4">
+            <p className="text-sm text-slate-400">
+              Configure the UPI account students pay to. Their QR code includes the selected plan and exact amount; access stays pending until an admin verifies the transaction reference.
+            </p>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="manual-upi-id">UPI ID</Label>
+                <Input
+                  id="manual-upi-id"
+                  value={paymentSettings.upi_id}
+                  onChange={(e) => setPaymentSettings({ ...paymentSettings, upi_id: e.target.value })}
+                  placeholder="merchant@bank"
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="manual-upi-payee">Payee name</Label>
+                <Input
+                  id="manual-upi-payee"
+                  value={paymentSettings.payee_name}
+                  onChange={(e) => setPaymentSettings({ ...paymentSettings, payee_name: e.target.value })}
+                  placeholder="Xophol"
+                  required
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="manual-upi-instructions">Student instructions (optional)</Label>
+              <textarea
+                id="manual-upi-instructions"
+                rows={3}
+                maxLength={2000}
+                value={paymentSettings.instructions}
+                onChange={(e) => setPaymentSettings({ ...paymentSettings, instructions: e.target.value })}
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                placeholder="After payment, enter the UPI transaction reference to request verification."
+              />
+            </div>
+            <label className="flex items-center gap-3 text-sm text-slate-200">
+              <input
+                type="checkbox"
+                checked={paymentSettings.is_enabled}
+                onChange={(e) => setPaymentSettings({ ...paymentSettings, is_enabled: e.target.checked })}
+                className="h-4 w-4 rounded border-input accent-cyan-500"
+              />
+              Accept manual UPI payments
+            </label>
+            <Button type="submit" disabled={savingPaymentSettings}>
+              {savingPaymentSettings ? "Saving…" : "Save UPI settings"}
+            </Button>
+          </form>
+        </AdminPanel>
+      </div>
 
       <div className="mt-6 grid gap-6 xl:grid-cols-[0.8fr_1.2fr]">
         <AdminPanel eyebrow="Monetization" title="Plans" icon={CreditCard}>

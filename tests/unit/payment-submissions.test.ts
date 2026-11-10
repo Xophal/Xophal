@@ -60,6 +60,7 @@ describe("manual payment submissions", () => {
     };
 
     const productQuery = createQuery(product);
+    const settingsQuery = createQuery({ upi_id: "merchant@bank", is_enabled: true });
     const duplicateQuery = createQuery(null);
     const insertQuery = createQuery({
       id: "submission-123",
@@ -78,6 +79,7 @@ describe("manual payment submissions", () => {
     mocks.requireVerifiedSession.mockReturnValue({ isAuthenticated: true });
     mocks.createAdminClient.mockReturnValue({
       from: vi.fn((table: string) => {
+        if (table === "manual_payment_settings") return settingsQuery;
         if (table === "product_catalog") return productQuery;
         if (table === "payment_submissions") {
           paymentSubmissionCallCount += 1;
@@ -123,6 +125,7 @@ describe("manual payment submissions", () => {
       is_active: true,
     };
     const productQuery = createQuery(product);
+    const settingsQuery = createQuery({ upi_id: "merchant@bank", is_enabled: true });
     const eligibilityQuery = createQuery({
       id: "eligibility-1",
       school_id: "22222222-2222-4222-8222-222222222222",
@@ -139,6 +142,7 @@ describe("manual payment submissions", () => {
     mocks.requireVerifiedSession.mockReturnValue({ isAuthenticated: true });
     mocks.createAdminClient.mockReturnValue({
       from: vi.fn((table: string) => {
+        if (table === "manual_payment_settings") return settingsQuery;
         if (table === "product_catalog") return productQuery;
         if (table === "school_student_eligibility") return eligibilityQuery;
         if (table === "school_records") return schoolQuery;
@@ -183,6 +187,7 @@ describe("manual payment submissions", () => {
       is_active: true,
     };
     const productQuery = createQuery(product);
+    const settingsQuery = createQuery({ upi_id: "merchant@bank", is_enabled: true });
     const eligibilityQuery = createQuery(null);
 
     mocks.requireAuth.mockResolvedValue({
@@ -191,6 +196,7 @@ describe("manual payment submissions", () => {
     });
     mocks.requireVerifiedSession.mockReturnValue({ isAuthenticated: true });
     const from = vi.fn((table: string) => {
+      if (table === "manual_payment_settings") return settingsQuery;
       if (table === "product_catalog") return productQuery;
       if (table === "school_student_eligibility") return eligibilityQuery;
       throw new Error(`Unexpected table: ${table}`);
@@ -214,6 +220,37 @@ describe("manual payment submissions", () => {
       code: "SCHOOL_ELIGIBILITY_REQUIRED",
     });
     expect(from).not.toHaveBeenCalledWith("payment_submissions");
+  });
+
+  it("rejects manual payment submissions when UPI settings are not configured", async () => {
+    const settingsQuery = createQuery(null);
+    const from = vi.fn((table: string) => {
+      if (table === "manual_payment_settings") return settingsQuery;
+      throw new Error(`Unexpected table: ${table}`);
+    });
+
+    mocks.requireAuth.mockResolvedValue({
+      user: { id: "user-123" },
+      profile: { id: "user-123", email_verified: true, is_active: true },
+    });
+    mocks.requireVerifiedSession.mockReturnValue({ isAuthenticated: true });
+    mocks.createAdminClient.mockReturnValue({ from });
+
+    const response = await submitPayment(new NextRequest("http://localhost/api/payments/submissions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        product_id: "11111111-1111-4111-8111-111111111111",
+        reference_code: "UPI-REF-789",
+      }),
+    }));
+
+    expect(response.status).toBe(503);
+    await expect(response.json()).resolves.toMatchObject({
+      success: false,
+      code: "MANUAL_PAYMENTS_NOT_CONFIGURED",
+    });
+    expect(from).toHaveBeenCalledTimes(1);
   });
 
   it("allows a payment verifier to approve a pending submission", async () => {

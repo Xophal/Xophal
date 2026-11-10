@@ -39,6 +39,7 @@ type DashboardData = {
   counts: Record<string, number>;
   sales: { transaction_count: number | string; gross_sales: number | string; xophol_commission: number | string; seller_earnings: number | string };
   earnings: Earnings;
+  manualSettlementDue: number;
   commissionPercent: number;
 };
 
@@ -163,6 +164,16 @@ export default function EbookSellerDashboard() {
           Balances include captured payment fees and tax. Razorpay Route transfer fees are shown separately; a completed transfer may still be awaiting bank settlement.
         </p>
       </section>
+
+      {Number(result?.manualSettlementDue ?? 0) > 0 ? (
+        <section className="rounded-md border border-amber-500/30 bg-amber-500/5 p-4" aria-label="Manual UPI seller settlement">
+          <h2 className="font-semibold text-foreground">Manual UPI proceeds awaiting settlement</h2>
+          <p className="mt-1 text-lg font-semibold text-foreground">{money(Number(result?.manualSettlementDue ?? 0))}</p>
+          <p className="mt-1 text-sm leading-6 text-muted-foreground">
+            These sales were paid to the platform UPI account. The seller balance is recorded here and is settled separately by the marketplace team outside this site.
+          </p>
+        </section>
+      ) : null}
 
       <EbookPayoutControls />
 

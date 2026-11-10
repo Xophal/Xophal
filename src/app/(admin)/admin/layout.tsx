@@ -40,6 +40,7 @@ const adminNavItems = [
 
   // Commerce
   { href: "/admin/payments", icon: "Wallet", label: "Payments", group: "Commerce" },
+  { href: "/admin/payment-submissions", icon: "QrCode", label: "UPI verifications", group: "Commerce" },
   { href: "/admin/subscriptions", icon: "CreditCard", label: "Subscriptions", group: "Commerce" },
   { href: "/admin/coupons", icon: "Ticket", label: "Coupons", group: "Commerce" },
 

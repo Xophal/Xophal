@@ -70,7 +70,7 @@ export async function GET(request: NextRequest) {
     let query = supabase
       .from("mock_tests")
       .select(
-        "id, test_type_id, title, slug, description, subject_id, chapter_id, total_questions, total_marks, duration_minutes, is_premium, year, test_types(code, name), subjects(name), chapters(name)",
+        "id, test_type_id, title, slug, description, subject_id, chapter_id, total_questions, total_marks, duration_minutes, is_premium, access_price, year, test_types(code, name), subjects(name), chapters(name)",
         { count: "exact" }
       )
       .eq("is_published", true)
@@ -78,9 +78,9 @@ export async function GET(request: NextRequest) {
       .gt("total_questions", 0)
       .gt("duration_minutes", 0);
 
-    if (!hasPremiumAccess && grantedTestIds.size === 0) query = query.eq("is_premium", false);
+    if (!hasPremiumAccess && grantedTestIds.size === 0) query = query.or("is_premium.eq.false,access_price.gt.0");
     if (!hasPremiumAccess && grantedTestIds.size > 0) {
-      query = query.or(`is_premium.eq.false,id.in.(${Array.from(grantedTestIds).join(",")})`);
+      query = query.or(`is_premium.eq.false,id.in.(${Array.from(grantedTestIds).join(",")}),access_price.gt.0`);
     }
 
     if (testTypeCode) {

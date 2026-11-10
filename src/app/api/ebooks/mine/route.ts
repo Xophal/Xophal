@@ -38,7 +38,7 @@ export async function GET(request: NextRequest) {
     const config = await getMarketplaceConfig();
     await releaseDueEbookBalances(config.payoutHoldDays).catch(() => undefined);
 
-    const [{ data: books, count, error }, salesResult, earningsResult] = await Promise.all([
+    const [{ data: books, count, error }, salesResult, earningsResult, manualSettlementResult] = await Promise.all([
       admin
         .from("ebook_listings")
         .select("id, title, slug, cover_image_url, status, price, currency, author_name, rejection_reason, view_count, is_featured, published_at, created_at, ebook_categories(name)", { count: "exact" })
@@ -47,8 +47,10 @@ export async function GET(request: NextRequest) {
         .range(offset, offset + limit - 1),
       admin.rpc("get_ebook_sales_summary", { p_user_id: session.user.id }),
       admin.rpc("get_ebook_earnings_summary", { p_user_id: session.user.id }),
+      admin.rpc("get_manual_upi_seller_settlement_due", { p_seller_user_id: session.user.id }),
     ]);
     if (error) throw error;
+    if (manualSettlementResult.error) throw manualSettlementResult.error;
 
     return apiSuccess({
       ...paginatedResponse(books ?? [], count ?? 0, page, limit),
@@ -58,6 +60,7 @@ export async function GET(request: NextRequest) {
       }, {}),
       sales: salesResult.error ? EMPTY_SALES : salesResult.data?.[0] ?? EMPTY_SALES,
       earnings: earningsResult.error ? EMPTY_EARNINGS : earningsResult.data?.[0] ?? EMPTY_EARNINGS,
+      manualSettlementDue: Number(manualSettlementResult.data?.[0]?.amount ?? 0),
       commissionPercent: config.commissionPercent,
     });
   } catch (error) {

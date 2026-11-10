@@ -23,12 +23,14 @@ export async function GET(request: NextRequest) {
     if (status && (STATUSES as readonly string[]).includes(status)) query = query.eq("status", status);
     if (search) query = query.or(`title.ilike.%${search}%,author_name.ilike.%${search}%`);
 
-    const [{ data, count, error }, revenueResult, commissionRow] = await Promise.all([
+    const [{ data, count, error }, revenueResult, commissionRow, manualSettlementResult] = await Promise.all([
       query.order("submitted_at", { ascending: false, nullsFirst: false }).range(offset, offset + limit - 1),
       admin.rpc("get_ebook_admin_revenue"),
       admin.from("ebook_marketplace_settings").select("percentage, setting_value").eq("setting_key", "marketplace_commission_percent").maybeSingle(),
+      admin.rpc("get_manual_upi_seller_settlement_due", { p_seller_user_id: null }),
     ]);
     if (error) throw error;
+    if (manualSettlementResult.error) throw manualSettlementResult.error;
 
     const counts: Record<string, number> = {};
     await Promise.all(
@@ -40,11 +42,16 @@ export async function GET(request: NextRequest) {
 
     const commissionPercent =
       Number(commissionRow.data?.percentage ?? commissionRow.data?.setting_value ?? Number.NaN) || 0;
+    const manualSellerSettlementDue = ((manualSettlementResult.data ?? []) as Array<{ amount: number | string }>).reduce<number>(
+      (total, seller) => total + Number(seller.amount ?? 0),
+      0
+    );
 
     return apiSuccess({
       ...paginatedResponse(data ?? [], count ?? 0, page, limit),
       counts,
       revenue: revenueResult.error ? null : revenueResult.data?.[0] ?? null,
+      manualSellerSettlementDue,
       commissionPercent,
     });
   } catch (error) {

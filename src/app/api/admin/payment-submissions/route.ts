@@ -5,7 +5,7 @@ import { apiSuccess, handleApiError, getPaginationParams, paginatedResponse } fr
 
 export async function GET(request: NextRequest) {
   try {
-    await requireAdminRole(["payment_verifier", "subscription_admin", "refund_approver", "school_eligibility_reviewer"]);
+    await requireAdminRole(["admin", "super_admin", "payment_verifier", "subscription_admin", "refund_approver", "school_eligibility_reviewer"]);
     const { searchParams } = request.nextUrl;
     const { page, limit, offset } = getPaginationParams(searchParams);
     const status = searchParams.get("status");

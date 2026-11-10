@@ -115,6 +115,7 @@ export default function AdminEbooksPanel() {
   const [listingsTotal, setListingsTotal] = useState(0);
   const [counts, setCounts] = useState<Record<string, number>>({});
   const [revenue, setRevenue] = useState<Revenue>(null);
+  const [manualSellerSettlementDue, setManualSellerSettlementDue] = useState(0);
   const [commissionPercent, setCommissionPercent] = useState(0);
   const [page, setPage] = useState(1);
   const [status, setStatus] = useState("");
@@ -172,6 +173,7 @@ export default function AdminEbooksPanel() {
       setListingsTotal(Number(json.data?.pagination?.total ?? 0));
       setCounts(json.data?.counts ?? {});
       setRevenue(json.data?.revenue ?? null);
+      setManualSellerSettlementDue(Number(json.data?.manualSellerSettlementDue ?? 0));
       setCommissionPercent(Number(json.data?.commissionPercent ?? 0));
     } catch (error) {
       toast({ title: "Load failed", description: error instanceof Error ? error.message : "Please try again.", variant: "destructive" });
@@ -369,6 +371,13 @@ export default function AdminEbooksPanel() {
           hint={revenue ? `Gross ${formatEbookPrice(money(revenue.gross_sales), "INR")} · refunds ${formatEbookPrice(money(revenue.refunds_total), "INR")}` : "No settled transactions yet"}
           icon={Star}
           tone="violet"
+        />
+        <AdminStat
+          label="Manual UPI seller balances"
+          value={formatEbookPrice(manualSellerSettlementDue, "INR")}
+          hint="Tracked for settlement outside this site"
+          icon={Coins}
+          tone="amber"
         />
       </div>
 

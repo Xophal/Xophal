@@ -13,6 +13,7 @@ type MockTest = {
   title: string;
   slug: string;
   duration_minutes: number;
+  access_price: number;
   total_questions: number;
   total_marks: number;
   is_published: boolean;
@@ -31,6 +32,7 @@ const blankTest = {
   title: "",
   slug: "",
   duration_minutes: 45,
+  access_price: 0,
   is_published: false,
   is_premium: false,
 };
@@ -125,7 +127,7 @@ export default function AdminMockTestsPage() {
   function editTest(item: MockTest) {
     setEditingId(item.id);
     setSlugEdited(true);
-    setForm({ title: item.title, slug: item.slug, duration_minutes: item.duration_minutes, is_published: item.is_published, is_premium: item.is_premium });
+    setForm({ title: item.title, slug: item.slug, duration_minutes: item.duration_minutes, access_price: item.access_price ?? 0, is_published: item.is_published, is_premium: item.is_premium });
   }
 
   function resetForm() {
@@ -289,6 +291,20 @@ export default function AdminMockTestsPage() {
                 <input type="checkbox" checked={form.is_premium} onChange={(e) => setForm({ ...form, is_premium: e.target.checked })} />
                 Premium test
               </label>
+              {form.is_premium ? (
+                <div className="space-y-2">
+                  <Label htmlFor="test-access-price">One-time UPI price (₹)</Label>
+                  <Input
+                    id="test-access-price"
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    value={form.access_price}
+                    onChange={(e) => setForm({ ...form, access_price: Number(e.target.value) || 0 })}
+                  />
+                  <p className="text-xs text-muted-foreground">Set 0 to include this test only with an active premium subscription.</p>
+                </div>
+              ) : null}
               <p className="text-xs text-muted-foreground">Tests stay in draft until they contain published questions and you publish them.</p>
               <Button type="submit" className="w-full" disabled={saving}>
                 {saving ? "Saving..." : editingId ? "Save test" : "Create test"}

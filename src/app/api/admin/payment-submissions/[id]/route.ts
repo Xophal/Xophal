@@ -14,7 +14,7 @@ type Params = { params: Promise<{ id: string }> };
 
 export async function PATCH(request: NextRequest, { params }: Params) {
   try {
-    const session = await requireAdminRole(["payment_verifier", "subscription_admin", "refund_approver", "school_eligibility_reviewer"]);
+    const session = await requireAdminRole(["admin", "super_admin", "payment_verifier", "subscription_admin", "refund_approver", "school_eligibility_reviewer"]);
     const { id } = await params;
     const payload = await validateBody(submissionPatchSchema, await request.json());
     const admin = createAdminClient();

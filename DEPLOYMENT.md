@@ -21,7 +21,7 @@ Follow this runbook for a full-feature production launch. Production credentials
    - Create a production Supabase project separate from development and staging.
    - Review and back up the production database before applying migrations.
    - Link the Supabase CLI to the intended project and apply all pending repository migrations with `supabase db push`.
-   - Confirm the latest migration is applied, including question/test access, exam integrity, ebook marketplace, and security hardening migration `040`. Migration `048` adds transactional subscription fulfillment support, serialized eBook checkout reservations, and idempotent partial/full refund accounting. Migration `040` enforces active-account checks in role/entitlement helpers and restricts attempt RPC access.
+   - Confirm the latest migration is applied, including question/test access, exam integrity, ebook marketplace, and security hardening migration `040`. Migration `047` adds manual UPI subscription checkout settings; migration `048` adds transactional subscription fulfillment support, serialized eBook checkout reservations, and idempotent partial/full refund accounting; migration `049` adds manual UPI eBook/mock-test requests, approval fulfillment, cross-product reference checks, and seller settlement reporting. Migration `040` enforces active-account checks in role/entitlement helpers and restricts attempt RPC access.
    - Verify RLS policies with anon, active-user, and deactivated-user clients; confirm disabled accounts lose admin/reviewer privileges and premium entitlements, and attempt RPCs reject anonymous and non-owner callers.
    - Seed production only with approved, non-test content; do not copy local test users or payment data.
 
@@ -42,7 +42,8 @@ Follow this runbook for a full-feature production launch. Production credentials
    - For local testing, use `http://localhost:3000/auth/callback` and `http://localhost:3000/reset-password`.
    - If Google sign-in is enabled, configure its provider credentials and authorized redirect URI in Supabase before setting `NEXT_PUBLIC_ENABLE_GOOGLE_AUTH=true`.
    - Configure the Razorpay webhook endpoint as `${NEXT_PUBLIC_APP_URL}/api/webhooks/razorpay`, subscribe to `payment.captured` and `payment.failed`, and set the matching webhook secret in the hosting platform.
-   - For Route payouts, configure `${NEXT_PUBLIC_APP_URL}/api/ebooks/webhook/razorpay-route` with `transfer.processed`, `transfer.failed`, `product.route.activated`, `product.route.under_review`, and `product.route.needs_clarification`; keep payouts disabled until a signed event is verified in staging.
+   - For manual UPI checkout, open Admin > Subscriptions, set the verified merchant UPI ID and payee name, then enable manual UPI payments. Students can pay for subscriptions, paid eBooks, and premium mock tests using an amount-specific QR. Staff must reconcile the submitted transaction reference with the payment account and approve it in Admin > UPI verifications before access is granted.
+   - eBook seller proceeds from manual UPI sales are recorded as balances awaiting settlement outside the site. Do not enable automatic Route payouts for these transactions. New Razorpay order creation is disabled for subscriptions, eBooks, and mock tests; legacy verification/webhook endpoints remain for transactions already in progress.
 
 5. Secrets & CI
    - Add production variables to the hosting platform's Production environment; configure Preview variables separately and use non-production provider credentials there.
@@ -60,7 +61,8 @@ Follow this runbook for a full-feature production launch. Production credentials
    - Run `npm run deploy:check`, `npm run typecheck`, `npm test`, and `npm run build` against the release configuration.
    - Verify student registration, OTP delivery/verification, login, logout, password reset, and protected-route behavior using non-production test accounts first.
     - Verify admin approval emails go only to the two configured main administrators and that unapproved users cannot access admin routes.
-    - Verify a Razorpay test transaction end-to-end in staging, including signature verification, provider-confirmed capture, and subscription fulfillment, before switching production to live keys.
+    - Verify each manual UPI purchase path in staging with a small payment: scan a subscription, eBook, and premium mock-test QR; submit each actual UPI reference; confirm access stays pending; then approve in Admin > UPI verifications and verify the corresponding access or eBook seller balance.
+    - Confirm new checkout requests cannot create Razorpay orders and that eBook manual-sale balances remain unavailable to automatic Route payouts.
     - Confirm database reads/writes, RLS behavior, admin operations, and content access in production with least-privilege test accounts.
     - Confirm both Upstash credentials are set together; production auth endpoints intentionally fail closed with `503 RATE_LIMIT_NOT_CONFIGURED` otherwise.
 

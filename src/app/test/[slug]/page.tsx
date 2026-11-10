@@ -11,6 +11,9 @@ import {
   Target,
   Trophy,
 } from "lucide-react";
+import { PaymentButton } from "@/components/payment/PaymentButton";
+import { getUserEntitlement, isProductEntitled } from "@/lib/entitlements";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
 type PageProps = { params: Promise<{ slug: string }> };
@@ -21,7 +24,7 @@ export default async function TestDetailPage({ params }: PageProps) {
   const { data: test } = await supabase
     .from("mock_tests")
     .select(
-      "title, slug, description, total_questions, total_marks, duration_minutes, passing_marks, negative_marking, negative_marks_ratio, max_attempts, instructions, test_types(name), subjects(name), chapters(name)"
+      "id, title, slug, description, total_questions, total_marks, duration_minutes, passing_marks, negative_marking, negative_marks_ratio, max_attempts, instructions, is_premium, access_price, test_types(name), subjects(name), chapters(name)"
     )
     .eq("slug", slug)
     .eq("is_published", true)
@@ -29,6 +32,24 @@ export default async function TestDetailPage({ params }: PageProps) {
     .maybeSingle();
   if (!test) notFound();
 
+  const { data: { user } } = await supabase.auth.getUser();
+  let hasIndividualAccess = false;
+  let hasPremiumSubscription = false;
+  if (user) {
+    const [{ data: grant, error: grantError }, entitlement] = await Promise.all([
+      createAdminClient()
+        .from("test_access_grants")
+        .select("id")
+        .eq("user_id", user.id)
+        .eq("mock_test_id", test.id)
+        .maybeSingle(),
+      getUserEntitlement(user.id),
+    ]);
+    if (grantError) throw grantError;
+    hasIndividualAccess = Boolean(grant);
+    hasPremiumSubscription = entitlement.isPaid && isProductEntitled(entitlement.productType, "premium");
+  }
+  const hasAccess = !test.is_premium || hasIndividualAccess || hasPremiumSubscription;
   const testType = (Array.isArray(test.test_types) ? test.test_types[0] : test.test_types)?.name;
   const subject = (Array.isArray(test.subjects) ? test.subjects[0] : test.subjects)?.name;
   const chapter = (Array.isArray(test.chapters) ? test.chapters[0] : test.chapters)?.name;
@@ -92,7 +113,7 @@ export default async function TestDetailPage({ params }: PageProps) {
               The timer starts as soon as the test opens and keeps running if you leave the page.
             </p>
 
-            {available ? (
+            {available && hasAccess ? (
               <Link
                 href={`/test/${test.slug}/attempt`}
                 className="exam-cta mt-6 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
@@ -100,6 +121,24 @@ export default async function TestDetailPage({ params }: PageProps) {
                 Start test
                 <ArrowRight className="h-4 w-4" />
               </Link>
+            ) : available && test.is_premium && Number(test.access_price) > 0 ? (
+              <div className="mt-6 space-y-3">
+                <p className="text-sm text-muted-foreground">Unlock this test with a one-time UPI payment. Access is enabled after staff verifies your transaction.</p>
+                {user ? (
+                  <PaymentButton amount={Number(test.access_price)} testId={test.id} />
+                ) : (
+                  <Link href={`/login?redirect=${encodeURIComponent(`/test/${test.slug}`)}`} className="exam-cta inline-flex min-h-11 w-full items-center justify-center rounded-lg px-4 py-2 text-sm font-semibold">
+                    Sign in to unlock
+                  </Link>
+                )}
+              </div>
+            ) : available ? (
+              <div className="mt-6 space-y-3">
+                <p className="text-sm text-muted-foreground">This premium test requires an active subscription.</p>
+                <Link href="/subscriptions" className="exam-cta inline-flex min-h-11 w-full items-center justify-center rounded-lg px-4 py-2 text-sm font-semibold">
+                  View plans
+                </Link>
+              </div>
             ) : (
               <div className="mt-6 rounded-lg border border-warning/40 bg-warning/10 p-4 text-sm">
                 <p className="font-semibold text-foreground">This test is currently unavailable.</p>

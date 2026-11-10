@@ -9,7 +9,7 @@ describe("legal and support helpers", () => {
   });
 
   it("exposes the deployed company and administrator contacts", () => {
-    expect(SUPPORT_EMAIL).toBe("xophal123@gmail.com");
+    expect(SUPPORT_EMAIL).toBe("support@xophol.com");
     expect(SUPPORT_PHONE).toBe(SUPER_ADMIN_PHONE);
     expect(SUPPORT_ADDRESS).toBe("Jorhat, Assam, India");
     expect(SUPER_ADMIN_EMAIL).toBe("borahjayanta840@gmail.com");

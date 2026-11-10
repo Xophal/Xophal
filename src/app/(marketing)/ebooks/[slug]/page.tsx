@@ -94,7 +94,6 @@ export default async function EbookDetailPage({ params }: Props) {
               <EbookPurchase
                 ebookId={book.id}
                 slug={book.slug}
-                title={book.title}
                 price={book.price}
                 currency={book.currency || "INR"}
                 owned={owned}

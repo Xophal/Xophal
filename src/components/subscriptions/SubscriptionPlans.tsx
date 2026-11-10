@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { Check, Copy, ExternalLink, LoaderCircle, ShieldCheck } from "lucide-react";
+import { QRCodeSVG } from "qrcode.react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -314,20 +315,25 @@ export default function SubscriptionPlans({ isStudent = false }: { isStudent?: b
                 <div>
                   <p className="text-sm font-semibold">Pay using UPI</p>
                   <p className="mt-1 text-sm text-muted-foreground">
-                    Pay {formatPaiseAsInr(selectedPrice)} to {payment.payee_name || "Xophol"}.
+                    Scan this QR with a UPI app and pay {formatPaiseAsInr(selectedPrice)} to {payment.payee_name || "Xophol"}.
                   </p>
                 </div>
-                <div className="flex flex-wrap items-center gap-3">
-                  <code className="rounded-lg bg-muted px-3 py-2 text-sm">{payment.upi_id}</code>
-                  <Button type="button" variant="outline" size="sm" onClick={() => void copyUpiId()}>
-                    <Copy aria-hidden="true" /> Copy UPI ID
-                  </Button>
-                  <a
-                    href={upiUri}
-                    className="inline-flex min-h-9 items-center gap-2 rounded-lg bg-primary px-3 text-sm font-semibold text-primary-foreground hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                  >
-                    <ExternalLink aria-hidden="true" /> Open UPI app
-                  </a>
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+                  <div className="w-fit rounded-xl bg-white p-3" role="img" aria-label={`UPI payment QR for ${formatPaiseAsInr(selectedPrice)}`}>
+                    <QRCodeSVG value={upiUri} size={192} level="M" includeMargin />
+                  </div>
+                  <div className="flex flex-wrap items-center gap-3">
+                    <code className="rounded-lg bg-muted px-3 py-2 text-sm">{payment.upi_id}</code>
+                    <Button type="button" variant="outline" size="sm" onClick={() => void copyUpiId()}>
+                      <Copy aria-hidden="true" /> Copy UPI ID
+                    </Button>
+                    <a
+                      href={upiUri}
+                      className="inline-flex min-h-9 items-center gap-2 rounded-lg bg-primary px-3 text-sm font-semibold text-primary-foreground hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    >
+                      <ExternalLink aria-hidden="true" /> Open UPI app
+                    </a>
+                  </div>
                 </div>
                 {copyNotice ? <p role="status" className="text-xs text-muted-foreground">{copyNotice}</p> : null}
                 {payment.instructions ? <p className="text-sm text-muted-foreground">{payment.instructions}</p> : null}
