@@ -1,25 +1,8 @@
 import { NextRequest } from "next/server";
-import { z } from "zod";
 import { apiSuccess, assertTrustedOrigin, handleApiError, getPaginationParams, paginatedResponse, validateBody } from "@/lib/api-utils";
 import { requireAdminAuth, requireAdminRole } from "@/lib/auth";
+import { notificationPayloadSchema } from "@/lib/notifications";
 import { createAdminClient } from "@/lib/supabase/admin";
-
-const notificationSchema = z.object({
-  title: z.string().trim().min(1).max(500),
-  message: z.string().trim().min(1).max(10_000),
-  type: z.enum(["info", "success", "warning", "announcement"]).default("info"),
-  link_url: z.string().trim().max(2048).nullable().default(null).refine((value) => {
-    if (!value) return true;
-    if (value.startsWith("/")) return !value.startsWith("//") && !value.includes("\\");
-    try {
-      return ["http:", "https:"].includes(new URL(value).protocol);
-    } catch {
-      return false;
-    }
-  }, "Link must be a safe internal path or an HTTP(S) URL."),
-  user_ids: z.array(z.string().uuid()).max(500).default([]),
-  is_global: z.boolean().default(false),
-});
 
 export async function GET(request: NextRequest) {
   try {
@@ -48,7 +31,7 @@ export async function POST(request: NextRequest) {
   try {
     assertTrustedOrigin(request);
     await requireAdminRole(["super_admin", "admin"]);
-    const payload = await validateBody(notificationSchema, await request.json());
+    const payload = await validateBody(notificationPayloadSchema, await request.json());
     const userIds = [...new Set(payload.user_ids)];
     if (!payload.is_global && userIds.length === 0) {
       return new Response(JSON.stringify({ success: false, error: "Choose a global broadcast or at least one recipient." }), { status: 400 });

@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
+import { normalizeNotificationActionUrl } from "@/lib/notifications";
 
 type NotificationItem = {
   id: string;
@@ -39,18 +40,32 @@ export default function NotificationBell() {
 
   async function markRead(id: string) {
     try {
-      await fetch(`/api/notifications/mark-read`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id }) });
+      const res = await fetch(`/api/notifications/mark-read`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id }) });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || !json.success) {
+        throw new Error(json.error || "Failed to mark notification as read");
+      }
       setItems((s) => s.map(i => i.id === id ? { ...i, is_read: true } : i));
       setUnread((u) => (u !== null ? Math.max(0, u - 1) : u));
-    } catch {}
+    } catch {
+      // keep the list state unchanged when the server rejects the update
+    }
   }
+
+  const getSafeLink = (linkUrl: string | null) => normalizeNotificationActionUrl(linkUrl) ?? "/notifications";
 
   async function markAll() {
     try {
-      await fetch(`/api/notifications/mark-all-read`, { method: "POST" });
+      const res = await fetch(`/api/notifications/mark-all-read`, { method: "POST" });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || !json.success) {
+        throw new Error(json.error || "Failed to mark all notifications as read");
+      }
       setItems((s) => s.map(i => ({ ...i, is_read: true })));
       setUnread(0);
-    } catch {}
+    } catch {
+      // keep the list state unchanged when the server rejects the update
+    }
   }
 
   return (
@@ -64,15 +79,18 @@ export default function NotificationBell() {
           <div className="flex items-center justify-between p-3"><div className="text-sm font-semibold">Notifications</div><button type="button" onClick={markAll} className="text-sm text-muted-foreground hover:text-foreground">Mark all</button></div>
           <div className="max-h-64 overflow-auto">
             {loading ? <div className="p-4 text-sm text-muted-foreground">Loading…</div> : items.length === 0 ? <div className="p-4 text-sm text-muted-foreground">No notifications</div> : (
-              items.map(item => (
-                <div key={item.id} className={`p-3 border-t ${item.is_read ? 'bg-transparent' : 'bg-muted/5'}`}>
-                  <Link href={item.link_url || '/notifications'} className="block" onClick={() => item.is_read ? null : markRead(item.id)}>
-                    <div className="text-sm font-medium">{item.title}</div>
-                    <div className="mt-1 text-xs text-muted-foreground truncate">{item.message}</div>
-                    <div className="mt-1 text-xs text-muted-foreground">{new Date(item.created_at).toLocaleString()}</div>
-                  </Link>
-                </div>
-              ))
+              items.map(item => {
+                const href = getSafeLink(item.link_url);
+                return (
+                  <div key={item.id} className={`p-3 border-t ${item.is_read ? 'bg-transparent' : 'bg-muted/5'}`}>
+                    <Link href={href} className="block" onClick={() => item.is_read ? null : markRead(item.id)}>
+                      <div className="text-sm font-medium">{item.title}</div>
+                      <div className="mt-1 text-xs text-muted-foreground truncate">{item.message}</div>
+                      <div className="mt-1 text-xs text-muted-foreground">{new Date(item.created_at).toLocaleString()}</div>
+                    </Link>
+                  </div>
+                );
+              })
             )}
           </div>
           <div className="p-3 border-t"><Link href="/notifications" className="text-sm font-medium">View all notifications</Link></div>
