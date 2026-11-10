@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
     const admin = createAdminClient();
     let query = admin
       .from("payment_submissions")
-      .select("id, user_id, product_id, school_id, payment_method, amount_minor, final_amount_minor, claimed_amount_minor, payment_paid_at, currency, status, reference_code, receipt_path, created_at, approved_by, approved_at, reason, product_snapshot, profiles(full_name, email), product_catalog(code, name, product_type)", { count: "exact" })
+      .select("id, user_id, product_id, school_id, payment_method, amount_minor, final_amount_minor, claimed_amount_minor, payment_paid_at, currency, status, reference_code, student_note, receipt_path, created_at, approved_by, approved_at, reason, product_snapshot, profiles(full_name, email), product_catalog(code, name, product_type)", { count: "exact" })
       .order("created_at", { ascending: false });
 
     if (status) {

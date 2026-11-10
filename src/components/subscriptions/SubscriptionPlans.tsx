@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState, type FormEvent } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { Check, Copy, ExternalLink, LoaderCircle, ShieldCheck } from "lucide-react";
+import { PAYMENT_REVIEW_WINDOW_MS } from "@/constants";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -49,6 +50,7 @@ type Submission = {
   amount_minor: number;
   claimed_amount_minor?: number | null;
   payment_paid_at?: string | null;
+  student_note?: string | null;
   status: string;
   reference_code?: string;
   reason?: string | null;
@@ -99,8 +101,8 @@ export default function SubscriptionPlans({ isStudent = false }: { isStudent?: b
   const [selectedSchoolId, setSelectedSchoolId] = useState("");
   const [paymentRequestId, setPaymentRequestId] = useState("");
   const [upiSelected, setUpiSelected] = useState(false);
-  const [showQrCode, setShowQrCode] = useState(false);
   const [referenceCode, setReferenceCode] = useState("");
+  const [studentNote, setStudentNote] = useState("");
   const [claimedAmount, setClaimedAmount] = useState("");
   const [paymentPaidAt, setPaymentPaidAt] = useState("");
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
@@ -188,6 +190,7 @@ export default function SubscriptionPlans({ isStudent = false }: { isStudent?: b
       formData.set("claimed_amount", claimedAmount);
       formData.set("payment_paid_at", paymentPaidAt);
       formData.set("reference_code", referenceCode.trim());
+      formData.set("student_note", studentNote.trim());
       formData.set("receipt", receiptFile);
 
       const response = await fetch("/api/payments/submissions", {
@@ -197,6 +200,7 @@ export default function SubscriptionPlans({ isStudent = false }: { isStudent?: b
       const submission = await readApiData<Submission>(response, "Unable to submit your payment for verification.");
       setSubmissions((current) => [submission, ...current.filter((item) => item.id !== submission.id)]);
       setReferenceCode("");
+      setStudentNote("");
       setClaimedAmount("");
       setPaymentPaidAt("");
       setReceiptFile(null);
@@ -204,7 +208,6 @@ export default function SubscriptionPlans({ isStudent = false }: { isStudent?: b
       setSelectedSchoolId("");
       setPaymentRequestId("");
       setUpiSelected(false);
-      setShowQrCode(false);
       setNotice(`Payment request ${submission.id} submitted. Admin review is normally completed within 24 hours. Your subscription will be activated only after the received payment is verified.`);
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : "Unable to submit your payment for verification.");
@@ -294,15 +297,19 @@ export default function SubscriptionPlans({ isStudent = false }: { isStudent?: b
                       setSelectedSchoolId("");
                       setPaymentRequestId(crypto.randomUUID());
                       setUpiSelected(false);
-                      setShowQrCode(false);
                     }}
                   >
                     {seasonDatesMissing ? "Season dates pending" : "Continue to Payment"}
                   </Button>
                 ) : (
-                  <Button asChild className="w-full">
-                    <Link href="/login?redirect=%2Fsubscriptions">Sign in to subscribe</Link>
-                  </Button>
+                  <div className="space-y-2">
+                    <Button asChild className="w-full">
+                      <Link href="/login?redirect=%2Fsubscriptions">Sign in to subscribe</Link>
+                    </Button>
+                    <p className="text-center text-sm text-muted-foreground">
+                      New student? <Link href="/register" className="font-medium text-primary underline-offset-4 hover:underline">Create an account</Link>
+                    </p>
+                  </div>
                 )}
               </CardContent>
             </Card>
@@ -320,7 +327,7 @@ export default function SubscriptionPlans({ isStudent = false }: { isStudent?: b
         <Card className="border-primary/40">
           <CardHeader>
             <CardTitle className="text-xl">Payment for {selectedProduct.name}</CardTitle>
-            <CardDescription>Review the plan and exact price before choosing a payment method.</CardDescription>
+            <CardDescription>Review the plan and exact price before generating your payment QR code.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             {selectedProduct.school_price_paise !== null && selectedProduct.school_price_paise !== undefined ? (
@@ -355,7 +362,7 @@ export default function SubscriptionPlans({ isStudent = false }: { isStudent?: b
                 Manual UPI payments are not configured right now. Please try again later.
               </p>
             ) : !upiSelected ? (
-              <Button type="button" onClick={() => setUpiSelected(true)}>Pay using UPI</Button>
+              <Button type="button" onClick={() => setUpiSelected(true)}>Generate QR Code</Button>
             ) : (
               <div className="space-y-4 rounded-xl border border-border p-4">
                 <div>
@@ -381,23 +388,17 @@ export default function SubscriptionPlans({ isStudent = false }: { isStudent?: b
                 {copyNotice ? <p role="status" className="text-xs text-muted-foreground">{copyNotice}</p> : null}
                 {payment.instructions ? <p className="text-sm text-muted-foreground">{payment.instructions}</p> : null}
                 <p className="text-sm text-muted-foreground">
-                  Include request ID <code>{paymentRequestId}</code> as the payment note when your UPI app supports it.
-                  A fixed QR code does not guarantee the amount is correct; check the exact amount before confirming payment.
+                  Scan this fixed UPI QR code and pay exactly {formatPaiseAsInr(selectedPrice)}. After payment, submit the UPI transaction ID, a note, and your payment screenshot. Your access starts only after an administrator verifies the payment.
                 </p>
-                <Button type="button" variant="outline" onClick={() => setShowQrCode((shown) => !shown)}>
-                  {showQrCode ? "Hide QR Code" : "Show QR Code"}
-                </Button>
-                {showQrCode ? (
-                  payment.qr_code_url ? (
-                    <div className="w-fit rounded-xl border border-border bg-white p-3">
-                      <Image src={payment.qr_code_url} alt="Xophol UPI payment QR code" width={280} height={280} unoptimized />
-                    </div>
-                  ) : (
-                    <p role="status" className="rounded-lg border border-amber-400/30 bg-amber-500/10 p-3 text-sm text-amber-900 dark:text-amber-100">
-                      The administrator has not configured a QR code. You can still pay to the UPI ID above.
-                    </p>
-                  )
-                ) : null}
+                {payment.qr_code_url ? (
+                  <div className="w-fit rounded-xl border border-border bg-white p-3">
+                    <Image src={payment.qr_code_url} alt="Fixed UPI payment QR code for Xophol" width={356} height={356} unoptimized />
+                  </div>
+                ) : (
+                  <p role="alert" className="rounded-lg border border-amber-400/30 bg-amber-500/10 p-3 text-sm text-amber-900 dark:text-amber-100">
+                    The administrator has not configured the payment QR code. Do not send payment until it is available.
+                  </p>
+                )}
               </div>
             )}
 
@@ -415,6 +416,20 @@ export default function SubscriptionPlans({ isStudent = false }: { isStudent?: b
                   onChange={(event) => setReferenceCode(event.target.value)}
                   placeholder="Enter the reference from your UPI app"
                   autoComplete="off"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="payment-note">Payment note</Label>
+                <textarea
+                  id="payment-note"
+                  required
+                  minLength={1}
+                  maxLength={1000}
+                  value={studentNote}
+                  onChange={(event) => setStudentNote(event.target.value)}
+                  placeholder="Add any details that will help us match your payment"
+                  rows={3}
+                  className="w-full rounded-xl border border-input bg-background px-3 py-2 text-sm text-foreground"
                 />
               </div>
               <div className="space-y-2">
@@ -492,6 +507,14 @@ export default function SubscriptionPlans({ isStudent = false }: { isStudent?: b
                     <p className="mt-1 text-xs text-muted-foreground">
                       Claimed payment time: {new Date(submission.payment_paid_at).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })} IST
                     </p>
+                  ) : null}
+                  {submission.status === "pending_verification" && submission.created_at ? (
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Expected admin review by {new Date(new Date(submission.created_at).getTime() + PAYMENT_REVIEW_WINDOW_MS).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })} IST
+                    </p>
+                  ) : null}
+                  {submission.student_note ? (
+                    <p className="mt-1 text-xs text-muted-foreground">Your note: {submission.student_note}</p>
                   ) : null}
                   <p className="mt-1 text-xs text-muted-foreground">Request ID: <code>{submission.id}</code></p>
                   {submission.status === "rejected" && submission.reason ? (

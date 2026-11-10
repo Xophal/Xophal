@@ -4,6 +4,7 @@ export const APP_NAME = "Xophol";
 export const APP_DESCRIPTION =
   "Board-focused learning and mock test platform for Class 9 and 10 students of CBSE and Assam Board, with notes, practice sets, and future-ready study resources.";
 export const APP_URL = publicEnv.NEXT_PUBLIC_APP_URL;
+export const PAYMENT_REVIEW_WINDOW_MS = 24 * 60 * 60 * 1000;
 
 export const ROUTES = {
   home: "/",

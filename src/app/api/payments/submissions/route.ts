@@ -19,6 +19,7 @@ const createSubmissionSchema = z.object({
   claimed_amount: z.string().regex(/^\d{1,7}(?:\.\d{1,2})?$/, "Enter the amount paid in rupees."),
   payment_paid_at: z.string().regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/, "Enter the payment date and time."),
   reference_code: z.string().trim().min(3).max(255),
+  student_note: z.string().trim().min(1).max(1000),
 });
 
 type ReceiptType = "image/jpeg" | "image/png" | "image/webp";
@@ -92,7 +93,7 @@ export async function GET() {
     const [{ data: submissions, error: submissionsError }, { data: eligibility, error: eligibilityError }] = await Promise.all([
       admin
         .from("payment_submissions")
-        .select("id, product_id, amount_minor, claimed_amount_minor, payment_paid_at, currency, reference_code, status, reason, created_at, approved_at, product_snapshot")
+        .select("id, product_id, amount_minor, claimed_amount_minor, payment_paid_at, currency, reference_code, student_note, status, reason, created_at, approved_at, product_snapshot")
         .eq("user_id", session.user.id)
         .order("created_at", { ascending: false })
         .limit(20),
@@ -161,6 +162,7 @@ export async function POST(request: NextRequest) {
       claimed_amount: getString("claimed_amount"),
       payment_paid_at: getString("payment_paid_at"),
       reference_code: getString("reference_code"),
+      student_note: getString("student_note"),
     });
     if (!payload.product_id && !payload.product_code) {
       return apiError("A product ID or product code is required.", 400, "MISSING_PRODUCT");
@@ -265,7 +267,7 @@ export async function POST(request: NextRequest) {
 
     const { data: priorRequest, error: priorRequestError } = await admin
       .from("payment_submissions")
-      .select("id, status, product_id, school_id, amount_minor, claimed_amount_minor, payment_paid_at, final_amount_minor, reference_code, created_at, product_snapshot")
+      .select("id, status, product_id, school_id, amount_minor, claimed_amount_minor, payment_paid_at, final_amount_minor, reference_code, student_note, created_at, product_snapshot")
       .eq("id", payload.payment_request_id)
       .eq("user_id", session.user.id)
       .maybeSingle();
@@ -274,6 +276,7 @@ export async function POST(request: NextRequest) {
       const sameRequest = priorRequest.product_id === product.id
         && priorRequest.school_id === payload.school_id
         && priorRequest.reference_code === payload.reference_code
+        && priorRequest.student_note === payload.student_note
         && Number(priorRequest.claimed_amount_minor) === claimedAmountMinor
         && priorRequest.payment_paid_at === paidAt.toISOString();
       if (sameRequest) return apiSuccess(priorRequest);
@@ -363,12 +366,13 @@ export async function POST(request: NextRequest) {
         payment_paid_at: paidAt.toISOString(),
         currency: "INR",
         reference_code: payload.reference_code,
+        student_note: payload.student_note,
         receipt_path: receiptPath,
         product_snapshot: productSnapshot,
         price_rule: priceDecision.appliedRule,
         status: "pending_verification",
       }])
-      .select("id, status, product_id, amount_minor, claimed_amount_minor, payment_paid_at, final_amount_minor, reference_code, created_at, product_snapshot")
+      .select("id, status, product_id, amount_minor, claimed_amount_minor, payment_paid_at, final_amount_minor, reference_code, student_note, created_at, product_snapshot")
       .single();
 
     if (error) {
@@ -377,7 +381,7 @@ export async function POST(request: NextRequest) {
       if (error.code === "23505") {
         const { data: priorRequest, error: priorRequestError } = await admin
           .from("payment_submissions")
-          .select("id, status, product_id, school_id, amount_minor, claimed_amount_minor, payment_paid_at, final_amount_minor, reference_code, created_at, product_snapshot")
+          .select("id, status, product_id, school_id, amount_minor, claimed_amount_minor, payment_paid_at, final_amount_minor, reference_code, student_note, created_at, product_snapshot")
           .eq("id", payload.payment_request_id)
           .eq("user_id", session.user.id)
           .maybeSingle();
@@ -386,6 +390,7 @@ export async function POST(request: NextRequest) {
           const sameRequest = priorRequest.product_id === product.id
             && priorRequest.school_id === payload.school_id
             && priorRequest.reference_code === payload.reference_code
+            && priorRequest.student_note === payload.student_note
             && Number(priorRequest.claimed_amount_minor) === claimedAmountMinor
             && priorRequest.payment_paid_at === paidAt.toISOString();
           if (sameRequest) return apiSuccess(priorRequest);

@@ -38,6 +38,7 @@ function createPaymentRequest(fields: Record<string, string>) {
   formData.set("payment_paid_at", "2026-10-24T12:00");
   formData.set("claimed_amount", "49.00");
   formData.set("reference_code", "UPI-REF-123");
+  formData.set("student_note", "Paid using UPI; please verify.");
   for (const [key, value] of Object.entries(fields)) formData.set(key, value);
   formData.set("receipt", new File([
     new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
@@ -146,6 +147,7 @@ describe("manual payment submissions", () => {
       expect.objectContaining({
         amount_minor: 4900,
         claimed_amount_minor: 1200,
+        student_note: "Paid using UPI; please verify.",
         id: REQUEST_ID,
         status: "pending_verification",
       }),
@@ -288,6 +290,7 @@ describe("manual payment submissions", () => {
         payment_paid_at: "2026-10-24T06:30:00.000Z",
         status: "pending_verification",
         receipt_path: receiptPath,
+        student_note: "Paid using UPI; please verify.",
         profiles: { full_name: "Student", email: "student@example.test" },
       }],
       count: 1,
@@ -320,6 +323,7 @@ describe("manual payment submissions", () => {
       id: "request-456",
       receipt_url: "https://storage.example/receipt?token=short-lived",
       claimed_amount_minor: 4900,
+      student_note: "Paid using UPI; please verify.",
     });
     expect(body.data.data[0]).not.toHaveProperty("receipt_path");
   });
@@ -465,6 +469,32 @@ describe("manual payment submissions", () => {
       code: "MANUAL_PAYMENTS_NOT_CONFIGURED",
     });
     expect(from).not.toHaveBeenCalledWith("product_catalog");
+  });
+
+  it("requires a student note with the payment reference and receipt", async () => {
+    const settingsQuery = createQuery({ upi_id: "merchant@bank", is_enabled: true });
+    mocks.requireAuth.mockResolvedValue({
+      user: { id: "user-123" },
+      profile: { id: "user-123", email_verified: true, is_active: true },
+    });
+    mocks.requireVerifiedSession.mockReturnValue({ isAuthenticated: true });
+    mocks.createAdminClient.mockReturnValue({
+      from: vi.fn((table: string) => {
+        if (table === "manual_payment_settings") return settingsQuery;
+        throw new Error(`Unexpected table: ${table}`);
+      }),
+    });
+
+    const response = await submitPayment(createPaymentRequest({
+      product_id: "11111111-1111-4111-8111-111111111111",
+      student_note: " ",
+    }));
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toMatchObject({
+      success: false,
+      code: "VALIDATION_ERROR",
+    });
   });
 
   it("returns a conflict when a submission was already reviewed", async () => {

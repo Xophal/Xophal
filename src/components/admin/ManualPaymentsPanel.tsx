@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useState, type FormEvent } from "react";
+import Image from "next/image";
 import { Banknote, CheckCircle2, ExternalLink, RefreshCw, Save, ShieldCheck, XCircle } from "lucide-react";
+import { PAYMENT_REVIEW_WINDOW_MS } from "@/constants";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -37,6 +39,7 @@ type Submission = {
   currency: string;
   status: string;
   reference_code: string | null;
+  student_note: string | null;
   receipt_url: string | null;
   created_at: string;
   approved_at: string | null;
@@ -64,7 +67,6 @@ type EditableSeasonProduct = CatalogProduct & {
 type ApiResult<T> = { success?: boolean; data?: T; error?: string };
 
 const PAGE_SIZE = 20;
-
 async function readData<T>(response: Response, fallback: string): Promise<T> {
   const result = await response.json().catch(() => null) as ApiResult<T> | null;
   if (!response.ok || !result?.success || result.data === undefined) {
@@ -344,7 +346,10 @@ export default function ManualPaymentsPanel({
                 <div className="space-y-2">
                   <Label htmlFor="manual-upi-qr">QR image path (optional)</Label>
                   <Input id="manual-upi-qr" value={settings.qr_code_url} onChange={(event) => setSettings({ ...settings, qr_code_url: event.target.value })} placeholder="/images/payment-qr.png" />
-                  <p className="text-xs text-slate-400">Use a same-site path, for example an image placed under the public directory. Verify the QR points to this payee before enabling payments.</p>
+                  {settings.qr_code_url ? (
+                    <Image src={settings.qr_code_url} alt="Fixed UPI payment QR code" width={180} height={180} unoptimized className="rounded-lg bg-white p-2" />
+                  ) : null}
+                  <p className="text-xs text-slate-400">Set a same-site image path to the fixed QR under the public directory. Verify that the receiving UPI ID matches this QR before accepting payments.</p>
                 </div>
                 <label className="flex items-start gap-3 rounded-xl border border-white/10 bg-white/5 p-3 text-sm text-slate-200">
                   <input type="checkbox" checked={settings.is_enabled} onChange={(event) => setSettings({ ...settings, is_enabled: event.target.checked })} className="mt-1" />
@@ -433,6 +438,7 @@ export default function ManualPaymentsPanel({
                 const product = Array.isArray(submission.product_catalog) ? submission.product_catalog[0] : submission.product_catalog;
                 const name = submission.product_snapshot?.name || product?.name || "Subscription plan";
                 const pending = submission.status === "pending_verification";
+                const reviewDueAt = new Date(new Date(submission.created_at).getTime() + PAYMENT_REVIEW_WINDOW_MS);
                 return (
                   <article key={submission.id} className="space-y-4 rounded-xl border border-white/10 bg-white/5 p-4">
                     <div className="flex flex-wrap items-start justify-between gap-3">
@@ -451,6 +457,16 @@ export default function ManualPaymentsPanel({
                       <div><dt className="text-xs text-slate-400">UPI reference</dt><dd className="break-all font-mono text-white">{submission.reference_code || "Not provided"}</dd></div>
                       <div><dt className="text-xs text-slate-400">Claimed payment time</dt><dd className="text-white">{submission.payment_paid_at ? `${new Date(submission.payment_paid_at).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })} IST` : "Not provided"}</dd></div>
                     </dl>
+                    {submission.student_note ? (
+                      <p className="rounded-lg border border-white/10 bg-white/5 p-3 text-sm text-slate-200">
+                        <span className="font-semibold text-white">Student note:</span> {submission.student_note}
+                      </p>
+                    ) : null}
+                    {pending ? (
+                      <p className="text-xs text-amber-200">
+                        24-hour review deadline: {reviewDueAt.toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })} IST
+                      </p>
+                    ) : null}
                     <div className="flex flex-wrap items-center gap-3">
                       {submission.receipt_url ? (
                         <a href={submission.receipt_url} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-9 items-center gap-2 rounded-lg border border-white/15 px-3 text-sm font-medium text-cyan-200 hover:bg-white/10">
