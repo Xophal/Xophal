@@ -45,75 +45,6 @@ export function isProductEntitled(
   return false;
 }
 
-async function getApprovedProductEntitlement(userId: string): Promise<EntitlementStatus | null> {
-  const admin = createAdminClient();
-  const { data: approvedSubmissions, error } = await admin
-    .from("payment_submissions")
-    .select("id, approved_at, subscription_id, product_snapshot, product_catalog(code, name, product_type, duration_days)")
-    .eq("user_id", userId)
-    .eq("status", "approved")
-    .is("subscription_id", null)
-    .order("approved_at", { ascending: false })
-    .limit(25);
-
-  if (error) throw error;
-
-  const eligible = (approvedSubmissions ?? []).reduce<EntitlementStatus | null>((best, submission) => {
-    const snapshot = submission?.product_snapshot as {
-      product_type?: unknown;
-      validity_starts_at?: unknown;
-      validity_ends_at?: unknown;
-      duration_days?: unknown;
-    } | null;
-    const productCatalog = Array.isArray(submission?.product_catalog)
-      ? submission.product_catalog[0]
-      : submission?.product_catalog;
-    const productType = normalizeProductType(snapshot?.product_type ?? productCatalog?.product_type ?? null);
-    const approvedAt = submission?.approved_at ? new Date(submission.approved_at) : null;
-    const snapshotExpiry = typeof snapshot?.validity_ends_at === "string"
-      ? new Date(snapshot.validity_ends_at)
-      : null;
-    const snapshotStart = typeof snapshot?.validity_starts_at === "string"
-      ? new Date(snapshot.validity_starts_at)
-      : null;
-    const durationDays = Number(snapshot?.duration_days ?? productCatalog?.duration_days ?? 0);
-
-    if (!productType || !approvedAt || !Number.isFinite(approvedAt.getTime())) {
-      return best;
-    }
-
-    const expiresAtDate = snapshotExpiry && Number.isFinite(snapshotExpiry.getTime())
-      ? snapshotExpiry
-      : durationDays > 0
-      ? new Date(approvedAt.getTime() + durationDays * 24 * 60 * 60 * 1000)
-      : approvedAt;
-
-    if (
-      expiresAtDate.getTime() <= Date.now() ||
-      (snapshotStart && Number.isFinite(snapshotStart.getTime()) && snapshotStart.getTime() > Date.now())
-    ) {
-      return best;
-    }
-
-    const candidate: EntitlementStatus = {
-      isFree: false,
-      isPaid: true,
-      activeSubscriptionId: submission?.id ?? null,
-      expiresAt: expiresAtDate.toISOString(),
-      productType,
-      reason: "Approved product access",
-    };
-
-    if (!best || new Date(best.expiresAt ?? 0).getTime() < expiresAtDate.getTime()) {
-      return candidate;
-    }
-
-    return best;
-  }, null);
-
-  return eligible;
-}
-
 export async function getUserEntitlement(userId: string): Promise<EntitlementStatus> {
   const admin = createAdminClient();
   const { data: activeSubscription, error } = await admin
@@ -134,20 +65,7 @@ export async function getUserEntitlement(userId: string): Promise<EntitlementSta
     : activeSubscription?.subscription_plans;
 
   const activeProductType = normalizeProductType(subscriptionPlans?.code ?? null);
-  const approvedProductEntitlement = await getApprovedProductEntitlement(userId);
-  const candidates = [
-    {
-      isFree: !activeSubscription,
-      isPaid: Boolean(activeSubscription),
-      activeSubscriptionId: activeSubscription?.id ?? null,
-      expiresAt: activeSubscription?.expires_at ?? null,
-      productType: activeProductType,
-      reason: activeSubscription ? undefined : "Free access",
-    } as EntitlementStatus,
-    approvedProductEntitlement,
-  ].filter(Boolean) as EntitlementStatus[];
-
-  if (candidates.length === 0) {
+  if (!activeSubscription) {
     return {
       isFree: true,
       isPaid: false,
@@ -158,14 +76,13 @@ export async function getUserEntitlement(userId: string): Promise<EntitlementSta
     };
   }
 
-  const winner = candidates.reduce((best, candidate) => {
-    if (!best) return candidate;
-    const bestExpiresAt = best.expiresAt ? new Date(best.expiresAt).getTime() : 0;
-    const candidateExpiresAt = candidate.expiresAt ? new Date(candidate.expiresAt).getTime() : 0;
-    return candidateExpiresAt > bestExpiresAt ? candidate : best;
-  }, candidates[0]);
-
-  return winner;
+  return {
+    isFree: false,
+    isPaid: true,
+    activeSubscriptionId: activeSubscription.id,
+    expiresAt: activeSubscription.expires_at,
+    productType: activeProductType,
+  };
 }
 
 export async function enforceServerEntitlement(userId: string, requiredType: "free" | "premium" | "pro" = "free") {

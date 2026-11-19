@@ -267,18 +267,24 @@ describe("manual payment submissions", () => {
     });
     mocks.createAdminClient.mockReturnValue(admin);
 
-    const response = await approveSubmission(new NextRequest("http://localhost/api/admin/payment-submissions/submission-456", {
+    const submissionId = "22222222-2222-4222-8222-222222222222";
+    const response = await approveSubmission(new NextRequest(`http://localhost/api/admin/payment-submissions/${submissionId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status: "approved", reason: "Verified via UPI reference" }),
-    }), { params: Promise.resolve({ id: "submission-456" }) });
+      body: JSON.stringify({
+        status: "approved",
+        reason: "Verified via UPI reference",
+        verified_amount_minor: 14900,
+      }),
+    }), { params: Promise.resolve({ id: submissionId }) });
 
     expect(response.status).toBe(200);
     expect(admin.rpc).toHaveBeenCalledWith("resolve_manual_payment_submission", {
-      p_submission_id: "submission-456",
+      p_submission_id: submissionId,
       p_actor_id: "admin-123",
       p_status: "approved",
       p_reason: "Verified via UPI reference",
+      p_verified_amount_minor: 14900,
     });
     await expect(response.json()).resolves.toMatchObject({
       success: true,

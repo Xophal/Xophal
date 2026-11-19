@@ -27,7 +27,7 @@ export async function GET() {
     const [{ data: submissions, error: submissionsError }, { data: eligibility, error: eligibilityError }] = await Promise.all([
       admin
         .from("payment_submissions")
-        .select("id, product_id, amount_minor, final_amount_minor, currency, reference_code, status, reason, created_at, approved_at, product_snapshot")
+        .select("id, product_id, subscription_plan_id, order_reference, amount_minor, final_amount_minor, currency, reference_code, payment_paid_at, status, reason, created_at, approved_at, verified_at, subscription_id, product_snapshot")
         .eq("user_id", session.user.id)
         .order("created_at", { ascending: false })
         .limit(20),

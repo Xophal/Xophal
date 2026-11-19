@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { CreditCard, Layers3, Plus, QrCode, Search, Users } from "lucide-react";
+import { CreditCard, Layers3, QrCode, Search, Users } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,7 +16,15 @@ type Plan = {
   price: number;
   currency: string;
   duration_days: number;
+  duration_value: number;
+  duration_unit: "days" | "months" | "years";
   features?: string[] | null;
+  applicable_board_codes?: string[] | null;
+  applicable_class_numbers?: number[] | null;
+  applicable_subject_ids?: string[] | null;
+  included_mock_test_ids?: string[] | null;
+  test_categories?: string[] | null;
+  access_limitations?: Record<string, unknown> | null;
   is_active: boolean;
   sort_order: number;
 };
@@ -24,15 +32,43 @@ type Plan = {
 type Subscription = {
   id: string;
   status: string;
+  effective_status: string;
   starts_at: string;
   expires_at: string;
   auto_renew: boolean;
   created_at: string;
+  subscription_refunds?: SubscriptionRefund[];
   profiles?: { full_name?: string | null; email?: string | null } | null;
   subscription_plans?: { name?: string | null; code?: string | null; price?: number | null; currency?: string | null } | null;
 };
 
-const blankPlan = { code: "", name: "", description: "", price: 0, duration_days: 30, features: "" };
+type SubscriptionRefund = {
+  id: string;
+  amount_minor: number;
+  status: "pending" | "verified" | "rejected";
+  refund_reference: string | null;
+  refund_date: string | null;
+  reason: string;
+  revoke_access: boolean;
+  created_at: string;
+};
+
+const blankPlan = {
+  code: "",
+  name: "",
+  description: "",
+  price: 0,
+  duration_value: 1,
+  duration_unit: "months" as Plan["duration_unit"],
+  applicable_board_codes: "",
+  applicable_class_numbers: "",
+  applicable_subject_ids: "",
+  included_mock_test_ids: "",
+  test_categories: "",
+  max_attempts_per_test: "",
+  sort_order: "",
+  features: "",
+};
 const blankPaymentSettings = { upi_id: "", payee_name: "", instructions: "", is_enabled: false };
 
 type ManualPaymentSettings = typeof blankPaymentSettings;
@@ -48,6 +84,7 @@ const SUB_TONES: Record<string, "success" | "warning" | "danger" | "neutral" | "
 export default function AdminSubscriptionsPage() {
   const [plans, setPlans] = useState<Plan[]>([]);
   const [planForm, setPlanForm] = useState(blankPlan);
+  const [editingPlanId, setEditingPlanId] = useState<string | null>(null);
   const [savingPlan, setSavingPlan] = useState(false);
   const [paymentSettings, setPaymentSettings] = useState<ManualPaymentSettings>(blankPaymentSettings);
   const [savingPaymentSettings, setSavingPaymentSettings] = useState(false);
@@ -68,7 +105,6 @@ export default function AdminSubscriptionsPage() {
 
   useEffect(() => {
     loadSubs(page, query, status);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, query, status]);
 
   async function loadPlans() {
@@ -145,27 +181,127 @@ export default function AdminSubscriptionsPage() {
     }
   }
 
+  async function changeSubscriptionStatus(subscription: Subscription, nextStatus: "active" | "suspended" | "cancelled") {
+    const action = nextStatus === "active" ? "restore" : nextStatus === "suspended" ? "suspend" : "revoke";
+    if (!window.confirm(`${action[0].toUpperCase()}${action.slice(1)} access for ${subscription.profiles?.email || "this student"}?`)) return;
+    const notes = window.prompt("Add an internal note for the audit history:");
+    if (notes === null) return;
+    try {
+      const response = await fetch(`/api/admin/subscriptions/${subscription.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: nextStatus, notes }),
+      });
+      const result = await response.json();
+      if (!response.ok || !result.success) throw new Error(result.error || "Could not update subscription access.");
+      toast({ title: "Subscription updated", description: `Access is now ${nextStatus}.` });
+      await loadSubs(page, query, status);
+    } catch (error) {
+      toast({ title: "Subscription update failed", description: error instanceof Error ? error.message : "Please try again.", variant: "destructive" });
+    }
+  }
+
+  async function recordRefund(subscription: Subscription, pendingRefund?: SubscriptionRefund) {
+    const amountInput = window.prompt(
+      "Enter the actual refund amount in INR:",
+      pendingRefund ? (pendingRefund.amount_minor / 100).toFixed(2) : ""
+    );
+    if (amountInput === null) return;
+    const amountParts = amountInput.trim().match(/^(\d+)(?:\.(\d{1,2}))?$/);
+    if (!amountParts) {
+      toast({ title: "Invalid refund amount", description: "Enter an INR amount with up to two decimal places.", variant: "destructive" });
+      return;
+    }
+    const amountMinor = Number(amountParts[1]) * 100 + Number((amountParts[2] || "").padEnd(2, "0"));
+    if (!Number.isSafeInteger(amountMinor) || amountMinor <= 0) {
+      toast({ title: "Invalid refund amount", description: "Enter a positive amount.", variant: "destructive" });
+      return;
+    }
+
+    const reason = window.prompt("Enter the refund reason:", pendingRefund?.reason || "");
+    if (reason === null || !reason.trim()) return;
+    const verified = window.confirm(
+      pendingRefund
+        ? "Confirm only if you verified this outgoing refund in the receiving account."
+        : "Has this refund already been sent and verified in the receiving account?"
+    );
+    const statusValue = verified ? "verified" : "pending";
+    let refundReference: string | null = null;
+    let refundDate: string | null = null;
+    if (verified) {
+      refundReference = window.prompt("Enter the actual refund reference:")?.trim() || null;
+      if (!refundReference) return;
+      const enteredDate = window.prompt("Enter the actual refund date and time (ISO 8601):", new Date().toISOString());
+      if (!enteredDate) return;
+      const parsedDate = new Date(enteredDate);
+      if (!Number.isFinite(parsedDate.getTime())) {
+        toast({ title: "Invalid refund date", description: "Enter a valid ISO 8601 date and time.", variant: "destructive" });
+        return;
+      }
+      refundDate = parsedDate.toISOString();
+    }
+    const revokeAccess = window.confirm("Revoke this subscription's access when the refund is verified?");
+
+    try {
+      const response = await fetch(`/api/admin/subscriptions/${subscription.id}/refunds`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          refund_id: pendingRefund?.id ?? null,
+          amount_minor: amountMinor,
+          status: statusValue,
+          refund_reference: refundReference,
+          refund_date: refundDate,
+          reason: reason.trim(),
+          revoke_access: revokeAccess,
+        }),
+      });
+      const result = await response.json();
+      if (!response.ok || !result.success) throw new Error(result.error || "Could not record refund.");
+      toast({
+        title: verified ? "Refund verified" : "Refund recorded as pending",
+        description: verified
+          ? revokeAccess ? "The refund is recorded and subscription access was revoked." : "The refund is recorded; subscription access remains unchanged."
+          : "The refund remains pending and is not shown as completed.",
+      });
+      await loadSubs(page, query, status);
+    } catch (error) {
+      toast({ title: "Refund update failed", description: error instanceof Error ? error.message : "Please try again.", variant: "destructive" });
+    }
+  }
+
   async function onCreatePlan(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setSavingPlan(true);
     try {
-      const res = await fetch("/api/admin/plans", {
-        method: "POST",
+      const payload = {
+        code: planForm.code,
+        name: planForm.name,
+        description: planForm.description,
+        price: Number(planForm.price),
+        duration_value: Number(planForm.duration_value),
+        duration_unit: planForm.duration_unit,
+        features: planForm.features.split(",").map((f) => f.trim()).filter(Boolean),
+        applicable_board_codes: planForm.applicable_board_codes.split(",").map((value) => value.trim()).filter(Boolean),
+        applicable_class_numbers: planForm.applicable_class_numbers.split(",").map((value) => Number(value.trim())).filter(Number.isInteger),
+        applicable_subject_ids: planForm.applicable_subject_ids.split(",").map((value) => value.trim()).filter(Boolean),
+        included_mock_test_ids: planForm.included_mock_test_ids.split(",").map((value) => value.trim()).filter(Boolean),
+        test_categories: planForm.test_categories.split(",").map((value) => value.trim()).filter(Boolean),
+        access_limitations: planForm.max_attempts_per_test
+          ? { max_attempts_per_test: Number(planForm.max_attempts_per_test) }
+          : {},
+        sort_order: planForm.sort_order ? Number(planForm.sort_order) : plans.length,
+      };
+      const res = await fetch(editingPlanId ? `/api/admin/plans/${editingPlanId}` : "/api/admin/plans", {
+        method: editingPlanId ? "PATCH" : "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          code: planForm.code,
-          name: planForm.name,
-          description: planForm.description,
-          price: Number(planForm.price),
-          duration_days: Number(planForm.duration_days),
-          features: planForm.features.split(",").map((f) => f.trim()).filter(Boolean),
-          sort_order: plans.length,
-        }),
+        body: JSON.stringify(payload),
       });
       const json = await res.json();
       if (!res.ok || !json.success) throw new Error(json.error || "Could not create plan");
-      toast({ title: "Plan created", description: `${planForm.name} is live.` });
+      toast({ title: editingPlanId ? "Plan updated" : "Plan created", description: `${planForm.name} was saved.` });
       setPlanForm(blankPlan);
+      setEditingPlanId(null);
       await loadPlans();
     } catch (error) {
       toast({ title: "Creation failed", description: error instanceof Error ? error.message : "Please try again.", variant: "destructive" });
@@ -183,6 +319,26 @@ export default function AdminSubscriptionsPage() {
     const json = await res.json().catch(() => ({}));
     if (!res.ok || !json.success) return toast({ title: "Update failed", description: json.error || "Could not update plan", variant: "destructive" });
     setPlans((prev) => prev.map((p) => (p.id === plan.id ? { ...p, is_active: !plan.is_active } : p)));
+  }
+
+  function editPlan(plan: Plan) {
+    setEditingPlanId(plan.id);
+    setPlanForm({
+      code: plan.code,
+      name: plan.name,
+      description: plan.description ?? "",
+      price: plan.price,
+      duration_value: plan.duration_value,
+      duration_unit: plan.duration_unit,
+      applicable_board_codes: (plan.applicable_board_codes ?? []).join(", "),
+      applicable_class_numbers: (plan.applicable_class_numbers ?? []).join(", "),
+      applicable_subject_ids: (plan.applicable_subject_ids ?? []).join(", "),
+      included_mock_test_ids: (plan.included_mock_test_ids ?? []).join(", "),
+      test_categories: (plan.test_categories ?? []).join(", "),
+      max_attempts_per_test: String(plan.access_limitations?.max_attempts_per_test ?? ""),
+      sort_order: String(plan.sort_order),
+      features: (plan.features ?? []).join(", "),
+    });
   }
 
   function onSearch(e: React.FormEvent) {
@@ -225,7 +381,7 @@ export default function AdminSubscriptionsPage() {
                   id="manual-upi-payee"
                   value={paymentSettings.payee_name}
                   onChange={(e) => setPaymentSettings({ ...paymentSettings, payee_name: e.target.value })}
-                  placeholder="Xophol"
+                  placeholder="Xophal"
                   required
                 />
               </div>
@@ -261,7 +417,7 @@ export default function AdminSubscriptionsPage() {
       <div className="mt-6 grid gap-6 xl:grid-cols-[0.8fr_1.2fr]">
         <AdminPanel eyebrow="Monetization" title="Plans" icon={CreditCard}>
           <form onSubmit={onCreatePlan} className="mb-5 space-y-3 rounded-2xl border border-white/10 bg-white/5 p-4">
-            <p className="admin-eyebrow">New plan</p>
+            <p className="admin-eyebrow">{editingPlanId ? "Edit plan" : "New plan"}</p>
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="plan-code">Code</Label>
@@ -275,27 +431,91 @@ export default function AdminSubscriptionsPage() {
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="plan-price">Price (₹)</Label>
-                <Input id="plan-price" type="number" min={0} step="0.01" value={planForm.price} onChange={(e) => setPlanForm({ ...planForm, price: Number(e.target.value) })} required />
+                <Input id="plan-price" type="number" min={0.01} max={21474836.47} step="0.01" value={planForm.price} onChange={(e) => setPlanForm({ ...planForm, price: Number(e.target.value) })} required />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="plan-days">Duration (days)</Label>
+                <Label htmlFor="plan-duration-value">Duration</Label>
                 <Input
-                  id="plan-days"
+                  id="plan-duration-value"
                   type="number"
                   min={1}
-                  value={planForm.duration_days}
-                  onChange={(e) => setPlanForm({ ...planForm, duration_days: Number(e.target.value) })}
+                  value={planForm.duration_value}
+                  onChange={(e) => setPlanForm({ ...planForm, duration_value: Number(e.target.value) })}
                   required
                 />
               </div>
+              <div className="space-y-2">
+                <Label htmlFor="plan-duration-unit">Duration unit</Label>
+                <select
+                  id="plan-duration-unit"
+                  value={planForm.duration_unit}
+                  onChange={(e) => setPlanForm({ ...planForm, duration_unit: e.target.value as Plan["duration_unit"] })}
+                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                >
+                  <option value="days">Days</option>
+                  <option value="months">Months</option>
+                  <option value="years">Years</option>
+                </select>
+              </div>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="plan-boards">Applicable board codes</Label>
+                <Input id="plan-boards" value={planForm.applicable_board_codes} onChange={(e) => setPlanForm({ ...planForm, applicable_board_codes: e.target.value })} placeholder="seba, cbse (blank = all)" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="plan-classes">Applicable class numbers</Label>
+                <Input id="plan-classes" value={planForm.applicable_class_numbers} onChange={(e) => setPlanForm({ ...planForm, applicable_class_numbers: e.target.value })} placeholder="9, 10 (blank = all)" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="plan-subjects">Applicable subject IDs</Label>
+                <Input id="plan-subjects" value={planForm.applicable_subject_ids} onChange={(e) => setPlanForm({ ...planForm, applicable_subject_ids: e.target.value })} placeholder="Comma-separated UUIDs; blank = all" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="plan-tests">Included test IDs</Label>
+                <Input id="plan-tests" value={planForm.included_mock_test_ids} onChange={(e) => setPlanForm({ ...planForm, included_mock_test_ids: e.target.value })} placeholder="Comma-separated UUIDs; blank = all" />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="plan-categories">Test categories</Label>
+              <Input id="plan-categories" value={planForm.test_categories} onChange={(e) => setPlanForm({ ...planForm, test_categories: e.target.value })} placeholder="premium, subscription_exclusive (blank = all paid categories)" />
             </div>
             <div className="space-y-2">
               <Label htmlFor="plan-features">Features (comma separated)</Label>
               <Input id="plan-features" value={planForm.features} onChange={(e) => setPlanForm({ ...planForm, features: e.target.value })} placeholder="Unlimited tests, Priority support" />
             </div>
+            <div className="space-y-2">
+              <Label htmlFor="plan-max-attempts">Maximum attempts per test per subscription</Label>
+              <Input
+                id="plan-max-attempts"
+                type="number"
+                min={1}
+                max={1000000}
+                step={1}
+                value={planForm.max_attempts_per_test}
+                onChange={(e) => setPlanForm({ ...planForm, max_attempts_per_test: e.target.value })}
+                placeholder="Blank = unlimited"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="plan-sort-order">Display order</Label>
+              <Input
+                id="plan-sort-order"
+                type="number"
+                step={1}
+                value={planForm.sort_order}
+                onChange={(e) => setPlanForm({ ...planForm, sort_order: e.target.value })}
+                placeholder={`Defaults to ${plans.length}`}
+              />
+            </div>
             <Button type="submit" className="w-full" size="sm" disabled={savingPlan}>
-              {savingPlan ? "Creating…" : "Create plan"}
+              {savingPlan ? "Saving…" : editingPlanId ? "Save plan" : "Create plan"}
             </Button>
+            {editingPlanId ? (
+              <Button type="button" className="w-full" size="sm" variant="outline" onClick={() => { setEditingPlanId(null); setPlanForm(blankPlan); }}>
+                Cancel editing
+              </Button>
+            ) : null}
           </form>
 
           {plans.length === 0 ? (
@@ -307,11 +527,14 @@ export default function AdminSubscriptionsPage() {
                   <div className="min-w-0">
                     <p className="admin-row-title">{plan.name}</p>
                     <p className="admin-row-meta">
-                      ₹{Number(plan.price)} · {plan.duration_days} days · <span className="font-mono">{plan.code}</span>
+                      ₹{Number(plan.price)} · {plan.duration_value} {plan.duration_unit} · <span className="font-mono">{plan.code}</span>
                     </p>
                   </div>
                   <div className="flex shrink-0 items-center gap-2">
                     <AdminChip tone={plan.is_active ? "success" : "neutral"}>{plan.is_active ? "Live" : "Hidden"}</AdminChip>
+                    <Button type="button" size="sm" variant="outline" onClick={() => editPlan(plan)}>
+                      Edit
+                    </Button>
                     <Button type="button" size="sm" variant="outline" onClick={() => void togglePlan(plan)}>
                       {plan.is_active ? "Disable" : "Enable"}
                     </Button>
@@ -341,8 +564,13 @@ export default function AdminSubscriptionsPage() {
               >
                 <option value="">All statuses</option>
                 <option value="active">Active</option>
+                <option value="pending">Pending</option>
+                <option value="verification_pending">Verification pending</option>
+                <option value="under_review">Under review</option>
                 <option value="expired">Expired</option>
                 <option value="cancelled">Cancelled</option>
+                <option value="suspended">Suspended</option>
+                <option value="refunded">Refunded</option>
                 <option value="past_due">Past due</option>
               </select>
             </AdminToolbar>
@@ -364,6 +592,7 @@ export default function AdminSubscriptionsPage() {
                         <th>Status</th>
                         <th>Period</th>
                         <th>Renewal</th>
+                        <th>Admin actions</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -380,13 +609,50 @@ export default function AdminSubscriptionsPage() {
                             ) : null}
                           </td>
                           <td>
-                            <AdminChip tone={SUB_TONES[sub.status] || "neutral"}>{sub.status}</AdminChip>
+                            <AdminChip tone={SUB_TONES[sub.effective_status] || "neutral"}>{sub.effective_status}</AdminChip>
                           </td>
                           <td className="text-slate-400">
                             {new Date(sub.starts_at).toLocaleDateString()} → {new Date(sub.expires_at).toLocaleDateString()}
                           </td>
                           <td>
                             <AdminChip tone={sub.auto_renew ? "info" : "neutral"}>{sub.auto_renew ? "Auto" : "Manual"}</AdminChip>
+                          </td>
+                          <td>
+                            <div className="flex flex-wrap gap-2">
+                              {sub.status === "active" ? (
+                                <>
+                                  <Button type="button" size="sm" variant="outline" onClick={() => void changeSubscriptionStatus(sub, "suspended")}>Suspend</Button>
+                                  <Button type="button" size="sm" variant="outline" onClick={() => void changeSubscriptionStatus(sub, "cancelled")}>Revoke</Button>
+                                </>
+                              ) : null}
+                              {sub.status === "suspended" ? (
+                                <>
+                                  <Button type="button" size="sm" variant="outline" onClick={() => void changeSubscriptionStatus(sub, "active")}>Restore</Button>
+                                  <Button type="button" size="sm" variant="outline" onClick={() => void changeSubscriptionStatus(sub, "cancelled")}>Revoke</Button>
+                                </>
+                              ) : null}
+                              {sub.status !== "refunded" && sub.status !== "rejected" ? (
+                                <Button type="button" size="sm" variant="outline" onClick={() => void recordRefund(sub)}>Record refund</Button>
+                              ) : null}
+                            </div>
+                            {sub.subscription_refunds?.length ? (
+                              <div className="mt-2 space-y-2">
+                                {sub.subscription_refunds.map((refund) => (
+                                  <div key={refund.id} className="rounded border border-white/10 p-2 text-xs">
+                                    <p>
+                                      ₹{(refund.amount_minor / 100).toFixed(2)} · {refund.status}
+                                      {refund.refund_reference ? ` · ${refund.refund_reference}` : ""}
+                                    </p>
+                                    <p className="text-slate-400">{refund.reason}</p>
+                                    {refund.status === "pending" ? (
+                                      <Button type="button" size="sm" variant="outline" className="mt-1" onClick={() => void recordRefund(sub, refund)}>
+                                        Verify actual refund
+                                      </Button>
+                                    ) : null}
+                                  </div>
+                                ))}
+                              </div>
+                            ) : null}
                           </td>
                         </tr>
                       ))}

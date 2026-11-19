@@ -2,17 +2,14 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   requireAuth: vi.fn(),
+  requireVerifiedSession: vi.fn(),
   createAdminClient: vi.fn(),
-  getUserEntitlement: vi.fn(),
-  isProductEntitled: vi.fn(),
+  accessAllowed: true,
 }));
 
 vi.mock("@/lib/auth", () => ({ requireAuth: mocks.requireAuth }));
+vi.mock("@/lib/auth-policy", () => ({ requireVerifiedSession: mocks.requireVerifiedSession }));
 vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: mocks.createAdminClient }));
-vi.mock("@/lib/entitlements", () => ({
-  getUserEntitlement: mocks.getUserEntitlement,
-  isProductEntitled: mocks.isProductEntitled,
-}));
 
 import { POST as startMockTest } from "@/app/api/mock-tests/[slug]/attempt/route";
 
@@ -38,9 +35,8 @@ function query(result: { data: unknown; error: unknown }) {
 describe("POST /api/mock-tests/[slug]/attempt", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mocks.accessAllowed = true;
     mocks.requireAuth.mockResolvedValue({ user: { id: "student-1" }, profile: { id: "student-1" } });
-    mocks.getUserEntitlement.mockResolvedValue({ isPaid: false, productType: "free" });
-    mocks.isProductEntitled.mockReturnValue(false);
 
     const tables: Record<string, ReturnType<typeof query>[]> = {
       mock_tests: [query({
@@ -90,16 +86,18 @@ describe("POST /api/mock-tests/[slug]/attempt", () => {
         if (!nextQuery) throw new Error(`Unexpected or exhausted query for ${table}`);
         return nextQuery;
       }),
-      rpc: vi.fn().mockResolvedValue({
-        data: {
-          id: attemptId,
-          started_at: "2026-11-10T00:00:00.000Z",
-          status: "in_progress",
-          duration_minutes: 30,
-          resumed: false,
-        },
-        error: null,
-      }),
+      rpc: vi.fn((name: string) => Promise.resolve(name === "can_access_mock_test"
+        ? { data: mocks.accessAllowed, error: null }
+        : {
+          data: {
+            id: attemptId,
+            started_at: "2026-11-10T00:00:00.000Z",
+            status: "in_progress",
+            duration_minutes: 30,
+            resumed: false,
+          },
+          error: null,
+        })),
     });
   });
 
@@ -114,5 +112,17 @@ describe("POST /api/mock-tests/[slug]/attempt", () => {
     expect(result.data.questions[0]).not.toHaveProperty("explanation");
     expect(result.data.questions[0].options.map((option: { is_correct: boolean }) => option.is_correct)).toEqual([false, false]);
     expect(result.data.test).toMatchObject({ allow_review: false, show_solutions: false });
+  });
+
+  it("refuses to create attempts when the subscription scope does not include the test", async () => {
+    mocks.accessAllowed = false;
+    const response = await startMockTest(new Request("http://localhost/api/mock-tests/test/attempt"), {
+      params: Promise.resolve({ slug: "test" }),
+    });
+    const result = await response.json();
+
+    expect(response.status).toBe(403);
+    expect(result.code).toBe("TEST_ACCESS_DENIED");
+    expect(mocks.createAdminClient.mock.results[0].value.rpc).toHaveBeenCalledTimes(1);
   });
 });

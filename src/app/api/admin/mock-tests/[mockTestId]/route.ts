@@ -11,6 +11,9 @@ const updateSchema = z.object({
   description: z.string().max(10000).optional().or(z.literal("")),
   duration_minutes: z.number().int().positive().optional(),
   access_price: z.number().min(0).finite().optional(),
+  access_category: z.enum(["free", "premium", "subscription_exclusive", "subject_specific", "board_class_specific"]).optional(),
+  available_from: z.string().datetime({ offset: true }).nullable().optional(),
+  available_until: z.string().datetime({ offset: true }).nullable().optional(),
   passing_marks: z.number().min(0).finite().optional(),
   negative_marking: z.boolean().optional(),
   negative_marks_ratio: z.number().min(0).max(1).optional(),
@@ -53,6 +56,11 @@ export async function PATCH(request: NextRequest, { params }: Params) {
           "TEST_NOT_READY"
         );
       }
+      const { data: snapshot, error: snapshotError } = await admin.rpc("publish_mock_test_snapshot", {
+        p_mock_test_id: mockTestId,
+      });
+      if (snapshotError) throw new ApiError(409, snapshotError.message, "PUBLISH_SNAPSHOT_FAILED");
+      if (!snapshot) throw new ApiError(500, "Published test snapshot could not be created.", "PUBLISH_SNAPSHOT_FAILED");
     }
 
     const updatePayload = {

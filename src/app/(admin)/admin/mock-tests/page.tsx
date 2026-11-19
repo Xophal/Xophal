@@ -25,6 +25,9 @@ type MockTest = {
   allow_review: boolean;
   max_attempts: number;
   access_price: number;
+  access_category: "free" | "premium" | "subscription_exclusive" | "subject_specific" | "board_class_specific";
+  available_from: string | null;
+  available_until: string | null;
   total_questions: number;
   total_marks: number;
   is_published: boolean;
@@ -62,6 +65,9 @@ const blankTest = {
   allow_review: true,
   max_attempts: 0,
   access_price: 0,
+  access_category: "free" as MockTest["access_category"],
+  available_from: "",
+  available_until: "",
   is_published: false,
   is_premium: false,
 };
@@ -82,6 +88,11 @@ export default function AdminMockTestsPage() {
   const [questionSearch, setQuestionSearch] = useState("");
   const [questionsLoading, setQuestionsLoading] = useState(false);
   const [questionActionId, setQuestionActionId] = useState<string | null>(null);
+  const [randomCount, setRandomCount] = useState("10");
+  const [chapterDistribution, setChapterDistribution] = useState("");
+  const [difficultyDistribution, setDifficultyDistribution] = useState("");
+  const [typeDistribution, setTypeDistribution] = useState("");
+  const [chapterSelection, setChapterSelection] = useState("");
 
   useEffect(() => {
     void loadTests().catch((error) => {
@@ -114,6 +125,8 @@ export default function AdminMockTestsPage() {
           ...form,
           ...(editingId ? { is_published: undefined } : {}),
           slug: form.slug || slugify(form.title),
+          available_from: form.available_from ? new Date(form.available_from).toISOString() : null,
+          available_until: form.available_until ? new Date(form.available_until).toISOString() : null,
           subject_id: null,
           chapter_id: null,
           is_active: editingId ? undefined : true,
@@ -167,6 +180,9 @@ export default function AdminMockTestsPage() {
       allow_review: item.allow_review ?? true,
       max_attempts: item.max_attempts ?? 0,
       access_price: item.access_price ?? 0,
+      access_category: item.access_category ?? (item.is_premium ? "premium" : "free"),
+      available_from: item.available_from ? new Date(item.available_from).toISOString().slice(0, 16) : "",
+      available_until: item.available_until ? new Date(item.available_until).toISOString().slice(0, 16) : "",
       is_published: item.is_published,
       is_premium: item.is_premium,
     });
@@ -254,6 +270,81 @@ export default function AdminMockTestsPage() {
       });
     } finally {
       setQuestionActionId(null);
+    }
+  }
+
+  async function attachRandomQuestions(testId: string) {
+    const count = Number(randomCount);
+    if (!Number.isInteger(count) || count < 1) {
+      toast({ title: "Invalid random count", description: "Enter a positive whole number.", variant: "destructive" });
+      return;
+    }
+    setQuestionsLoading(true);
+    try {
+      const parseOptionalJson = (value: string, label: string) => {
+        if (!value.trim()) return undefined;
+        try {
+          return JSON.parse(value) as Record<string, number>;
+        } catch {
+          throw new Error(`${label} must be valid JSON.`);
+        }
+      };
+      const response = await fetch(`/api/admin/mock-tests/${testId}/questions`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          mode: "random",
+          count,
+          chapter_distribution: parseOptionalJson(chapterDistribution, "Chapter distribution"),
+          difficulty_distribution: parseOptionalJson(difficultyDistribution, "Difficulty distribution"),
+          type_distribution: parseOptionalJson(typeDistribution, "Question-type distribution"),
+          section_id: selectedSectionId || null,
+        }),
+      });
+      const result = await response.json();
+      if (!response.ok || !result.success) throw new Error(result.error || "Could not select random questions.");
+      await Promise.all([loadTestQuestions(testId), loadTests()]);
+      toast({ title: "Random questions selected", description: `${count} questions were added.` });
+    } catch (error) {
+      toast({
+        title: "Random selection failed",
+        description: error instanceof Error ? error.message : "Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setQuestionsLoading(false);
+    }
+  }
+
+  async function attachChapterQuestions(testId: string) {
+    if (!chapterSelection.trim()) {
+      toast({ title: "Chapter distribution required", description: 'Use [{"chapter_id":"uuid","count":5}]', variant: "destructive" });
+      return;
+    }
+    setQuestionsLoading(true);
+    try {
+      const chapterDistribution = JSON.parse(chapterSelection) as Array<{ chapter_id: string; count: number }>;
+      const response = await fetch(`/api/admin/mock-tests/${testId}/questions`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          mode: "chapter",
+          chapter_distribution: chapterDistribution,
+          section_id: selectedSectionId || null,
+        }),
+      });
+      const result = await response.json();
+      if (!response.ok || !result.success) throw new Error(result.error || "Could not select chapter questions.");
+      await Promise.all([loadTestQuestions(testId), loadTests()]);
+      toast({ title: "Chapter questions selected" });
+    } catch (error) {
+      toast({
+        title: "Chapter selection failed",
+        description: error instanceof Error ? error.message : "Please enter valid chapter JSON.",
+        variant: "destructive",
+      });
+    } finally {
+      setQuestionsLoading(false);
     }
   }
 
@@ -386,6 +477,32 @@ export default function AdminMockTestsPage() {
                   <p className="text-xs text-muted-foreground">Set 0 to include this test only with an active premium subscription.</p>
                 </div>
               ) : null}
+              <div className="space-y-2">
+                <Label htmlFor="test-access-category">Test access category</Label>
+                <select
+                  id="test-access-category"
+                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                  value={form.access_category}
+                  onChange={(event) => setForm({ ...form, access_category: event.target.value as MockTest["access_category"] })}
+                >
+                  <option value="free">Free</option>
+                  <option value="premium">Premium</option>
+                  <option value="subscription_exclusive">Subscription exclusive</option>
+                  <option value="subject_specific">Subject specific</option>
+                  <option value="board_class_specific">Board/class specific</option>
+                </select>
+                <p className="text-xs text-muted-foreground">Premium access is granted only when an active subscription includes this test category and scope.</p>
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="test-available-from">Available from (optional)</Label>
+                  <Input id="test-available-from" type="datetime-local" value={form.available_from} onChange={(event) => setForm({ ...form, available_from: event.target.value })} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="test-available-until">Available until (optional)</Label>
+                  <Input id="test-available-until" type="datetime-local" value={form.available_until} onChange={(event) => setForm({ ...form, available_until: event.target.value })} />
+                </div>
+              </div>
               <div className="space-y-3 rounded-lg border p-3">
                 <p className="text-sm font-medium">Exam behavior</p>
                 <label className="flex items-center gap-2 text-sm">
@@ -507,6 +624,39 @@ export default function AdminMockTestsPage() {
                         }}
                         placeholder="Search published question bank"
                       />
+                      <div className="grid gap-2 rounded-lg border border-border p-3">
+                        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Random selection</p>
+                        <div className="grid gap-2 sm:grid-cols-[120px_1fr]">
+                          <Input
+                            type="number"
+                            min="1"
+                            max="100"
+                            value={randomCount}
+                            onChange={(event) => setRandomCount(event.target.value)}
+                            aria-label="Random question count"
+                          />
+                          <Button type="button" variant="outline" disabled={questionsLoading} onClick={() => void attachRandomQuestions(item.id)}>
+                            Select random questions
+                          </Button>
+                        </div>
+                        <div className="grid gap-2 md:grid-cols-3">
+                          <Input value={chapterDistribution} onChange={(event) => setChapterDistribution(event.target.value)} placeholder='Chapter IDs: {"uuid":5}' aria-label="Chapter distribution" />
+                          <Input value={difficultyDistribution} onChange={(event) => setDifficultyDistribution(event.target.value)} placeholder='Difficulty: {"medium":5}' aria-label="Difficulty distribution" />
+                          <Input value={typeDistribution} onChange={(event) => setTypeDistribution(event.target.value)} placeholder='Type: {"single_correct":10}' aria-label="Question type distribution" />
+                        </div>
+                      </div>
+                      <div className="grid gap-2 rounded-lg border border-border p-3">
+                        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Chapter-wise selection</p>
+                        <Input
+                          value={chapterSelection}
+                          onChange={(event) => setChapterSelection(event.target.value)}
+                          placeholder='[{"chapter_id":"uuid","count":5}]'
+                          aria-label="Chapter-wise question distribution"
+                        />
+                        <Button type="button" variant="outline" disabled={questionsLoading} onClick={() => void attachChapterQuestions(item.id)}>
+                          Select chapter distribution
+                        </Button>
+                      </div>
                       {questionsLoading ? <p className="text-sm text-muted-foreground">Loading questions…</p> : availableQuestions.length > 0 ? (
                         <div className="max-h-64 space-y-2 overflow-y-auto">
                           {availableQuestions.map((question) => (

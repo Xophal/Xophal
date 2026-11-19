@@ -1,4 +1,4 @@
-import SubscriptionPlans from "@/components/subscriptions/SubscriptionPlans";
+import StudentSubscriptionManager from "@/components/subscriptions/StudentSubscriptionManager";
 
 export const metadata = {
   title: "Subscriptions",
@@ -15,7 +15,7 @@ export default function StudentSubscriptionsPage() {
           Select a plan, pay using UPI, then submit the transaction reference for verification.
         </p>
       </header>
-      <SubscriptionPlans isStudent />
+      <StudentSubscriptionManager />
     </div>
   );
 }

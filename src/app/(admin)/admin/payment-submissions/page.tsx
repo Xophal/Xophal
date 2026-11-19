@@ -9,22 +9,29 @@ import { AdminChip, AdminEmpty, AdminLoading, AdminPage, AdminPageHeader, AdminP
 type PaymentSubmission = {
   id: string;
   amount_minor: number;
+  final_amount_minor?: number;
   currency: string;
   status: string;
   submissionType: "subscription" | "one_time";
   title_snapshot?: string;
+  order_reference?: string;
   reference_code: string;
   evidence_url?: string | null;
+  payment_paid_at?: string | null;
+  payment_note?: string | null;
   created_at: string;
   reason?: string | null;
   profiles?: { full_name?: string | null; email?: string | null } | null;
   product_catalog?: { name?: string | null; code?: string | null } | null;
+  subscription_plans?: { name?: string | null; code?: string | null } | null;
+  ebook_listings?: { title?: string | null; subject?: string | null; exam?: string | null } | null;
 };
 
-const STATUSES = ["", "pending_verification", "approved", "rejected", "duplicate_flagged"] as const;
-const ONE_TIME_STATUSES = ["", "pending_payment", "pending_verification", "approved", "rejected"] as const;
+const STATUSES = ["", "pending_payment", "pending_verification", "under_review", "approved", "rejected", "duplicate_flagged", "cancelled"] as const;
+const ONE_TIME_STATUSES = ["", "pending_payment", "pending_verification", "under_review", "approved", "rejected"] as const;
 const STATUS_TONES: Record<string, "success" | "warning" | "danger" | "violet" | "neutral"> = {
   pending_verification: "warning",
+  under_review: "violet",
   approved: "success",
   rejected: "danger",
   duplicate_flagged: "violet",
@@ -65,7 +72,26 @@ export default function AdminPaymentSubmissionsPage() {
   }
 
   async function resolveSubmission(submission: PaymentSubmission, nextStatus: "approved" | "rejected") {
-    if (nextStatus === "approved" && !window.confirm("Approve this payment and activate the student's access?")) return;
+    let verifiedAmountMinor: number | undefined;
+    if (nextStatus === "approved" && submission.submissionType === "subscription") {
+      const expectedAmountMinor = submission.final_amount_minor ?? submission.amount_minor;
+      const enteredAmount = window.prompt(
+        `Enter the actual incoming amount you verified (INR). Expected: ${formatAmount(expectedAmountMinor, submission.currency)}`
+      );
+      if (enteredAmount === null) return;
+      const amountParts = enteredAmount.trim().match(/^(\d+)(?:\.(\d{1,2}))?$/);
+      if (!amountParts) {
+        toast({ title: "Invalid amount", description: "Enter an INR amount with up to two decimal places.", variant: "destructive" });
+        return;
+      }
+      verifiedAmountMinor = Number(amountParts[1]) * 100 + Number((amountParts[2] || "").padEnd(2, "0"));
+      if (verifiedAmountMinor !== expectedAmountMinor) {
+        toast({ title: "Amount mismatch", description: "Do not approve unless the actual incoming amount exactly matches the order.", variant: "destructive" });
+        return;
+      }
+    }
+
+    if (nextStatus === "approved" && !window.confirm("I verified the actual incoming payment in the receiving account. Approve this payment?")) return;
 
     let reason: string | null = null;
     if (nextStatus === "rejected") {
@@ -86,14 +112,42 @@ export default function AdminPaymentSubmissionsPage() {
       const response = await fetch(endpoint, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: nextStatus, reason }),
+        body: JSON.stringify({ status: nextStatus, reason, verified_amount_minor: verifiedAmountMinor }),
       });
       const json = await response.json();
       if (!response.ok || !json.success) throw new Error(json.error || "Could not update this payment submission");
       toast({
         title: nextStatus === "approved" ? "Payment approved" : "Payment rejected",
-        description: nextStatus === "approved" ? "The purchased access has been enabled." : "The student can now review the rejection reason.",
+        description: nextStatus === "approved" ? "The subscription is active or queued according to its start date." : "The student can now review the rejection reason.",
       });
+      await load(page, status, submissionType);
+    } catch (error) {
+      toast({ title: "Update failed", description: error instanceof Error ? error.message : "Please try again.", variant: "destructive" });
+    } finally {
+      setWorkingId(null);
+    }
+  }
+
+  async function requestInformation(submission: PaymentSubmission) {
+    const reason = window.prompt("Describe the additional payment information needed:");
+    if (reason === null) return;
+    if (!reason.trim()) {
+      toast({ title: "Details required", description: "Enter the information the student should provide.", variant: "destructive" });
+      return;
+    }
+    setWorkingId(submission.id);
+    try {
+      const endpoint = submission.submissionType === "subscription"
+        ? `/api/admin/payment-submissions/${submission.id}`
+        : `/api/admin/manual-payment-requests/${submission.id}`;
+      const response = await fetch(endpoint, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "under_review", reason: reason.trim() }),
+      });
+      const json = await response.json();
+      if (!response.ok || !json.success) throw new Error(json.error || "Could not request additional information");
+      toast({ title: "Additional information requested", description: "The payment remains under review." });
       await load(page, status, submissionType);
     } catch (error) {
       toast({ title: "Update failed", description: error instanceof Error ? error.message : "Please try again.", variant: "destructive" });
@@ -184,9 +238,10 @@ export default function AdminPaymentSubmissionsPage() {
                             <p className="font-semibold text-white">{submission.profiles?.full_name || "—"}</p>
                             <p className="text-xs text-slate-500">{submission.profiles?.email || "No email"}</p>
                           </td>
-                          <td className="text-slate-300">{submission.product_catalog?.name || submission.title_snapshot || "—"}</td>
-                          <td className="is-num font-semibold text-white">{formatAmount(submission.amount_minor, submission.currency)}</td>
+                          <td className="text-slate-300">{submission.subscription_plans?.name || submission.product_catalog?.name || submission.ebook_listings?.title || submission.title_snapshot || "—"}</td>
+                          <td className="is-num font-semibold text-white">{formatAmount(submission.final_amount_minor ?? submission.amount_minor, submission.currency)}</td>
                           <td>
+                            {submission.order_reference ? <p className="text-xs text-cyan-200">Order: {submission.order_reference}</p> : null}
                             <code className="text-xs text-cyan-200">{submission.reference_code}</code>
                             {submission.evidence_url ? (
                               <a href={submission.evidence_url} target="_blank" rel="noreferrer" className="ml-2 inline-flex items-center gap-1 text-xs text-cyan-300 hover:text-cyan-200">
@@ -194,13 +249,15 @@ export default function AdminPaymentSubmissionsPage() {
                               </a>
                             ) : null}
                             {submission.reason ? <p className="mt-1 text-xs text-rose-300">{submission.reason}</p> : null}
+                            {submission.payment_paid_at ? <p className="mt-1 text-xs text-slate-400">Paid: {new Date(submission.payment_paid_at).toLocaleString()}</p> : null}
+                            {submission.payment_note ? <p className="mt-1 text-xs text-slate-300">Student note: {submission.payment_note}</p> : null}
                           </td>
                           <td>
                             <AdminChip tone={STATUS_TONES[submission.status] || "neutral"}>{submission.status.replaceAll("_", " ")}</AdminChip>
                           </td>
                           <td className="text-slate-400">{new Date(submission.created_at).toLocaleString()}</td>
                           <td className="text-right">
-                            {submission.status === "pending_verification" ? (
+                            {["pending_verification", "under_review"].includes(submission.status) ? (
                               <div className="flex justify-end gap-2">
                                 <Button size="sm" onClick={() => void resolveSubmission(submission, "approved")} disabled={workingId === submission.id}>
                                   <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
@@ -209,6 +266,11 @@ export default function AdminPaymentSubmissionsPage() {
                                 <Button size="sm" variant="outline" onClick={() => void resolveSubmission(submission, "rejected")} disabled={workingId === submission.id}>
                                   <XCircle className="h-4 w-4" aria-hidden="true" /> Reject
                                 </Button>
+                                {submission.status === "pending_verification" ? (
+                                  <Button size="sm" variant="outline" onClick={() => void requestInformation(submission)} disabled={workingId === submission.id}>
+                                    Request info
+                                  </Button>
+                                ) : null}
                               </div>
                             ) : <span className="text-xs text-slate-500">Reviewed</span>}
                           </td>

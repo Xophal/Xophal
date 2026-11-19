@@ -1,12 +1,13 @@
 import { ApiError, apiSuccess, handleApiError } from "@/lib/api-utils";
 import { requireAuth } from "@/lib/auth";
+import { requireVerifiedSession } from "@/lib/auth-policy";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { getUserEntitlement, isProductEntitled } from "@/lib/entitlements";
 
 export async function POST(_: Request, { params }: { params: Promise<{ slug: string }> }) {
   try {
     const session = await requireAuth();
     if (!session?.profile) throw new ApiError(401, "Authentication required", "UNAUTHORIZED");
+    requireVerifiedSession(session.profile, session.user, { allowRoles: ["student"] });
 
     const { slug } = await params;
     const adminClient = createAdminClient();
@@ -20,6 +21,15 @@ export async function POST(_: Request, { params }: { params: Promise<{ slug: str
 
     if (testError) throw testError;
     if (!test) throw new ApiError(404, "Mock test not found", "TEST_NOT_FOUND");
+
+    const { data: hasAccess, error: accessError } = await adminClient.rpc("can_access_mock_test", {
+      p_user_id: session.user.id,
+      p_mock_test_id: test.id,
+    });
+    if (accessError) throw accessError;
+    if (hasAccess !== true) {
+      throw new ApiError(403, "You are not eligible to access this test.", "TEST_ACCESS_DENIED");
+    }
 
     const { data: currentAttempt, error: currentAttemptError } = await adminClient
       .from("test_attempts")
@@ -63,24 +73,6 @@ export async function POST(_: Request, { params }: { params: Promise<{ slug: str
       if (publishedQuestions?.length !== questionIds.length) {
         throw new ApiError(400, "This test is being updated and is not ready to start.", "TEST_NOT_READY");
       }
-    }
-
-    const entitlement = await getUserEntitlement(session.user.id);
-
-    const { data: grant, error: grantError } = await adminClient
-      .from("test_access_grants")
-      .select("id")
-      .eq("user_id", session.user.id)
-      .eq("mock_test_id", test.id)
-      .maybeSingle();
-    if (grantError) throw grantError;
-
-    const hasEntitlement = test.is_premium
-      ? entitlement.isPaid && isProductEntitled(entitlement.productType, "premium")
-      : true;
-
-    if (test.is_premium && !hasEntitlement && !grant) {
-      throw new ApiError(403, entitlement.reason || "Premium access required", "PREMIUM_REQUIRED");
     }
 
     const { data: startedAttempt, error: startError } = await adminClient.rpc("start_mock_test_attempt", {

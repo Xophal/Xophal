@@ -16,6 +16,9 @@ const mockTestCreateSchema = z.object({
   chapter_id: z.string().uuid().nullable().optional(),
   duration_minutes: z.number().int().positive().optional().default(45),
   access_price: z.number().min(0).finite().optional().default(0),
+  access_category: z.enum(["free", "premium", "subscription_exclusive", "subject_specific", "board_class_specific"]).optional(),
+  available_from: z.string().datetime({ offset: true }).nullable().optional(),
+  available_until: z.string().datetime({ offset: true }).nullable().optional(),
   passing_marks: z.number().min(0).finite().optional().default(0),
   negative_marking: z.boolean().optional().default(false),
   negative_marks_ratio: z.number().min(0).max(1).optional().default(0.25),
@@ -73,7 +76,7 @@ export async function GET(request: NextRequest) {
     let query = supabase
       .from("mock_tests")
       .select(
-        "id, test_type_id, title, slug, description, subject_id, chapter_id, total_questions, total_marks, duration_minutes, is_premium, access_price, year, test_types(code, name), subjects(name), chapters(name)",
+        "id, test_type_id, title, slug, description, subject_id, chapter_id, total_questions, total_marks, duration_minutes, is_premium, access_price, access_category, available_from, available_until, year, test_types(code, name), subjects(name), chapters(name)",
         { count: "exact" }
       )
       .eq("is_published", true)
@@ -194,6 +197,9 @@ export async function POST(request: NextRequest) {
           total_marks: 0,
           duration_minutes: payload.duration_minutes,
           access_price: payload.access_price,
+          access_category: payload.access_category ?? (payload.is_premium || payload.access_price > 0 ? "premium" : "free"),
+          available_from: payload.available_from ?? null,
+          available_until: payload.available_until ?? null,
           passing_marks: payload.passing_marks ?? 0,
           negative_marking: payload.negative_marking,
           negative_marks_ratio: payload.negative_marks_ratio,
