@@ -26,7 +26,9 @@ describe("comprehensive RLS migration", () => {
     expect(migration).toContain("GRANT USAGE ON SCHEMA public TO anon, authenticated");
   });
 
-  it("leaves payment event table grants to its defining migration", () => {
-    expect(migration).not.toContain("public.payment_submission_events");
+  it("skips missing tables with a notice when applying privilege updates", () => {
+    expect(migration).toContain("IF to_regclass(format('public.%I', table_name)) IS NULL THEN");
+    expect(migration).toContain("RAISE NOTICE 'Skipping authenticated SELECT grant");
+    expect(migration).toContain("'payment_submission_events'");
   });
 });

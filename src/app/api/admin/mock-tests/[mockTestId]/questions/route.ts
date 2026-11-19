@@ -1,14 +1,34 @@
 import { NextRequest } from "next/server";
 import { z } from "zod";
+import { randomInt } from "node:crypto";
 import { ApiError, apiSuccess, handleApiError, validateBody } from "@/lib/api-utils";
 import { requireAdminRole } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isUsableMockTestQuestion } from "@/lib/mock-tests/question-readiness";
 
-const questionSelectionSchema = z.object({
-  question_ids: z.array(z.string().uuid()).min(1).max(100),
-  section_id: z.string().uuid().nullable().optional(),
-});
+const questionSelectionSchema = z.union([
+  z.object({
+    mode: z.literal("manual").optional(),
+    question_ids: z.array(z.string().uuid()).min(1).max(100),
+    section_id: z.string().uuid().nullable().optional(),
+  }),
+  z.object({
+    mode: z.literal("random"),
+    count: z.number().int().min(1).max(100),
+    chapter_distribution: z.record(z.string(), z.number().int().min(0).max(100)).optional(),
+    difficulty_distribution: z.record(z.string(), z.number().int().min(0).max(100)).optional(),
+    type_distribution: z.record(z.string(), z.number().int().min(0).max(100)).optional(),
+    section_id: z.string().uuid().nullable().optional(),
+  }),
+  z.object({
+    mode: z.literal("chapter"),
+    chapter_distribution: z.array(z.object({
+      chapter_id: z.string().uuid(),
+      count: z.number().int().min(1).max(100),
+    })).min(1).max(100),
+    section_id: z.string().uuid().nullable().optional(),
+  }),
+]);
 
 const questionSectionSchema = z.object({
   question_id: z.string().uuid(),
@@ -34,6 +54,15 @@ type AttachedRow = {
   section_id: string | null;
   questions: QuestionRow | QuestionRow[] | null;
 };
+
+function shuffleRows<T>(rows: T[]): T[] {
+  const shuffled = [...rows];
+  for (let index = shuffled.length - 1; index > 0; index--) {
+    const swapIndex = randomInt(index + 1);
+    [shuffled[index], shuffled[swapIndex]] = [shuffled[swapIndex], shuffled[index]];
+  }
+  return shuffled;
+}
 
 async function getTest(admin: ReturnType<typeof createAdminClient>, mockTestId: string) {
   if (!z.string().uuid().safeParse(mockTestId).success) {
@@ -151,7 +180,104 @@ export async function POST(request: NextRequest, { params }: Params) {
     const payload = await validateBody(questionSelectionSchema, await request.json());
     const admin = createAdminClient();
     const test = await getTest(admin, mockTestId);
-    const uniqueQuestionIds = [...new Set(payload.question_ids)];
+    let uniqueQuestionIds: string[] = [];
+
+    if ("question_ids" in payload) {
+      uniqueQuestionIds = [...new Set(payload.question_ids)];
+    } else if (payload.mode === "chapter") {
+      const chapterIds = payload.chapter_distribution.map((entry) => entry.chapter_id);
+      const { data: chapterRows, error: chapterError } = await admin
+        .from("questions")
+        .select("id, question_text, status, is_active, marks, chapter_id, difficulty_levels(code), question_types(code), question_options(id, option_text, is_correct)")
+        .eq("status", "published")
+        .eq("is_active", true)
+        .in("chapter_id", chapterIds);
+      if (chapterError) throw chapterError;
+      for (const distribution of payload.chapter_distribution) {
+        const matching = ((chapterRows ?? []) as QuestionRow[])
+          .filter((question) => (question as QuestionRow & { chapter_id?: string }).chapter_id === distribution.chapter_id)
+          .filter(isUsableMockTestQuestion);
+        if (matching.length < distribution.count) {
+          throw new ApiError(
+            400,
+            `Only ${matching.length} approved questions are available for chapter ${distribution.chapter_id}; ${distribution.count} were requested.`,
+            "INSUFFICIENT_CHAPTER_QUESTIONS"
+          );
+        }
+        const selected = shuffleRows(matching).slice(0, distribution.count);
+        uniqueQuestionIds.push(...selected.map((question) => question.id));
+      }
+      uniqueQuestionIds = [...new Set(uniqueQuestionIds)];
+    } else {
+      const { data: candidateRows, error: candidateError } = await admin
+        .from("questions")
+        .select("id, question_text, status, is_active, marks, chapter_id, difficulty_levels(code), question_types(code), question_options(id, option_text, is_correct)")
+        .eq("status", "published")
+        .eq("is_active", true)
+        .limit(5000);
+      if (candidateError) throw candidateError;
+      let candidates = ((candidateRows ?? []) as Array<QuestionRow & { chapter_id?: string; difficulty_levels?: { code: string } | { code: string }[] | null }>)
+        .filter(isUsableMockTestQuestion);
+
+      const selected: Array<QuestionRow & { chapter_id?: string; difficulty_levels?: { code: string } | { code: string }[] | null }> = [];
+      const selectedIds = new Set<string>();
+      const takeFor = (
+        matching: Array<QuestionRow & { chapter_id?: string; difficulty_levels?: { code: string } | { code: string }[] | null }>,
+        count: number
+      ) => {
+        const available = shuffleRows(matching.filter((question) => !selectedIds.has(question.id))).slice(0, count);
+        if (available.length !== count) {
+          throw new ApiError(
+            400,
+            `Only ${available.length} approved questions are available for the requested distribution; ${count} were requested.`,
+            "INSUFFICIENT_QUESTIONS"
+          );
+        }
+        for (const question of available) {
+          selected.push(question);
+          selectedIds.add(question.id);
+        }
+      };
+
+      if (payload.chapter_distribution) {
+        for (const [chapterId, count] of Object.entries(payload.chapter_distribution)) {
+          takeFor(candidates.filter((question) => question.chapter_id === chapterId), count);
+        }
+      }
+      if (payload.difficulty_distribution) {
+        for (const [difficultyCode, count] of Object.entries(payload.difficulty_distribution)) {
+          takeFor(candidates.filter((question) => {
+            const relation = question.difficulty_levels;
+            const code = Array.isArray(relation) ? relation[0]?.code : relation?.code;
+            return code === difficultyCode;
+          }), count);
+        }
+      }
+      if (payload.type_distribution) {
+        for (const [typeCode, count] of Object.entries(payload.type_distribution)) {
+          takeFor(candidates.filter((question) => {
+            const relation = question.question_types;
+            const code = Array.isArray(relation) ? relation[0]?.code : relation?.code;
+            return code === typeCode;
+          }), count);
+        }
+      }
+      if (selected.length > payload.count) {
+        throw new ApiError(400, "Distribution totals exceed the requested question count.", "INVALID_DISTRIBUTION");
+      }
+      if (selected.length < payload.count) {
+        takeFor(candidates, payload.count - selected.length);
+      }
+
+      if (selected.length !== payload.count) {
+        throw new ApiError(
+          400,
+          `Only ${selected.length} approved questions match the requested filters; ${payload.count} were requested.`,
+          "INSUFFICIENT_QUESTIONS"
+        );
+      }
+      uniqueQuestionIds = selected.map((question) => question.id);
+    }
     if (payload.section_id) {
       const { data: section, error: sectionError } = await admin
         .from("mock_test_sections")

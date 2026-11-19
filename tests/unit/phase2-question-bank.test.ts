@@ -21,6 +21,7 @@ import {
   isAllowedEngineTransition,
   LEGACY_QTYPE_FOR_ENGINE,
 } from "@/lib/engine/vocab";
+import { resolveImportedQuestionStatus } from "@/lib/engine/question-service";
 
 function opts(pairs: Array<[string, boolean]>): NormalizedEngineOption[] {
   return pairs.map(([body, is_correct], i) => ({
@@ -239,6 +240,13 @@ describe("engine review state machine", () => {
   it("allows draft -> reviewed -> published", () => {
     expect(isAllowedEngineTransition("draft", "reviewed")).toBe(true);
     expect(isAllowedEngineTransition("reviewed", "published")).toBe(true);
+  });
+
+  describe("engine import status", () => {
+    it("uses the authorized import default instead of a status supplied by the CSV row", () => {
+      expect(resolveImportedQuestionStatus("published", "draft")).toBe("draft");
+      expect(resolveImportedQuestionStatus("published", "reviewed")).toBe("reviewed");
+    });
   });
 
   it("blocks retired -> published", () => {

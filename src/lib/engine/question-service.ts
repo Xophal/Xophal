@@ -15,6 +15,10 @@ import { buildAnswerJson, validateOptionsForType, withEngineDefaults } from "./q
 
 type Admin = SupabaseClient;
 
+export function resolveImportedQuestionStatus(_rowStatus: string | null | undefined, defaultStatus: EngineStatus): EngineStatus {
+  return defaultStatus;
+}
+
 const LIST_SELECT = "id,question_text,explanation,marks,negative_marks,time_seconds,tags,status,is_active,is_verified,created_at,updated_at,topic_id,chapter_id,subject_id,question_type_id,difficulty_level_id,engine_type,stem,parent_id,subtopic_id,difficulty,skill,neg_marks,est_time_sec,board_pattern,pyq_year,lang,engine_status,source,review_notes";
 
 function norm(opts: EngineOptionInput[] | undefined): NormalizedEngineOption[] {
@@ -337,7 +341,7 @@ export async function bulkCreateEngineQuestions(
       boardPattern: r.board_pattern,
       pyqYear: null,
       lang: "en",
-      status: r.status ?? defaultStatus,
+      status: resolveImportedQuestionStatus(r.status, defaultStatus),
       source: "import",
       tags,
       options,

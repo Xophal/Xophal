@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { createRequire } from "node:module";
 import { validateEnv } from "./src/lib/env.server";
 
 // Surface environment misconfigurations early and loudly. This intentionally
@@ -6,8 +7,22 @@ import { validateEnv } from "./src/lib/env.server";
 // deployments over a fixable environment-variable gap.
 validateEnv();
 
+const require = createRequire(import.meta.url);
+const tslibPath = require.resolve("tslib/tslib.js");
+
 const nextConfig: NextConfig = {
   allowedDevOrigins: ["127.0.0.1", "localhost", "10.203.91.253"],
+  turbopack: {
+    resolveAlias: {
+      tslib: "./node_modules/tslib/tslib.js",
+    },
+  },
+  webpack: (config) => {
+    config.resolve ??= {};
+    config.resolve.alias ??= {};
+    config.resolve.alias.tslib = tslibPath;
+    return config;
+  },
   experimental: {
     serverActions: {
       bodySizeLimit: "50mb",

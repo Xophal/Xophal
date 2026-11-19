@@ -21,92 +21,85 @@ $$;
 -- remains available through explicitly scoped RLS policies below.
 GRANT USAGE ON SCHEMA public TO anon, authenticated;
 
-GRANT SELECT ON TABLE
-  public.entity_types,
-  public.question_types,
-  public.difficulty_levels,
-  public.languages,
-  public.test_types,
-  public.content_types,
-  public.roles,
-  public.permissions,
-  public.boards,
-  public.classes,
-  public.subjects,
-  public.chapters,
-  public.topics,
-  public.exams,
-  public.exam_subjects,
-  public.lessons,
-  public.notes,
-  public.mock_tests,
-  public.mock_test_sections,
-  public.mock_test_questions,
-  public.test_types,
-  public.blogs,
-  public.announcements,
-  public.banners,
-  public.ebook_categories,
-  public.ebook_contributors,
-  public.ebook_listings,
-  public.manual_payment_settings
-TO anon, authenticated;
+DO $$
+DECLARE
+  table_name TEXT;
+BEGIN
+  FOREACH table_name IN ARRAY ARRAY[
+    'entity_types', 'question_types', 'difficulty_levels', 'languages',
+    'test_types', 'content_types', 'roles', 'permissions', 'boards', 'classes',
+    'subjects', 'chapters', 'topics', 'exams', 'exam_subjects', 'lessons',
+    'notes', 'mock_tests', 'mock_test_sections', 'mock_test_questions', 'blogs',
+    'announcements', 'banners', 'ebook_categories', 'ebook_contributors',
+    'ebook_listings', 'manual_payment_settings'
+  ]
+  LOOP
+    IF to_regclass(format('public.%I', table_name)) IS NULL THEN
+      RAISE NOTICE 'Skipping anonymous SELECT grant for missing public.%', table_name;
+    ELSE
+      EXECUTE format(
+        'GRANT SELECT ON TABLE public.%I TO anon, authenticated',
+        table_name
+      );
+    END IF;
+  END LOOP;
+END;
+$$;
 
 -- Student-owned reads and existing application RPC-backed writes.
-GRANT SELECT ON TABLE
-  public.profiles,
-  public.subscriptions,
-  public.payments,
-  public.payment_submissions,
-  public.subscription_history,
-  public.subscription_refunds,
-  public.test_attempts,
-  public.test_responses,
-  public.test_attempt_papers,
-  public.attempts,
-  public.attempt_answers,
-  public.user_topic_progress,
-  public.user_chapter_progress,
-  public.user_daily_activity,
-  public.user_bookmarks,
-  public.user_notes,
-  public.notifications,
-  public.notification_receipts,
-  public.push_subscriptions,
-  public.user_library,
-  public.download_logs,
-  public.refund_requests,
-  public.refund_events
-TO authenticated;
+DO $$
+DECLARE
+  table_name TEXT;
+BEGIN
+  FOREACH table_name IN ARRAY ARRAY[
+    'profiles', 'subscriptions', 'payments', 'payment_submissions',
+    'payment_submission_events', 'subscription_history',
+    'subscription_refunds', 'test_attempts', 'test_responses',
+    'test_attempt_papers', 'attempts', 'attempt_answers',
+    'user_topic_progress', 'user_chapter_progress', 'user_daily_activity',
+    'user_bookmarks', 'user_notes', 'notifications', 'notification_receipts',
+    'push_subscriptions', 'user_library', 'download_logs', 'refund_requests',
+    'refund_events'
+  ]
+  LOOP
+    IF to_regclass(format('public.%I', table_name)) IS NULL THEN
+      RAISE NOTICE 'Skipping authenticated SELECT grant for missing public.%', table_name;
+    ELSE
+      EXECUTE format(
+        'GRANT SELECT ON TABLE public.%I TO authenticated',
+        table_name
+      );
+    END IF;
+  END LOOP;
+END;
+$$;
 
 -- These tables are server/RPC-owned. Students must never create or mutate engine attempts or answers directly.
-REVOKE INSERT, UPDATE, DELETE ON TABLE
-  public.attempts,
-  public.attempt_answers,
-  public.test_attempts,
-  public.test_responses,
-  public.test_attempt_papers,
-  public.test_instance_answers,
-  public.question_answers,
-  public.topic_mastery,
-  public.streaks
-FROM PUBLIC, anon, authenticated;
-
-REVOKE INSERT, UPDATE, DELETE ON TABLE
-  public.subscriptions,
-  public.payments,
-  public.payment_submissions,
-  public.manual_payment_requests,
-  public.refund_requests,
-  public.refund_events,
-  public.subscription_refunds,
-  public.subscription_history,
-  public.admin_audit_logs,
-  public.audit_logs,
-  public.user_role_invitations,
-  public.admin_signup_requests,
-  public.premium_beta_events
-FROM PUBLIC, anon, authenticated;
+DO $$
+DECLARE
+  table_name TEXT;
+BEGIN
+  FOREACH table_name IN ARRAY ARRAY[
+    'attempts', 'attempt_answers', 'test_attempts', 'test_responses',
+    'test_attempt_papers', 'test_instance_answers', 'question_answers',
+    'topic_mastery', 'streaks', 'subscriptions', 'payments',
+    'payment_submissions', 'manual_payment_requests', 'refund_requests',
+    'refund_events', 'subscription_refunds', 'subscription_history',
+    'payment_submission_events', 'admin_audit_logs', 'audit_logs',
+    'user_role_invitations', 'admin_signup_requests', 'premium_beta_events'
+  ]
+  LOOP
+    IF to_regclass(format('public.%I', table_name)) IS NULL THEN
+      RAISE NOTICE 'Skipping write revoke for missing public.%', table_name;
+    ELSE
+      EXECUTE format(
+        'REVOKE INSERT, UPDATE, DELETE ON TABLE public.%I FROM PUBLIC, anon, authenticated',
+        table_name
+      );
+    END IF;
+  END LOOP;
+END;
+$$;
 
 -- Remove unsafe owner-write policies for the engine attempts tables. Creation,
 -- resumption, saving, and submission remain in SECURITY DEFINER RPCs.
@@ -155,11 +148,21 @@ CREATE POLICY push_subscriptions_own
 
 -- Tables with no application-facing policies must not grant direct access.
 -- Service role remains all-privileged for trusted server operations.
-GRANT ALL ON TABLE
-  public.subscription_history,
-  public.subscription_refunds,
-  public.manual_payment_requests,
-  public.admin_audit_logs,
-  public.audit_logs,
-  public.premium_beta_events
-TO service_role;
+DO $$
+DECLARE
+  table_name TEXT;
+BEGIN
+  FOREACH table_name IN ARRAY ARRAY[
+    'payment_submission_events', 'subscription_history',
+    'subscription_refunds', 'manual_payment_requests', 'admin_audit_logs',
+    'audit_logs', 'premium_beta_events'
+  ]
+  LOOP
+    IF to_regclass(format('public.%I', table_name)) IS NULL THEN
+      RAISE NOTICE 'Skipping service-role grant for missing public.%', table_name;
+    ELSE
+      EXECUTE format('GRANT ALL ON TABLE public.%I TO service_role', table_name);
+    END IF;
+  END LOOP;
+END;
+$$;

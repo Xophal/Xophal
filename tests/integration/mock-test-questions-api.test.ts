@@ -49,6 +49,10 @@ function setupAdminClient(queries: Record<string, QueryResult[]>, singles: Recor
       builders.set(table, [...(builders.get(table) ?? []), builder]);
       return builder;
     }),
+    rpc: vi.fn().mockResolvedValue({
+      data: { mock_test_id: "test-1", version_number: 1, question_count: 1 },
+      error: null,
+    }),
   };
   return { admin, builders };
 }
@@ -102,6 +106,62 @@ describe("admin mock-test question management", () => {
     expect(builders.get("mock_test_questions")?.[1].insert).toHaveBeenCalledWith([
       { mock_test_id: "00000000-0000-4000-8000-000000000010", section_id: null, question_id: readyQuestion.id, sort_order: 0 },
     ]);
+  });
+
+  it("selects the requested random question count from published questions", async () => {
+    const first = { ...readyQuestion };
+    const second = { ...readyQuestion, id: "00000000-0000-4000-8000-000000000005" };
+    const { admin } = setupAdminClient({
+      mock_tests: [{ data: null, error: null }],
+      questions: [
+        { data: [first, second], error: null },
+        { data: [first, second], error: null },
+      ],
+      mock_test_questions: [
+        { data: [], error: null },
+        { data: null, error: null },
+      ],
+    }, {
+      mock_tests: [{ data: { id: "test-1", is_published: false }, error: null }],
+    });
+    mocks.createAdminClient.mockReturnValue(admin);
+
+    const response = await addTestQuestions(
+      new NextRequest("http://localhost/api/admin/mock-tests/test-1/questions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mode: "random", count: 2 }),
+      }),
+      context()
+    );
+
+    expect(response.status).toBe(201);
+  });
+
+  it("rejects chapter selection when a chapter has too few approved questions", async () => {
+    const chapterId = "00000000-0000-4000-8000-000000000006";
+    const { admin } = setupAdminClient({
+      mock_tests: [{ data: null, error: null }],
+      questions: [{ data: [{ ...readyQuestion, chapter_id: chapterId }], error: null }],
+    }, {
+      mock_tests: [{ data: { id: "test-1", is_published: false }, error: null }],
+    });
+    mocks.createAdminClient.mockReturnValue(admin);
+
+    const response = await addTestQuestions(
+      new NextRequest("http://localhost/api/admin/mock-tests/test-1/questions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          mode: "chapter",
+          chapter_distribution: [{ chapter_id: chapterId, count: 2 }],
+        }),
+      }),
+      context()
+    );
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toMatchObject({ code: "INSUFFICIENT_CHAPTER_QUESTIONS" });
   });
 
   it("rejects unpublished questions instead of adding unusable test content", async () => {
