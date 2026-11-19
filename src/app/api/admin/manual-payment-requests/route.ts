@@ -10,7 +10,7 @@ export async function GET(request: NextRequest) {
     const status = request.nextUrl.searchParams.get("status");
     let query = createAdminClient()
       .from("manual_payment_requests")
-      .select("id, user_id, resource_type, title_snapshot, amount_minor, currency, reference_code, evidence_url, status, reason, submitted_at, created_at, profiles(full_name, email)", { count: "exact" })
+      .select("id, user_id, resource_type, title_snapshot, amount_minor, currency, reference_code, evidence_url, payment_paid_at, status, reason, submitted_at, created_at, reviewed_by, profiles(full_name, email), ebook_listings(title, subject, exam)", { count: "exact" })
       .order("submitted_at", { ascending: false });
     if (status) query = query.eq("status", status);
 

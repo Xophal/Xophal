@@ -41,6 +41,7 @@ export default function ManualUpiPurchase({
   const [checkout, setCheckout] = useState<CheckoutData | null>(null);
   const [referenceCode, setReferenceCode] = useState("");
   const [evidenceUrl, setEvidenceUrl] = useState("");
+  const [paymentPaidAt, setPaymentPaidAt] = useState("");
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -74,6 +75,7 @@ export default function ManualUpiPurchase({
       setCheckout(data);
       setReferenceCode("");
       setEvidenceUrl("");
+      setPaymentPaidAt("");
       if (data.request.status === "pending_verification") {
         setNotice("Your payment reference is already under review. We will unlock access after verification.");
       } else {
@@ -99,6 +101,7 @@ export default function ManualUpiPurchase({
         body: JSON.stringify({
           reference_code: referenceCode.trim(),
           evidence_url: evidenceUrl.trim() || null,
+          payment_paid_at: paymentPaidAt ? new Date(paymentPaidAt).toISOString() : null,
         }),
       });
       await readData(response, "Unable to submit your payment for verification.");
@@ -145,6 +148,15 @@ export default function ManualUpiPurchase({
           </div>
 
           <form onSubmit={submitPayment} className="space-y-3 border-t border-border pt-4">
+            <div className="space-y-2">
+              <Label htmlFor={`upi-paid-at-${checkout.request.id}`}>Payment date and time (optional)</Label>
+              <Input
+                id={`upi-paid-at-${checkout.request.id}`}
+                type="datetime-local"
+                value={paymentPaidAt}
+                onChange={(event) => setPaymentPaidAt(event.target.value)}
+              />
+            </div>
             <div className="space-y-2">
               <Label htmlFor={`upi-reference-${checkout.request.id}`}>UPI transaction/reference ID</Label>
               <Input

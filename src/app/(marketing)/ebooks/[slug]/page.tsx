@@ -11,6 +11,7 @@ import EbookCard from "@/components/ebooks/EbookCard";
 import { getPublishedEbookBySlug, getRelatedFreeMockTests, listPublishedEbooks } from "@/lib/ebooks/data";
 import { hasVerifiedEbookPurchase } from "@/lib/ebooks/orders";
 import { requireAuth } from "@/lib/auth";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -47,6 +48,12 @@ export default async function EbookDetailPage({ params }: Props) {
   const session = await requireAuth();
   const signedIn = Boolean(session);
   const owned = session ? await hasVerifiedEbookPurchase(session.user.id, book.id) : false;
+  const { data: privateFile } = await createAdminClient()
+    .from("product_files")
+    .select("id")
+    .eq("product_id", book.id)
+    .eq("is_active", true)
+    .maybeSingle();
   const related = category ? await listPublishedEbooks({ category: category.slug, limit: 4 }) : { books: [] };
   const offer = book.price === 0 ? "Free" : new Intl.NumberFormat("en-IN", { style: "currency", currency: book.currency || "INR", maximumFractionDigits: 0 }).format(Number(book.price));
   const canonicalUrl = `${APP_URL}/ebooks/${book.slug}`;
@@ -98,6 +105,7 @@ export default async function EbookDetailPage({ params }: Props) {
                 currency={book.currency || "INR"}
                 owned={owned}
                 signedIn={signedIn}
+                hasPrivateFile={Boolean(privateFile)}
               />
               {book.preview_url ? <a href={book.preview_url} target="_blank" rel="noreferrer" className="mt-3 inline-flex min-h-11 items-center rounded-md border border-border px-4 text-sm font-semibold hover:bg-muted">Preview</a> : null}
               <p className="mt-3 text-xs text-muted-foreground">The original book file lives on the author&apos;s own destination and opens here only after access is granted. Xophol never stores the book itself.</p>

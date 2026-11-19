@@ -22,6 +22,8 @@ export const ebookSubmissionSchema = z.object({
   coverImageUrl: httpUrl,
   externalProductUrl: httpUrl,
   previewUrl: httpUrl.optional().or(z.literal("")),
+  pdfStoragePath: z.string().trim().max(500).optional().or(z.literal("")),
+  pdfFileSize: z.number().int().positive().max(52428800).optional(),
   publicationDate: z.string().date().optional().or(z.literal("")),
   contributorBio: z.string().trim().max(2000).optional().or(z.literal("")),
   contributorExpertise: z.array(z.string().trim().min(2).max(80)).max(12).default([]),

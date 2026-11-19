@@ -29,7 +29,7 @@ async function loadExistingRequest(userId: string, resourceType: "ebook" | "mock
     .from("manual_payment_requests")
     .select("id, resource_type, title_snapshot, amount_minor, currency, status")
     .eq("user_id", userId)
-    .in("status", ["pending_payment", "pending_verification", "approved"]);
+    .in("status", ["pending_payment", "pending_verification", "under_review", "approved"]);
   query = resourceType === "ebook" ? query.eq("ebook_id", resourceId) : query.eq("mock_test_id", resourceId);
   const { data, error } = await query.maybeSingle();
   if (error) throw error;

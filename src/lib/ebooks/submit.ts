@@ -157,6 +157,26 @@ export async function createEbookListing(input: {
     .single();
   if (error) throw error;
 
+  if (input.payload.pdfStoragePath) {
+    if (!input.payload.pdfFileSize) {
+      throw new ApiError(400, "The PDF size is missing. Upload the PDF again.", "INVALID_PDF_METADATA");
+    }
+    const expectedPrefix = `${input.userId}/`;
+    if (!input.payload.pdfStoragePath.startsWith(expectedPrefix)) {
+      throw new ApiError(400, "The PDF upload does not belong to this seller.", "INVALID_PDF_PATH");
+    }
+    const { error: fileError } = await admin.from("product_files").insert({
+      product_id: data.id,
+      storage_bucket: "ebook-pdfs",
+      storage_path: input.payload.pdfStoragePath,
+      file_name: `${input.payload.title}.pdf`,
+      mime_type: "application/pdf",
+      file_size: input.payload.pdfFileSize,
+      uploaded_by: input.userId,
+    });
+    if (fileError) throw fileError;
+  }
+
   await admin.from("ebook_events").insert({
     event_name: "ebook_listing_submit",
     ebook_id: data.id,
@@ -215,6 +235,33 @@ export async function updateEbookListing(input: {
     .select("id, slug, status")
     .single();
   if (error) throw error;
+
+  if (input.payload.pdfStoragePath) {
+    if (!input.payload.pdfFileSize) {
+      throw new ApiError(400, "The PDF size is missing. Upload the PDF again.", "INVALID_PDF_METADATA");
+    }
+    const expectedPrefix = `${input.userId}/`;
+    if (!input.payload.pdfStoragePath.startsWith(expectedPrefix)) {
+      throw new ApiError(400, "The PDF upload does not belong to this seller.", "INVALID_PDF_PATH");
+    }
+    const { error: deactivateError } = await admin
+      .from("product_files")
+      .update({ is_active: false, updated_at: now })
+      .eq("product_id", input.listingId)
+      .eq("is_active", true);
+    if (deactivateError) throw deactivateError;
+    const { error: fileError } = await admin.from("product_files").upsert({
+      product_id: input.listingId,
+      storage_bucket: "ebook-pdfs",
+      storage_path: input.payload.pdfStoragePath,
+      file_name: `${input.payload.title}.pdf`,
+      mime_type: "application/pdf",
+      file_size: input.payload.pdfFileSize,
+      uploaded_by: input.userId,
+      is_active: true,
+    }, { onConflict: "product_id,storage_bucket,storage_path" });
+    if (fileError) throw fileError;
+  }
 
   await admin.from("ebook_events").insert({
     event_name: "ebook_listing_submit",

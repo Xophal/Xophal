@@ -20,6 +20,7 @@ export function EbookPurchase({
   currency,
   owned,
   signedIn,
+  hasPrivateFile = false,
 }: {
   ebookId: string;
   slug: string;
@@ -27,8 +28,9 @@ export function EbookPurchase({
   currency: string;
   owned: boolean;
   signedIn: boolean;
+  hasPrivateFile?: boolean;
 }) {
-  const [accessUrl, setAccessUrl] = useState<string | null>(owned ? `/api/ebooks/${ebookId}/external` : null);
+  const [accessUrl] = useState<string | null>(owned ? (hasPrivateFile ? `/api/ebooks/library/${ebookId}/download` : `/api/ebooks/${ebookId}/external`) : null);
   const isFree = Number(price) <= 0;
 
   async function openBook() {
@@ -44,7 +46,7 @@ export function EbookPurchase({
           className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-md bg-primary px-6 text-sm font-semibold text-primary-foreground hover:bg-primary/90"
         >
           <BookOpen className="h-4 w-4" aria-hidden="true" />
-          {owned ? "Open your book" : "Read this book"}
+          {owned ? (hasPrivateFile ? "Download your PDF" : "Open your book") : "Read this book"}
         </button>
       ) : isFree ? (
         <button

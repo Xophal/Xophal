@@ -54,6 +54,8 @@ const blank = {
   coverImageUrl: "",
   externalProductUrl: "",
   previewUrl: "",
+  pdfStoragePath: "",
+  pdfFileSize: 0,
   publicationDate: "",
   contributorBio: "",
   contributorExpertise: "",
@@ -105,6 +107,8 @@ export default function EbookSubmissionForm({ listingId }: { listingId?: string 
               coverImageUrl: book.cover_image_url,
               externalProductUrl: book.external_product_url,
               previewUrl: book.preview_url ?? "",
+              pdfStoragePath: "",
+              pdfFileSize: 0,
               publicationDate: book.publication_date ? String(book.publication_date).slice(0, 10) : "",
               contributorBio: book.contributor_bio ?? "",
               contributorExpertise: (book.contributor_expertise ?? []).join(", "),
@@ -152,6 +156,25 @@ export default function EbookSubmissionForm({ listingId }: { listingId?: string 
     }
   }
 
+  async function uploadPdf(file: File) {
+    setUploading(true);
+    setError("");
+    try {
+      const body = new FormData();
+      body.append("file", file);
+      const response = await fetch("/api/ebooks/pdf", { method: "POST", body });
+      const json = await response.json();
+      if (!response.ok || !json.success) throw new Error(json.error || "PDF upload failed.");
+      update("pdfStoragePath", json.data.path);
+      update("pdfFileSize", json.data.fileSize);
+      toast({ title: "PDF uploaded", description: "The paid file will remain private until a verified purchase." });
+    } catch (uploadError) {
+      setError(uploadError instanceof Error ? uploadError.message : "PDF upload failed.");
+    } finally {
+      setUploading(false);
+    }
+  }
+
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setSaving(true);
@@ -172,6 +195,8 @@ export default function EbookSubmissionForm({ listingId }: { listingId?: string 
         coverImageUrl: form.coverImageUrl,
         externalProductUrl: form.externalProductUrl.trim(),
         previewUrl: form.previewUrl.trim(),
+        pdfStoragePath: form.pdfStoragePath,
+        pdfFileSize: form.pdfFileSize || undefined,
         publicationDate: form.publicationDate,
         contributorBio: form.contributorBio.trim(),
         contributorExpertise: form.contributorExpertise.split(",").map((item) => item.trim()).filter(Boolean),
@@ -213,6 +238,14 @@ export default function EbookSubmissionForm({ listingId }: { listingId?: string 
         <div className="grid gap-1.5 sm:col-span-2">
           <Label htmlFor="ebook-title">Title</Label>
           <Input id="ebook-title" required minLength={3} maxLength={240} value={form.title} onChange={(event) => update("title", event.target.value)} />
+        </div>
+        <div className="grid gap-1.5 sm:col-span-2">
+          <Label htmlFor="ebook-pdf">Private PDF for verified purchasers (optional)</Label>
+          <Input id="ebook-pdf" type="file" accept="application/pdf" onChange={(event) => {
+            const file = event.target.files?.[0];
+            if (file) void uploadPdf(file);
+          }} />
+          <p className="text-xs text-muted-foreground">PDFs are stored privately and are never exposed as public URLs.</p>
         </div>
         <div className="grid gap-1.5">
           <Label htmlFor="ebook-author">Author / pen name</Label>

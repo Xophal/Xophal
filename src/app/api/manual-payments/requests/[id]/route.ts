@@ -10,6 +10,7 @@ const submitReferenceSchema = z.object({
   evidence_url: z.string().url().max(2048).refine((value) => ["http:", "https:"].includes(new URL(value).protocol), {
     message: "Evidence URL must use HTTP or HTTPS.",
   }).optional().nullable(),
+  payment_paid_at: z.string().datetime().optional().nullable(),
 });
 
 type Params = { params: Promise<{ id: string }> };
@@ -33,7 +34,28 @@ export async function PATCH(request: NextRequest, { params }: Params) {
     if (!existing || existing.user_id !== session.user.id) {
       return apiError("Payment request not found.", 404, "NOT_FOUND");
     }
-    if (existing.status === "pending_verification") {
+    if (existing.status === "pending_verification" || existing.status === "under_review") {
+      if (existing.status === "under_review") {
+        const { data, error } = await admin
+          .from("manual_payment_requests")
+          .update({
+            reference_code: payload.reference_code,
+            evidence_url: payload.evidence_url ?? null,
+            payment_paid_at: payload.payment_paid_at ?? null,
+            status: "pending_verification",
+            submitted_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", id)
+          .eq("user_id", session.user.id)
+          .eq("status", "under_review")
+          .select("id, status, reference_code, submitted_at")
+          .maybeSingle();
+        if (error?.code === "23505") return apiError("This UPI transaction reference has already been submitted.", 409, "DUPLICATE_PAYMENT_REFERENCE");
+        if (error) throw error;
+        if (!data) return apiError("This payment request was already updated.", 409, "REQUEST_NOT_PENDING");
+        return apiSuccess(data);
+      }
       return apiSuccess(existing);
     }
     if (existing.status !== "pending_payment") {
@@ -45,6 +67,7 @@ export async function PATCH(request: NextRequest, { params }: Params) {
       .update({
         reference_code: payload.reference_code,
         evidence_url: payload.evidence_url ?? null,
+        payment_paid_at: payload.payment_paid_at ?? null,
         status: "pending_verification",
         submitted_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
