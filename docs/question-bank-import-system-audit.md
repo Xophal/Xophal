@@ -1,7 +1,7 @@
-P# Xophal Question Bank and Bulk Import Audit
+# Xophal Question Bank and Bulk Import Audit
 
-**Audit date:** 2026-11-19  
-**Scope:** Repository source, migrations, route handlers, UI, tests, and setup documentation.  
+**Audit date:** 2026-11-19
+**Scope:** Repository source, migrations, route handlers, UI, tests, and setup documentation.
 **Live database access:** Not available in this workspace. Applied migration state, production RLS, and live row counts could not be verified. No production data was queried or changed.
 
 ## 1. Architecture summary
