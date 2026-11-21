@@ -31,7 +31,7 @@ BEGIN
     'subjects', 'chapters', 'topics', 'exams', 'exam_subjects', 'lessons',
     'notes', 'mock_tests', 'mock_test_sections', 'mock_test_questions', 'blogs',
     'announcements', 'banners', 'ebook_categories', 'ebook_contributors',
-    'ebook_listings', 'manual_payment_settings'
+    'manual_payment_settings'
   ]
   LOOP
     IF to_regclass(format('public.%I', table_name)) IS NULL THEN
@@ -43,6 +43,25 @@ BEGIN
       );
     END IF;
   END LOOP;
+END;
+$$;
+
+-- Ebook listings expose public discovery columns only. Fulfillment destinations
+-- remain server-only and must never be granted to anon/authenticated roles.
+DO $$
+BEGIN
+  IF to_regclass('public.ebook_listings') IS NULL THEN
+    RAISE NOTICE 'Skipping ebook_listings column grant because the table is missing';
+  ELSE
+    EXECUTE 'REVOKE SELECT ON TABLE public.ebook_listings FROM anon, authenticated';
+    EXECUTE 'GRANT SELECT (
+      id, contributor_id, category_id, subject_id, exam_id, title, slug,
+      cover_image_url, short_description, full_description, subject, exam,
+      language, page_count, price, currency, preview_url, author_name,
+      publication_date, status, is_featured, view_count, external_click_count,
+      published_at, created_at, updated_at
+    ) ON TABLE public.ebook_listings TO anon, authenticated';
+  END IF;
 END;
 $$;
 
@@ -108,6 +127,29 @@ DROP POLICY IF EXISTS attempts_own_update ON public.attempts;
 DROP POLICY IF EXISTS attempt_answers_own_upsert ON public.attempt_answers;
 DROP POLICY IF EXISTS test_attempts_own ON public.test_attempts;
 DROP POLICY IF EXISTS test_responses_own ON public.test_responses;
+
+DROP POLICY IF EXISTS test_attempts_owner_read_only ON public.test_attempts;
+CREATE POLICY test_attempts_owner_read_only
+  ON public.test_attempts FOR SELECT
+  USING (
+    user_id = auth.uid()
+    OR public.is_reviewer_or_admin()
+  );
+
+DROP POLICY IF EXISTS test_responses_owner_read_only ON public.test_responses;
+CREATE POLICY test_responses_owner_read_only
+  ON public.test_responses FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1
+      FROM public.test_attempts ta
+      WHERE ta.id = test_responses.attempt_id
+        AND (
+          ta.user_id = auth.uid()
+          OR public.is_reviewer_or_admin()
+        )
+    )
+  );
 
 -- Keep attempts read-only for the owning student or authorized reviewer/admin.
 DROP POLICY IF EXISTS attempts_owner_read_only ON public.attempts;

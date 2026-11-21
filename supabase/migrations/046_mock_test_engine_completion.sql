@@ -164,8 +164,7 @@ BEGIN
 
   SELECT * INTO v_test
   FROM public.mock_tests
-  WHERE id = p_mock_test_id AND is_active = true AND is_published = true
-  FOR UPDATE;
+  WHERE id = p_mock_test_id AND is_active = true AND is_published = true;
 
   IF NOT FOUND THEN RAISE EXCEPTION 'Mock test not found'; END IF;
 

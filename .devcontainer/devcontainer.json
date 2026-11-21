@@ -1,0 +1,14 @@
+{
+	"name": "Xophal",
+	"image": "node:24-bookworm",
+	"forwardPorts": [3000],
+	"postCreateCommand": "npm ci",
+	"remoteUser": "node",
+	"customizations": {
+		"vscode": {
+			"extensions": [
+				"dbaeumer.vscode-eslint"
+			]
+		}
+	}
+}

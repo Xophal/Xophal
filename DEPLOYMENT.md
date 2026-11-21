@@ -88,3 +88,7 @@ supabase db push
 ```
 
 Production is not ready until provider setup, migrations, the deployment check, and the end-to-end verification steps all pass. The app can build without live provider values, so a successful build alone is not a production-readiness signal.
+
+## Docker deployment
+
+For a containerized deployment, follow [DOCKER.md](DOCKER.md). The Docker image packages only the Next.js application; run Supabase migrations separately against the linked production project. Keep all credentials in `.env.docker`, which is gitignored, and pass it explicitly with `docker compose --env-file .env.docker`.

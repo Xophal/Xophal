@@ -149,19 +149,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { data: existingUsers } = await adminClient.auth.admin.listUsers({ page: 1, perPage: 1000 });
-    const duplicateUser = existingUsers?.users.find(
-      (user) => user.email?.trim().toLowerCase() === data.email.trim().toLowerCase()
-    );
-
-    if (duplicateUser) {
-      throw new ApiError(
-        409,
-        "This email is already registered in the current Xophol database. Please use a different email address or remove the stale user from Supabase Auth > Users.",
-        "EMAIL_ALREADY_REGISTERED"
-      );
-    }
-
     // Create users unconfirmed so they receive a verification email. We
     // will attempt to trigger Supabase's resend flow below. In staging the
     // team previously auto-confirmed users; keep behavior configurable later.

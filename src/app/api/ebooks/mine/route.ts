@@ -50,7 +50,15 @@ export async function GET(request: NextRequest) {
       admin.rpc("get_manual_upi_seller_settlement_due", { p_seller_user_id: session.user.id }),
     ]);
     if (error) throw error;
-    if (manualSettlementResult.error) throw manualSettlementResult.error;
+    // Older installations may not contain the optional manual-UPI settlement
+    // RPC yet. Keep seller dashboards usable until migration 052 is applied.
+    const manualSettlementDue =
+      manualSettlementResult.error
+        ? 0
+        : Number(manualSettlementResult.data?.[0]?.amount ?? 0);
+    if (manualSettlementResult.error) {
+      console.error("Could not load manual eBook settlement totals", manualSettlementResult.error);
+    }
 
     return apiSuccess({
       ...paginatedResponse(books ?? [], count ?? 0, page, limit),
@@ -60,7 +68,7 @@ export async function GET(request: NextRequest) {
       }, {}),
       sales: salesResult.error ? EMPTY_SALES : salesResult.data?.[0] ?? EMPTY_SALES,
       earnings: earningsResult.error ? EMPTY_EARNINGS : earningsResult.data?.[0] ?? EMPTY_EARNINGS,
-      manualSettlementDue: Number(manualSettlementResult.data?.[0]?.amount ?? 0),
+      manualSettlementDue: manualSettlementDue,
       commissionPercent: config.commissionPercent,
     });
   } catch (error) {

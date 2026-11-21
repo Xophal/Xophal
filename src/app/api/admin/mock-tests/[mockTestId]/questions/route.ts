@@ -216,7 +216,7 @@ export async function POST(request: NextRequest, { params }: Params) {
         .eq("is_active", true)
         .limit(5000);
       if (candidateError) throw candidateError;
-      let candidates = ((candidateRows ?? []) as Array<QuestionRow & { chapter_id?: string; difficulty_levels?: { code: string } | { code: string }[] | null }>)
+      const candidates = ((candidateRows ?? []) as Array<QuestionRow & { chapter_id?: string; difficulty_levels?: { code: string } | { code: string }[] | null }>)
         .filter(isUsableMockTestQuestion);
 
       const selected: Array<QuestionRow & { chapter_id?: string; difficulty_levels?: { code: string } | { code: string }[] | null }> = [];

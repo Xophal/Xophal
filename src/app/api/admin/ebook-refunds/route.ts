@@ -30,44 +30,26 @@ export async function POST(request: NextRequest) {
 
     const grossMinor = Math.round(Number(order.gross_amount) * 100);
     if (payload.amountMinor > grossMinor) return apiError("Refund amount exceeds the original payment.", 400, "REFUND_TOO_LARGE");
-
-    if (payload.status === "confirmed") {
-      const { data: confirmedRefunds, error: refundError } = await admin
-        .from("refund_events")
-        .select("amount_minor")
-        .eq("order_id", payload.orderId)
-        .eq("status", "confirmed");
-      if (refundError) throw refundError;
-      const alreadyRefunded = (confirmedRefunds ?? []).reduce((sum, row) => sum + Number(row.amount_minor), 0);
-      if (alreadyRefunded + payload.amountMinor > grossMinor) {
-        return apiError("Confirmed refunds would exceed the original payment.", 400, "REFUND_TOTAL_TOO_LARGE");
-      }
+    if (payload.status === "confirmed" && order.status !== "VERIFIED") {
+      return apiError("Only verified ebook payments can be refunded.", 409, "NOT_REFUNDABLE");
     }
 
-    const { data, error } = await admin.from("refund_events").insert({
-      order_id: payload.orderId,
-      amount_minor: payload.amountMinor,
-      refund_reference: payload.refundReference,
-      refund_date: payload.refundDate,
-      reason: payload.reason,
-      status: payload.status,
-      admin_id: session.user.id,
-    }).select("id, order_id, amount_minor, refund_reference, refund_date, reason, status, admin_id, created_at").single();
+    const { data, error } = await admin.rpc("record_manual_ebook_refund", {
+      p_order_id: payload.orderId,
+      p_amount_minor: payload.amountMinor,
+      p_refund_reference: payload.refundReference,
+      p_refund_date: payload.refundDate,
+      p_reason: payload.reason,
+      p_status: payload.status,
+      p_admin_id: session.user.id,
+    });
     if (error?.code === "23505") return apiError("This refund reference has already been recorded.", 409, "DUPLICATE_REFUND_REFERENCE");
+    if (error?.message.includes("Confirmed refunds would exceed")) {
+      return apiError("Confirmed refunds would exceed the original payment.", 400, "REFUND_TOTAL_TOO_LARGE");
+    }
     if (error) throw error;
 
-    if (payload.status === "confirmed") {
-      await admin.from("ebook_transactions").update({
-        refund_status: payload.amountMinor === grossMinor ? "REFUNDED" : "PARTIAL",
-        refunded_amount: payload.amountMinor / 100,
-        refunded_at: payload.amountMinor === grossMinor ? payload.refundDate : null,
-        status: payload.amountMinor === grossMinor ? "REFUNDED" : "VERIFIED",
-        order_status: payload.amountMinor === grossMinor ? "REFUNDED" : "PAID",
-        updated_at: new Date().toISOString(),
-      }).eq("id", payload.orderId);
-    }
-
-    return apiSuccess(data, 201);
+    return apiSuccess(data, data?.already_recorded ? 200 : 201);
   } catch (error) {
     return handleApiError(error);
   }

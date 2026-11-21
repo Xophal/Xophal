@@ -11,6 +11,7 @@ const require = createRequire(import.meta.url);
 const tslibPath = require.resolve("tslib/tslib.js");
 
 const nextConfig: NextConfig = {
+  output: "standalone",
   allowedDevOrigins: ["127.0.0.1", "localhost", "10.203.91.253"],
   turbopack: {
     resolveAlias: {

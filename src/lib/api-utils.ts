@@ -33,6 +33,34 @@ export function handleApiError(error: unknown) {
       error.retryAfterSeconds ? { retryAfterSeconds: error.retryAfterSeconds } : undefined
     );
   }
+
+  const message = error instanceof Error ? error.message : String(error ?? "");
+  const code =
+    typeof error === "object" && error !== null && "code" in error
+      ? String((error as { code?: unknown }).code ?? "")
+      : "";
+
+  if (
+    ["42P01", "42703", "PGRST204", "PGRST205"].includes(code) ||
+    /relation .* does not exist|column .* does not exist|could not find the .* column|could not find the .* function|schema cache/i.test(message)
+  ) {
+    console.error("Database is not ready:", error);
+    return apiError(
+      "The service is temporarily unavailable because a required database migration has not been applied.",
+      503,
+      "DATABASE_NOT_READY"
+    );
+  }
+
+  if (/SUPABASE_SERVICE_ROLE_KEY is not configured|SUPABASE.*not configured/i.test(message)) {
+    console.error("Server configuration is incomplete:", error);
+    return apiError(
+      "The service is temporarily unavailable because server configuration is incomplete.",
+      503,
+      "SERVICE_CONFIGURATION_ERROR"
+    );
+  }
+
   try {
     console.error("API Error:", error, error instanceof Error ? error.stack : undefined);
   } catch {

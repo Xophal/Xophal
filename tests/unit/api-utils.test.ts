@@ -27,4 +27,22 @@ describe("API utilities", () => {
     expect(response.status).toBe(404);
     await expect(response.json()).resolves.toEqual({ success: false, error: "Not found", code: "NOT_FOUND" });
   });
+
+  it("turns missing database migrations into a clear service-unavailable response", async () => {
+    const response = handleApiError({ code: "42P01", message: 'relation "subscription_plans" does not exist' });
+    expect(response.status).toBe(503);
+    await expect(response.json()).resolves.toMatchObject({
+      success: false,
+      code: "DATABASE_NOT_READY",
+    });
+  });
+
+  it("turns missing server credentials into a service configuration response", async () => {
+    const response = handleApiError(new Error("SUPABASE_SERVICE_ROLE_KEY is not configured"));
+    expect(response.status).toBe(503);
+    await expect(response.json()).resolves.toMatchObject({
+      success: false,
+      code: "SERVICE_CONFIGURATION_ERROR",
+    });
+  });
 });

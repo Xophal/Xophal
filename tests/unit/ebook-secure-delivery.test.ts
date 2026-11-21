@@ -45,4 +45,42 @@ describe("manual ebook refunds", () => {
 
     expect(response.status).toBe(400);
   });
+
+  it("records manual refunds through the atomic accounting RPC", async () => {
+    mocks.requireAdminRole.mockResolvedValue({ user: { id: "admin-1" } });
+    const orderQuery = queryResult({ id: "order-1", gross_amount: 99, status: "VERIFIED" });
+    const refundResult = {
+      refund_id: "refund-1",
+      status: "confirmed",
+      already_recorded: false,
+      refund_total_minor: 2500,
+      fully_refunded: false,
+    };
+    const rpc = vi.fn().mockResolvedValue({ data: refundResult, error: null });
+    mocks.createAdminClient.mockReturnValue({ from: vi.fn(() => orderQuery), rpc });
+
+    const response = await recordRefund(new NextRequest("http://localhost/api/admin/ebook-refunds", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        orderId: "11111111-1111-4111-8111-111111111111",
+        amountMinor: 2500,
+        refundReference: "UPI-RF-2",
+        refundDate: "2026-11-20T00:00:00.000Z",
+        reason: "Partial refund",
+        status: "confirmed",
+      }),
+    }));
+
+    expect(response.status).toBe(201);
+    expect(rpc).toHaveBeenCalledWith("record_manual_ebook_refund", {
+      p_order_id: "11111111-1111-4111-8111-111111111111",
+      p_amount_minor: 2500,
+      p_refund_reference: "UPI-RF-2",
+      p_refund_date: "2026-11-20T00:00:00.000Z",
+      p_reason: "Partial refund",
+      p_status: "confirmed",
+      p_admin_id: "admin-1",
+    });
+  });
 });

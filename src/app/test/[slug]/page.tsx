@@ -21,7 +21,7 @@ type PageProps = { params: Promise<{ slug: string }> };
 export default async function TestDetailPage({ params }: PageProps) {
   const { slug } = await params;
   const supabase = await createClient();
-  const { data: test } = await supabase
+  const { data: test, error: testError } = await supabase
     .from("mock_tests")
     .select(
       "id, title, slug, description, total_questions, total_marks, duration_minutes, passing_marks, negative_marking, negative_marks_ratio, max_attempts, instructions, is_premium, access_price, test_types(name), subjects(name), chapters(name)"
@@ -30,6 +30,7 @@ export default async function TestDetailPage({ params }: PageProps) {
     .eq("is_published", true)
     .eq("is_active", true)
     .maybeSingle();
+  if (testError) throw testError;
   if (!test) notFound();
 
   const { data: { user } } = await supabase.auth.getUser();
