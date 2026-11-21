@@ -1,4 +1,4 @@
--- Paid access is server-created and scoped to the subscription's eligible tests.
+-- Manual UPI paid access is server-created and scoped to eligible tests.
 
 REVOKE INSERT ON TABLE public.payment_submissions FROM PUBLIC, anon, authenticated;
 DROP POLICY IF EXISTS payment_submissions_owner_insert ON public.payment_submissions;

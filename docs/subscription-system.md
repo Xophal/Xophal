@@ -6,11 +6,11 @@ Subscriptions use the existing manual UPI account in `manual_payment_settings`; 
 
 Approved orders create one subscription transactionally. Renewals are **queued until the latest active subscription expiry**. Repeated approval is idempotent. Access is derived from the active subscription and checked on the server for test status, availability window, student board/class, plan board/class/subject scope, included test IDs, allowed test categories, and optional per-test attempt limits. Existing free tests remain free. A subscription whose plan is later deactivated retains the already-purchased access, but the plan cannot be selected for new orders.
 
-Expiry is enforced by the access check even if a scheduled job is unavailable. Migration 053 schedules `expire_subscriptions()` every 15 minutes when the Supabase `pg_cron` extension is enabled; otherwise configure a trusted scheduler to invoke that function with the service role. Do not expose the service-role key to a browser.
+Expiry is enforced by the access check even if a scheduled job is unavailable. The hosted project has `pg_cron` enabled and `xophal-expire-subscriptions` scheduled every 15 minutes. Migration 062 also creates this job when `pg_cron` is enabled; otherwise configure a trusted scheduler to invoke `expire_subscriptions()` with the service role. Do not expose the service-role key to a browser.
 
 ## Deployment
 
-1. Back up the database and review migrations 050–054 already present in the deployment branch; apply migration `053_secure_subscription_test_access.sql` after its prerequisites.
+1. Back up the database and confirm migrations `052_secure_ebook_delivery.sql`, `059_rls_every_public_table.sql`, and `062_secure_subscription_test_access.sql` are applied. Version 062 avoids a collision with the hosted project's existing, unrelated migration 053.
 2. Confirm the private `subscription-payment-evidence` bucket and its owner/admin policies exist after migration.
 3. Configure the receiving UPI ID and payee name in Admin → Subscriptions → Manual UPI payment. Enable payments only after verifying the receiving account.
 4. Create plans with the appropriate INR price, duration, board/class/subject scope, included tests/categories, features, and any attempt limit. Confirm mock tests have the intended access category and availability dates before publishing.
