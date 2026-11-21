@@ -76,7 +76,7 @@ describe("environment configuration", () => {
 
     it("warns when a production app URL still points at a Vercel host", async () => {
       const warnings = await captureWarnings(
-        "https://xophal-ksec4eb36-xophal.vercel.app",
+        "https://xophol-ksec4eb36-xophol.vercel.app",
         "production"
       );
 
@@ -91,7 +91,7 @@ describe("environment configuration", () => {
 
     it("does not warn outside production", async () => {
       const warnings = await captureWarnings(
-        "https://xophal-ksec4eb36-xophal.vercel.app",
+        "https://xophol-ksec4eb36-xophol.vercel.app",
         "development"
       );
 
