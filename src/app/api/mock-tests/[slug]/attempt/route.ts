@@ -22,8 +22,6 @@ export async function POST(_: Request, { params }: { params: Promise<{ slug: str
     if (testError) throw testError;
     if (!test) throw new ApiError(404, "Mock test not found", "TEST_NOT_FOUND");
 
-    const entitlement = await getUserEntitlement(session.user.id);
-
     const { data: grant } = await adminClient
       .from("test_access_grants")
       .select("id")
@@ -31,12 +29,12 @@ export async function POST(_: Request, { params }: { params: Promise<{ slug: str
       .eq("mock_test_id", test.id)
       .maybeSingle();
 
-    const hasEntitlement = test.is_premium
-      ? entitlement.isPaid && isProductEntitled(entitlement.productType, "premium")
-      : true;
-
-    if (test.is_premium && !hasEntitlement && !grant) {
-      throw new ApiError(403, entitlement.reason || "Premium access required", "PREMIUM_REQUIRED");
+    if (test.is_premium) {
+      const entitlement = await getUserEntitlement(session.user.id);
+      const hasEntitlement = entitlement.isPaid && isProductEntitled(entitlement.productType, "premium");
+      if (!hasEntitlement && !grant) {
+        throw new ApiError(403, entitlement.reason || "Premium access required", "PREMIUM_REQUIRED");
+      }
     }
 
     const { data: startedAttempt, error: startError } = await adminClient.rpc("start_mock_test_attempt", {
